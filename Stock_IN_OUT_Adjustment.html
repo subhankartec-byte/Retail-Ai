@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Adjustment — IN &amp; OUT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --green:#16A34A; --green-d:#15803D; --green-bg:#DCFCE7; --green-soft:#F0FDF4;
+  --red:#E11D48;   --red-d:#BE123C;   --red-bg:#FFE4E6;   --red-soft:#FFF1F3;
+  --ink:#1E293B; --muted:#64748B; --faint:#94A3B8;
+  --line:#E7ECF4; --card:#FFF;
+  --shadow:0 10px 28px -14px rgba(30,41,59,.2);
+  --fd:'Poppins',system-ui,sans-serif; --fb:'Inter',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--fb);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.5;
+  background:linear-gradient(180deg,#F7F9FD,#EEF2F9);min-height:100vh}
+.wrap{max-width:1000px;margin:0 auto;padding:22px 18px 80px}
+h1,h2,h3{font-family:var(--fd);margin:0}
+button{font-family:var(--fb);cursor:pointer}
+.mono{font-family:ui-monospace,monospace}
+
+.head{display:flex;align-items:center;gap:13px;flex-wrap:wrap;margin-bottom:18px}
+.logo{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;color:#fff;font-size:20px;flex:0 0 auto;
+  background:linear-gradient(135deg,var(--green),var(--red));box-shadow:0 8px 18px -8px rgba(190,18,60,.4);font-family:var(--fd);font-weight:800}
+.head .t1{font-size:21px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.head .t2{font-size:12.5px;color:var(--muted);font-weight:600;margin-top:2px}
+.grow{flex:1}
+.btn{display:inline-flex;align-items:center;gap:7px;border:none;padding:10px 15px;border-radius:11px;font-size:13px;font-weight:700;color:#fff;transition:.15s;box-shadow:0 4px 12px -6px rgba(0,0,0,.3)}
+.btn:hover{transform:translateY(-2px)} .btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+.btn.green{background:linear-gradient(135deg,#22C55E,#16A34A)}
+.btn.ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line);box-shadow:none;font-weight:600}
+.btn.ghost:hover{border-color:#cbd5e6}
+
+.card{background:var(--card);border-radius:18px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.setup{padding:20px}
+.setup .eb{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:var(--green-d)}
+.setup h2{font-size:18px;margin:5px 0 3px}
+.setup p{color:var(--muted);font-size:13px;margin:0 0 15px}
+.drop{border:2px dashed #cdd7e6;border-radius:15px;padding:22px;text-align:center;background:#F8FAFF;cursor:pointer;transition:.15s}
+.drop:hover,.drop.over{border-color:var(--green);background:var(--green-soft)}
+.drop .b{font-weight:700;font-size:14px}
+.drop .s{font-size:12px;color:var(--faint);margin-top:4px}
+.drop input{display:none}
+.maps{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:15px}
+@media(max-width:680px){.maps{grid-template-columns:1fr}}
+.mcol{border-radius:13px;padding:13px;border:1.5px solid var(--line)}
+.mcol.s{background:#EFF6FF} .mcol.p{background:var(--green-soft)}
+.mcol h3{font-size:13px;display:flex;align-items:center;gap:8px}
+.mcol .bd{margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;color:#fff}
+.mcol.s .bd{background:#2563EB} .mcol.p .bd{background:var(--green)}
+.f{margin-top:9px}
+.f label{display:block;font-size:11px;color:var(--muted);font-weight:600;margin-bottom:3px}
+.f .rq{color:var(--red)}
+select{width:100%;padding:9px 11px;border-radius:10px;border:1.5px solid #dbe3f1;background:#fff;color:var(--ink);font-size:13px;font-family:var(--fb)}
+select:focus{outline:none;border-color:var(--green)}
+.run{display:flex;gap:11px;align-items:center;flex-wrap:wrap;margin-top:15px}
+.hint{font-size:12px;color:var(--faint)}
+.warn{display:none;margin-top:14px;padding:13px 15px;border-radius:12px;background:#FEF3C7;border:1.5px solid #F59E0B;font-size:13px;line-height:1.55;color:#7c5806}
+.warn.show{display:block} .warn b{color:#b45309}
+.mono-i{font-family:ui-monospace,monospace;background:rgba(0,0,0,.06);padding:1px 5px;border-radius:5px}
+
+#rep{display:none} #rep.show{display:block}
+
+/* summary chips */
+.chips{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin:22px 0 8px}
+@media(max-width:560px){.chips{grid-template-columns:1fr}}
+.chip{border-radius:16px;padding:16px 18px;color:#fff;display:flex;align-items:center;gap:14px}
+.chip.in{background:linear-gradient(135deg,#22C55E,#15803D)}
+.chip.out{background:linear-gradient(135deg,#FB7185,#BE123C)}
+.chip .ci{width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.22);display:grid;place-items:center;font-size:22px;font-family:var(--fd);font-weight:800;flex:0 0 auto}
+.chip .cl{font-size:12px;font-weight:700;opacity:.92;text-transform:uppercase;letter-spacing:.04em}
+.chip .cn{font-family:var(--fd);font-weight:800;font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
+.chip .cx{font-size:12px;opacity:.9;margin-top:2px;font-variant-numeric:tabular-nums}
+
+/* tables */
+.tcard{overflow:hidden;margin-top:16px}
+.tcap{display:flex;align-items:center;gap:11px;padding:14px 18px}
+.tcap .ico{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;color:#fff;font-size:17px;flex:0 0 auto;font-family:var(--fd);font-weight:800}
+.tcap .tt{font-family:var(--fd);font-weight:800;font-size:16px}
+.tcap .ts{font-size:12px;color:var(--muted);font-weight:500}
+.tcap.in{background:var(--green-soft)} .tcap.out{background:var(--red-soft)}
+.tcap.in .ico{background:var(--green)} .tcap.out .ico{background:var(--red)}
+.tscroll{overflow:auto;max-height:560px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{position:sticky;top:0;text-align:left;padding:11px 15px;font-size:11px;letter-spacing:.03em;text-transform:uppercase;font-weight:800;color:#fff;white-space:nowrap}
+thead th.n{text-align:right}
+tbody td{padding:11px 15px;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody td.n{text-align:right;font-variant-numeric:tabular-nums}
+tbody td.bc{font-family:ui-monospace,monospace;font-size:12.5px;font-weight:600}
+tbody tr:nth-child(even){background:#FAFBFE}
+tbody tr:hover{background:#F1F5FF}
+.dsc{max-width:240px;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
+.qbig{font-family:var(--fd);font-weight:800;font-size:15px}
+.qbig.in{color:var(--green-d)} .qbig.out{color:var(--red-d)}
+tfoot td{padding:12px 15px;font-weight:800;font-family:var(--fd);border-top:2px solid var(--line);font-variant-numeric:tabular-nums;background:#fff}
+tfoot td.n{text-align:right}
+.emp{padding:40px;text-align:center;color:var(--faint);font-size:14px}
+.emp .e1{font-size:16px;font-weight:700;color:var(--green-d);font-family:var(--fd)}
+
+@media print{
+  body{background:#fff}
+  .head .btn,.setup{display:none!important}
+  .card{box-shadow:none;border-color:#ddd;break-inside:avoid}
+  .tscroll{overflow:visible;max-height:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <div class="logo">⇄</div>
+    <div>
+      <div class="t1">Stock Adjustment — IN &amp; OUT</div>
+      <div class="t2">Barcodes not matching between system &amp; physical</div>
+    </div>
+    <div class="grow"></div>
+    <button class="btn green" id="xlsxBtn" disabled>⤓ Excel</button>
+    <button class="btn ghost" id="printBtn" disabled>🖶 Print</button>
+  </div>
+
+  <!-- SETUP -->
+  <div class="card setup" id="setup">
+    <div class="eb">Load your files</div>
+    <h2>Upload system &amp; physical data</h2>
+    <p>One workbook with both sheets, or two files. Barcodes are read as full text — nothing leaves your browser.</p>
+    <label class="drop" id="drop">
+      <input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv" multiple>
+      <div class="b">Drop files here, or tap to browse</div>
+      <div class="s">.xlsx · .xls · .csv — keep the barcode column as Text</div>
+    </label>
+
+    <div id="mapArea" style="display:none">
+      <div class="maps">
+        <div class="mcol s">
+          <h3>System (book) <span class="bd">SYSTEM</span></h3>
+          <div class="f"><label>Sheet</label><select id="sysSheet"></select></div>
+          <div class="f"><label>Barcode <span class="rq">*</span></label><select id="sysBc"></select></div>
+          <div class="f"><label>System qty <span class="rq">*</span></label><select id="sysQty"></select></div>
+          <div class="f"><label>MRP</label><select id="sysMrp"></select></div>
+          <div class="f"><label>Description</label><select id="sysDesc"></select></div>
+          <div class="f"><label>Style code</label><select id="sysStyle"></select></div>
+        </div>
+        <div class="mcol p">
+          <h3>Physical (scan) <span class="bd">SCAN</span></h3>
+          <div class="f"><label>Sheet</label><select id="phySheet"></select></div>
+          <div class="f"><label>Barcode <span class="rq">*</span></label><select id="phyBc"></select></div>
+          <div class="f"><label>Physical qty <span class="rq">*</span></label><select id="phyQty"></select></div>
+          <div class="f"><label>MRP</label><select id="phyMrp"></select></div>
+          <div class="f"><label>Description</label><select id="phyDesc"></select></div>
+          <div class="f"><label>Style code</label><select id="phyStyle"></select></div>
+        </div>
+      </div>
+      <div class="run">
+        <button class="btn green" id="runBtn">Generate IN / OUT →</button>
+        <span class="hint" id="loaded"></span>
+      </div>
+    </div>
+
+    <div class="run">
+      <button class="btn ghost" id="sampleBtn">▷ Try with sample data</button>
+      <span class="hint">See how it works instantly.</span>
+    </div>
+    <div class="warn" id="warn"></div>
+  </div>
+
+  <!-- REPORT -->
+  <div id="rep">
+    <div class="chips" id="chips"></div>
+    <div id="inSec"></div>
+    <div id="outSec"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ===== helpers ===== */
+function toNum(v){ if(v===null||v===undefined||v==='') return 0; const n=typeof v==='number'?v:parseFloat(String(v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?0:n; }
+function bcKey(v){ if(v===null||v===undefined) return ''; if(typeof v==='number') return Number.isInteger(v)?v.toFixed(0):String(v); return String(v).trim(); }
+function consolidate(rows){ const m=new Map();
+  for(const r of rows){ const bc=bcKey(r.barcode); if(bc==='')continue; const q=toNum(r.qty), cur=m.get(bc);
+    if(cur){cur.qty+=q; if(!cur.mrp)cur.mrp=toNum(r.mrp); if(!cur.desc)cur.desc=r.desc||''; if(!cur.style)cur.style=String(r.style||'').trim();}
+    else m.set(bc,{qty:q,mrp:toNum(r.mrp),desc:r.desc||'',style:String(r.style||'').trim()}); }
+  return m; }
+/* ONLY logic: barcodes present on exactly one side */
+function computeDiff(sysRows,phyRows){
+  const sys=consolidate(sysRows), phy=consolidate(phyRows);
+  const inList=[], outList=[]; // in = physical-only (bring in) ; out = system-only (take out)
+  for(const [bc,p] of phy){ if(!sys.has(bc)) inList.push({barcode:bc,qty:p.qty,mrp:p.mrp,desc:p.desc,style:p.style,amount:p.qty*p.mrp}); }
+  for(const [bc,s] of sys){ if(!phy.has(bc)) outList.push({barcode:bc,qty:s.qty,mrp:s.mrp,desc:s.desc,style:s.style,amount:s.qty*s.mrp}); }
+  inList.sort((a,b)=>b.amount-a.amount); outList.sort((a,b)=>b.amount-a.amount);
+  return {inList,outList,commonCount:[...phy.keys()].filter(b=>sys.has(b)).length};
+}
+const inr=new Intl.NumberFormat('en-IN',{maximumFractionDigits:0}), nf=new Intl.NumberFormat('en-IN');
+const money=v=>'₹'+inr.format(Math.round(v));
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ===== state ===== */
+let POOL=[], RES=null;
+
+/* ===== file intake ===== */
+const drop=document.getElementById('drop'), file=document.getElementById('file');
+['dragenter','dragover'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add('over');}));
+['dragleave','drop'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove('over');}));
+drop.addEventListener('drop',ev=>{if(ev.dataTransfer.files.length)readFiles(ev.dataTransfer.files);});
+file.addEventListener('change',ev=>{if(ev.target.files.length)readFiles(ev.target.files);});
+function readFiles(list){ const files=[...list]; let pend=files.length; POOL=[];
+  files.forEach(f=>{ const rd=new FileReader(); rd.onload=e=>{ try{ const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+    wb.SheetNames.forEach(sn=>{ const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,blankrows:false,defval:''}); if(aoa.length)POOL.push({label:(files.length>1?f.name+' · ':'')+sn,aoa}); }); }catch(err){console.error(err);}
+    if(--pend===0)poolReady(); }; rd.readAsArrayBuffer(f); }); }
+function colLetter(i){let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26);}return s;}
+function headersOf(en){const h=en.aoa[0]||[];return h.map((v,i)=>({idx:i,name:(v===''||v==null)?('Column '+colLetter(i)):String(v),letter:colLetter(i)}));}
+function findCol(hs,pats,fb){for(const p of pats){const f=hs.find(h=>h.name.toLowerCase().includes(p));if(f)return f.idx;} return (fb!=null&&hs.some(h=>h.idx===fb))?fb:-1;}
+function fillSel(sel,hs,si,opt){sel.innerHTML=''; if(opt){const o=document.createElement('option');o.value='-1';o.textContent='—';sel.appendChild(o);} hs.forEach(h=>{const o=document.createElement('option');o.value=h.idx;o.textContent=h.letter+' · '+h.name;sel.appendChild(o);}); sel.value=si;}
+function poolReady(){ if(!POOL.length){alert('Could not read any sheet.');return;}
+  document.getElementById('mapArea').style.display='block';
+  const ss=document.getElementById('sysSheet'), ps=document.getElementById('phySheet');
+  [ss,ps].forEach(s=>{s.innerHTML='';POOL.forEach((en,i)=>{const o=document.createElement('option');o.value=i;o.textContent=en.label;s.appendChild(o);});});
+  ss.value=0; ps.value=POOL.length>1?1:0; ss.onchange=()=>remap('sys'); ps.onchange=()=>remap('phy'); remap('sys'); remap('phy');
+  const tot=POOL.reduce((a,e)=>a+Math.max(0,e.aoa.length-1),0);
+  document.getElementById('loaded').textContent=POOL.length+' sheet(s) · '+nf.format(tot)+' rows';
+  document.getElementById('warn').classList.remove('show');
+  document.getElementById('mapArea').scrollIntoView({behavior:'smooth',block:'nearest'}); }
+function remap(side){ const idx=+document.getElementById(side+'Sheet').value; const hs=headersOf(POOL[idx]);
+  const qp=side==='sys'?['system qty','sys qty','soh','book','system','qty','quantity','stock']:['physical qty','phy qty','scan qty','physical','scanned','scan','count','qty','quantity'];
+  fillSel(document.getElementById(side+'Bc'),hs,findCol(hs,['barcode','ean','bar code'],side==='sys'?7:1),false);
+  fillSel(document.getElementById(side+'Qty'),hs,findCol(hs,qp,side==='sys'?17:2),false);
+  fillSel(document.getElementById(side+'Mrp'),hs,findCol(hs,['mrp','m.r.p','price','rate'],side==='sys'?14:4),true);
+  fillSel(document.getElementById(side+'Desc'),hs,findCol(hs,['description','desc','item name','product','material desc','item'],-1),true);
+  fillSel(document.getElementById(side+'Style'),hs,findCol(hs,['style code','style','design','article','material code','sku'],-1),true); }
+function extractRows(side){ const idx=+document.getElementById(side+'Sheet').value; const data=POOL[idx].aoa.slice(1); const g=id=>+document.getElementById(side+id).value;
+  const bc=g('Bc'),qty=g('Qty'),mrp=g('Mrp'),desc=g('Desc'),style=g('Style');
+  return data.map(r=>({barcode:r[bc],qty:r[qty],mrp:mrp>=0?r[mrp]:0,desc:desc>=0?r[desc]:'',style:style>=0?r[style]:''})); }
+function detectCorruption(sr,pr){ function scan(rows,name){ const bcs=rows.map(r=>bcKey(r.barcode)).filter(x=>x!==''); if(bcs.length<10)return null; const uniq=new Set(bcs).size; const sci=bcs.filter(b=>/e\+/i.test(b)).length;
+  if(sci>bcs.length*0.3)return name+' barcodes are in scientific notation for '+Math.round(sci/bcs.length*100)+'% of rows.';
+  if(uniq<Math.max(5,bcs.length*0.15))return name+' barcodes have only '+uniq+' unique values across '+bcs.length+' rows.'; return null; }
+  return [scan(sr,'System'),scan(pr,'Physical')].filter(Boolean); }
+
+/* ===== run ===== */
+document.getElementById('runBtn').addEventListener('click',()=>{ const sr=extractRows('sys'),pr=extractRows('phy'); const probs=detectCorruption(sr,pr); const w=document.getElementById('warn');
+  if(probs.length){ w.innerHTML='<b>⚠ Barcodes look corrupted.</b> '+probs.map(esc).join(' ')+' Re-export with the barcode column as <span class="mono-i">Text</span> (full digits, no <span class="mono-i">E+</span>). Lists shown anyway, but matching will be wrong.'; w.classList.add('show'); } else w.classList.remove('show');
+  build(sr,pr); });
+document.getElementById('sampleBtn').addEventListener('click',()=>{document.getElementById('warn').classList.remove('show');build(SAMPLE.system,SAMPLE.physical);});
+function build(sr,pr){ const res=computeDiff(sr,pr);
+  if(!res.inList.length && !res.outList.length && res.commonCount===0){ alert('No barcodes found — check the Barcode and Qty columns.'); return; }
+  RES=res; document.getElementById('rep').classList.add('show'); document.getElementById('xlsxBtn').disabled=false; document.getElementById('printBtn').disabled=false;
+  renderChips(); renderIn(); renderOut();
+  document.getElementById('rep').scrollIntoView({behavior:'smooth',block:'start'}); }
+
+function renderChips(){ const inP=RES.inList.reduce((a,r)=>a+r.qty,0), inV=RES.inList.reduce((a,r)=>a+r.amount,0);
+  const outP=RES.outList.reduce((a,r)=>a+r.qty,0), outV=RES.outList.reduce((a,r)=>a+r.amount,0);
+  document.getElementById('chips').innerHTML=
+    `<div class="chip in"><div class="ci">IN</div><div><div class="cl">Bring IN · not in system</div><div class="cn">${nf.format(inP)} pcs</div><div class="cx">${nf.format(RES.inList.length)} barcodes · ${money(inV)}</div></div></div>
+     <div class="chip out"><div class="ci">OUT</div><div><div class="cl">Take OUT · extra in system</div><div class="cn">${nf.format(outP)} pcs</div><div class="cx">${nf.format(RES.outList.length)} barcodes · ${money(outV)}</div></div></div>`; }
+
+function buildTable(list,kind){ // kind 'in' or 'out'
+  const hasDesc=list.some(r=>r.desc), hasStyle=list.some(r=>r.style);
+  const qtyLabel = kind==='in'?'Qty to bring IN':'Qty to take OUT';
+  const cols=['Barcode']; if(hasDesc)cols.push('Description'); if(hasStyle)cols.push('Style'); cols.push('MRP',qtyLabel,'Amount');
+  const headBg = kind==='in'?'var(--green)':'var(--red)';
+  const th=cols.map((c,i)=>{ const n = (c==='MRP'||c===qtyLabel||c==='Amount'); return `<th class="${n?'n':''}" style="background:${headBg}">${c}</th>`; }).join('');
+  const totPcs=list.reduce((a,r)=>a+r.qty,0), totAmt=list.reduce((a,r)=>a+r.amount,0);
+  const body=list.map(r=>{ let t=`<tr><td class="bc">${esc(r.barcode)}</td>`;
+    if(hasDesc)t+=`<td class="dsc" title="${esc(r.desc)}">${esc(r.desc)||'—'}</td>`;
+    if(hasStyle)t+=`<td>${esc(r.style)||'—'}</td>`;
+    t+=`<td class="n">${money(r.mrp)}</td><td class="n"><span class="qbig ${kind}">${nf.format(r.qty)}</span></td><td class="n">${money(r.amount)}</td></tr>`; return t; }).join('');
+  const colspanLeft = 1+(hasDesc?1:0)+(hasStyle?1:0)+1; // barcode(+desc+style)+mrp
+  const foot=`<tfoot><tr><td colspan="${colspanLeft}">Total — ${nf.format(list.length)} barcodes</td><td class="n">${nf.format(totPcs)} pcs</td><td class="n">${money(totAmt)}</td></tr></tfoot>`;
+  return `<div class="tscroll"><table><thead><tr>${th}</tr></thead><tbody>${body}</tbody>${foot}</table></div>`;
+}
+function renderIn(){ const el=document.getElementById('inSec');
+  if(!RES.inList.length){ el.innerHTML=`<div class="card tcard"><div class="tcap in"><div class="ico">IN</div><div><div class="tt">Bring IN — not in system</div><div class="ts">Pieces found in scan but missing from system</div></div></div><div class="emp"><div class="e1">✅ Nothing to bring in</div>Every scanned barcode already exists in the system.</div></div>`; return; }
+  el.innerHTML=`<div class="card tcard"><div class="tcap in"><div class="ico">IN</div><div><div class="tt">Bring IN — not in system</div><div class="ts">Found in scan, missing from system → do inward entry</div></div></div>${buildTable(RES.inList,'in')}</div>`; }
+function renderOut(){ const el=document.getElementById('outSec');
+  if(!RES.outList.length){ el.innerHTML=`<div class="card tcard"><div class="tcap out"><div class="ico">OUT</div><div><div class="tt">Take OUT — extra in system</div><div class="ts">Pieces in system but not found in scan</div></div></div><div class="emp"><div class="e1">✅ Nothing to take out</div>Every system barcode was found in the physical scan.</div></div>`; return; }
+  el.innerHTML=`<div class="card tcard"><div class="tcap out"><div class="ico">OUT</div><div><div class="tt">Take OUT — extra in system</div><div class="ts">In system, not found in scan → do outward entry</div></div></div>${buildTable(RES.outList,'out')}</div>`; }
+
+/* ===== export ===== */
+document.getElementById('printBtn').addEventListener('click',()=>window.print());
+document.getElementById('xlsxBtn').addEventListener('click',()=>{ if(!RES)return; const wb=XLSX.utils.book_new();
+  const sheet=(list,name,qtyLabel)=>{ const aoa=[['Barcode','Description','Style','MRP',qtyLabel,'Amount']].concat(list.map(r=>[r.barcode,r.desc,r.style,r.mrp,r.qty,Math.round(r.amount)]));
+    const tp=list.reduce((a,r)=>a+r.qty,0), ta=list.reduce((a,r)=>a+r.amount,0); aoa.push(['TOTAL','','','',tp,Math.round(ta)]);
+    const ws=XLSX.utils.aoa_to_sheet(aoa); const rg=XLSX.utils.decode_range(ws['!ref']); for(let R=1;R<=rg.e.r;R++){const c=ws[XLSX.utils.encode_cell({r:R,c:0})]; if(c){c.t='s';c.v=String(c.v);}} XLSX.utils.book_append_sheet(wb,ws,name); };
+  sheet(RES.inList,'Bring IN (not in system)','Qty IN');
+  sheet(RES.outList,'Take OUT (extra in system)','Qty OUT');
+  const d=new Date(),stamp=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+  XLSX.writeFile(wb,'Stock_IN_OUT_'+stamp+'.xlsx'); });
+
+/* ===== sample ===== */
+const SAMPLE={
+  system:[ // some barcodes here are NOT in the scan -> they become "take OUT"
+    {barcode:8905661000015,qty:5,mrp:1999,style:'W-KUR-2201',desc:'Printed A-line Kurta'},
+    {barcode:8905661000022,qty:4,mrp:1999,style:'W-KUR-2201',desc:'Printed A-line Kurta'},
+    {barcode:8905662000145,qty:2,mrp:2499,style:'W-DRS-4410',desc:'Floral Midi Dress'},   // not in scan -> OUT
+    {barcode:8905663000114,qty:4,mrp:999, style:'FS-TOP-1180',desc:'Solid Cotton Top'},    // not in scan -> OUT
+    {barcode:8905664000117,qty:5,mrp:3999,style:'W-GWN-7702',desc:'Anarkali Gown'},
+    {barcode:8905665000110,qty:3,mrp:5999,style:'WSH-LEH-9001',desc:'Embroidered Lehenga'},
+    {barcode:8905667000115,qty:1,mrp:7599,style:'WSH-SAR-6600',desc:'Silk Saree'},         // not in scan -> OUT
+  ],
+  physical:[ // some barcodes here are NOT in the system -> they become "bring IN"
+    {barcode:8905661000015,qty:3,mrp:1999,style:'W-KUR-2201',desc:'Printed A-line Kurta'},
+    {barcode:8905661000022,qty:6,mrp:1999,style:'W-KUR-2201',desc:'Printed A-line Kurta'},
+    {barcode:8905662000152,qty:2,mrp:2499,style:'W-DRS-4410',desc:'Floral Midi Dress S'},   // not in system -> IN
+    {barcode:8905663000121,qty:5,mrp:999, style:'FS-TOP-1180',desc:'Solid Cotton Top'},      // not in system -> IN
+    {barcode:8905664000117,qty:5,mrp:3999,style:'W-GWN-7702',desc:'Anarkali Gown'},
+    {barcode:8905665000110,qty:4,mrp:5999,style:'WSH-LEH-9001',desc:'Embroidered Lehenga'},
+    {barcode:8905668000119,qty:2,mrp:1299,style:'W-TUN-5500',desc:'Cotton Tunic'},           // not in system -> IN
+  ]
+};
+</script>
+</body>
+</html>
