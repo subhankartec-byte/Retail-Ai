@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#08080B" />
+  <meta name="description" content="Sign in to Retail AI — the operations toolkit built for store teams." />
+  <title>Sign In · Retail AI</title>
+
+  <!-- Fonts: Cormorant Garamond (display accent) + Inter (UI). Graceful system fallbacks below. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* =========================================================
+       1. DESIGN TOKENS
+       ========================================================= */
+    :root {
+      /* Palette — premium black, charcoal & gold */
+      --noir:        #08080B;   /* deepest background */
+      --charcoal:    #131318;   /* raised surface */
+      --charcoal-2:  #1B1B22;   /* input surface */
+      --gold:        #D4AF37;   /* metallic gold */
+      --gold-hi:     #F2DE9A;   /* champagne highlight */
+      --gold-lo:     #A87E28;   /* antique gold (shadow) */
+      --ivory:       #F4F1EA;   /* warm near-white text */
+      --muted:       #8C8B96;   /* muted grey text */
+      --danger:      #E5715C;   /* error */
+      --success:     #6FCF97;   /* success */
+
+      /* Gradients */
+      --grad-gold: linear-gradient(135deg, #F2DE9A 0%, #D4AF37 44%, #B8912F 100%);
+      --grad-gold-text: linear-gradient(120deg, #F6E7B0 0%, #D4AF37 55%, #B88A2A 100%);
+
+      /* Type */
+      --font-display: 'Cormorant Garamond', 'Playfair Display', Georgia, 'Times New Roman', serif;
+      --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+      /* Motion */
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* =========================================================
+       2. RESET & BASE
+       ========================================================= */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      font-family: var(--font-ui);
+      color: var(--ivory);
+      background: var(--noir);
+      overflow: hidden;               /* contain the particle field */
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    /* =========================================================
+       3. ANIMATED BACKGROUND (glows + grain)
+       ========================================================= */
+    .bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(140% 120% at 50% -20%, #16130c 0%, transparent 55%),
+        linear-gradient(180deg, #0b0b0f 0%, #08080b 60%, #050506 100%);
+    }
+    .glow {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(90px);
+      opacity: 0.5;
+      will-change: transform;
+    }
+    .glow--1 {
+      width: 46vmax; height: 46vmax;
+      top: -14vmax; left: -8vmax;
+      background: radial-gradient(circle, rgba(212,175,55,0.30), transparent 65%);
+      animation: drift1 26s var(--ease) infinite alternate;
+    }
+    .glow--2 {
+      width: 40vmax; height: 40vmax;
+      bottom: -16vmax; right: -10vmax;
+      background: radial-gradient(circle, rgba(184,138,42,0.26), transparent 66%);
+      animation: drift2 32s var(--ease) infinite alternate;
+    }
+    .glow--3 {
+      width: 30vmax; height: 30vmax;
+      top: 40%; left: 55%;
+      background: radial-gradient(circle, rgba(242,222,154,0.12), transparent 70%);
+      animation: drift3 38s var(--ease) infinite alternate;
+    }
+    @keyframes drift1 { from { transform: translate3d(0,0,0) scale(1); }   to { transform: translate3d(6vmax,4vmax,0) scale(1.12); } }
+    @keyframes drift2 { from { transform: translate3d(0,0,0) scale(1.05); } to { transform: translate3d(-5vmax,-3vmax,0) scale(1); } }
+    @keyframes drift3 { from { transform: translate3d(-3vmax,0,0) scale(1); } to { transform: translate3d(3vmax,-4vmax,0) scale(1.15); } }
+
+    /* Fine film grain for a matte, premium finish */
+    .grain {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.045;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* Floating gold particles (generated in JS) */
+    .particles { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+    .particle {
+      position: absolute;
+      bottom: -14px;
+      left: var(--x);
+      width: var(--s);
+      height: var(--s);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(246,231,176,0.95), rgba(212,175,55,0.15));
+      box-shadow: 0 0 6px rgba(212,175,55,0.55);
+      animation: rise var(--dur) linear var(--delay) infinite;
+      will-change: transform, opacity;
+    }
+    @keyframes rise {
+      0%   { transform: translateY(0) translateX(0);            opacity: 0; }
+      10%  { opacity: var(--pop); }
+      90%  { opacity: var(--pop); }
+      100% { transform: translateY(-112vh) translateX(var(--dx)); opacity: 0; }
+    }
+
+    /* =========================================================
+       4. LOGIN CARD (glassmorphism)
+       ========================================================= */
+    .login {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: 430px;
+      animation: card-in 0.9s var(--ease) both;
+    }
+    @keyframes card-in {
+      from { opacity: 0; transform: translateY(22px) scale(0.985); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .login__card {
+      position: relative;
+      padding: 42px 38px 30px;
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid rgba(212,175,55,0.16);
+      background:
+        radial-gradient(120% 90% at 50% -12%, rgba(212,175,55,0.13), transparent 58%),
+        linear-gradient(160deg, rgba(255,255,255,0.055), rgba(255,255,255,0.015));
+      -webkit-backdrop-filter: blur(24px) saturate(140%);
+      backdrop-filter: blur(24px) saturate(140%);
+      box-shadow:
+        0 30px 80px -24px rgba(0,0,0,0.75),
+        0 1px 0 rgba(255,255,255,0.06) inset,
+        0 0 0 1px rgba(255,255,255,0.02) inset;
+    }
+
+    /* Moving light along the card's top edge — the "brushed metal" signature */
+    .edge-light {
+      position: absolute; top: 0; left: 0; right: 0; height: 1px; overflow: hidden;
+      background: linear-gradient(90deg, transparent, rgba(212,175,55,0.35), transparent);
+    }
+    .edge-light::after {
+      content: ""; position: absolute; top: 0; left: 0; height: 100%; width: 42%;
+      background: linear-gradient(90deg, transparent, var(--gold-hi), transparent);
+      animation: sweep 7s linear infinite;
+    }
+    @keyframes sweep { 0% { transform: translateX(-130%); } 100% { transform: translateX(330%); } }
+
+    /* =========================================================
+       5. BRAND
+       ========================================================= */
+    .brand { text-align: center; margin-bottom: 26px; }
+    .brand__mark {
+      width: 54px; height: 54px; margin: 0 auto 16px;
+      display: grid; place-items: center;
+      border-radius: 15px;
+      background: linear-gradient(160deg, rgba(212,175,55,0.16), rgba(212,175,55,0.04));
+      border: 1px solid rgba(212,175,55,0.30);
+      box-shadow: 0 8px 22px -10px rgba(212,175,55,0.5), 0 1px 0 rgba(255,255,255,0.08) inset;
+    }
+    .brand__mark svg { width: 26px; height: 26px; display: block; }
+    .brand__name {
+      font-family: var(--font-ui);
+      font-size: 25px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      background: var(--grad-gold-text);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: var(--gold);
+    }
+    .brand__tag {
+      margin-top: 7px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* =========================================================
+       6. HEADINGS
+       ========================================================= */
+    .heading {
+      margin: 0;
+      text-align: center;
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 42px;
+      line-height: 1.05;
+      letter-spacing: 0.01em;
+      color: var(--ivory);
+    }
+    .subheading {
+      margin: 10px 0 26px;
+      text-align: center;
+      font-size: 14.5px;
+      font-weight: 300;
+      color: var(--muted);
+    }
+
+    /* =========================================================
+       7. MESSAGE AREAS (error / success)
+       ========================================================= */
+    .alert {
+      display: none;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 18px;
+      padding: 12px 14px;
+      font-size: 13.5px;
+      line-height: 1.4;
+      border-radius: 12px;
+      border: 1px solid transparent;
+    }
+    .alert.is-visible { display: flex; animation: alert-in 0.32s var(--ease); }
+    .alert svg { flex: 0 0 auto; width: 17px; height: 17px; margin-top: 1px; }
+    .alert--error   { color: #f3b6a9; background: rgba(229,113,92,0.10);  border-color: rgba(229,113,92,0.32); }
+    .alert--success { color: #b7e8c9; background: rgba(111,207,151,0.10); border-color: rgba(111,207,151,0.32); }
+    .alert--error.is-shake { animation: alert-in 0.32s var(--ease), shake 0.4s var(--ease); }
+    @keyframes alert-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(5px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(3px)} }
+
+    /* =========================================================
+       8. FORM FIELDS
+       ========================================================= */
+    .field { margin-bottom: 18px; }
+    .field__label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .input-wrap { position: relative; }
+    .input-wrap > .icon-lead {
+      position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
+      width: 18px; height: 18px; color: var(--muted); pointer-events: none;
+      transition: color 0.25s var(--ease);
+    }
+    .field__input {
+      width: 100%;
+      height: 50px;
+      padding: 0 16px 0 44px;
+      font-family: var(--font-ui);
+      font-size: 15px;
+      color: var(--ivory);
+      background: var(--charcoal-2);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 13px;
+      outline: none;
+      transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease), background 0.25s var(--ease);
+    }
+    .field__input::placeholder { color: #6a6a74; }
+    .field__input:hover { border-color: rgba(255,255,255,0.16); }
+    .field__input:focus {
+      border-color: rgba(212,175,55,0.65);
+      background: #1e1e26;
+      box-shadow: 0 0 0 3px rgba(212,175,55,0.16);
+    }
+    .input-wrap:focus-within > .icon-lead { color: var(--gold); }
+    /* Password field leaves room for the toggle button */
+    .field__input--password { padding-right: 46px; }
+
+    .toggle-pass {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      width: 34px; height: 34px; display: grid; place-items: center;
+      background: transparent; border: 0; border-radius: 9px; cursor: pointer;
+      color: var(--muted); transition: color 0.2s var(--ease), background 0.2s var(--ease);
+    }
+    .toggle-pass:hover { color: var(--gold-hi); background: rgba(255,255,255,0.05); }
+    .toggle-pass svg { width: 19px; height: 19px; }
+    .toggle-pass .icon-hide { display: none; }
+    .toggle-pass.is-showing .icon-show { display: none; }
+    .toggle-pass.is-showing .icon-hide { display: block; }
+
+    /* =========================================================
+       9. OPTIONS ROW (remember / forgot)
+       ========================================================= */
+    .options {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 6px 0 24px;
+      font-size: 13.5px;
+    }
+    .remember { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; color: var(--muted); user-select: none; }
+    .remember input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .remember__box {
+      width: 18px; height: 18px; border-radius: 6px; flex: 0 0 auto;
+      border: 1px solid rgba(255,255,255,0.22);
+      background: var(--charcoal-2);
+      display: grid; place-items: center;
+      transition: background 0.2s var(--ease), border-color 0.2s var(--ease);
+    }
+    .remember__box svg { width: 12px; height: 12px; opacity: 0; transform: scale(0.6); transition: opacity 0.2s var(--ease), transform 0.2s var(--ease); color: #16130c; }
+    .remember input:checked + .remember__box { background: var(--grad-gold); border-color: transparent; }
+    .remember input:checked + .remember__box svg { opacity: 1; transform: scale(1); }
+    .remember input:focus-visible + .remember__box { box-shadow: 0 0 0 3px rgba(212,175,55,0.25); }
+    .remember:hover .remember__box { border-color: rgba(212,175,55,0.5); }
+
+    .forgot {
+      color: var(--gold);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s var(--ease);
+      white-space: nowrap;
+    }
+    .forgot:hover { color: var(--gold-hi); text-decoration: underline; text-underline-offset: 3px; }
+
+    /* =========================================================
+       10. LOGIN BUTTON (gold gradient + loading spinner)
+       ========================================================= */
+    .btn-login {
+      position: relative;
+      width: 100%;
+      height: 52px;
+      border: 0;
+      border-radius: 13px;
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: #1a1408;
+      background: var(--grad-gold);
+      background-size: 160% 160%;
+      background-position: 0% 50%;
+      overflow: hidden;
+      box-shadow: 0 12px 30px -10px rgba(212,175,55,0.55), 0 1px 0 rgba(255,255,255,0.35) inset;
+      transition: transform 0.18s var(--ease), box-shadow 0.25s var(--ease), background-position 0.5s var(--ease), filter 0.2s var(--ease);
+    }
+    .btn-login:hover:not(:disabled) {
+      background-position: 100% 50%;
+      transform: translateY(-2px);
+      box-shadow: 0 18px 40px -10px rgba(212,175,55,0.7), 0 1px 0 rgba(255,255,255,0.4) inset;
+    }
+    .btn-login:active:not(:disabled) { transform: translateY(0) scale(0.985); }
+    .btn-login:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(8,8,11,1), 0 0 0 5px rgba(212,175,55,0.7); }
+    .btn-login:disabled { cursor: not-allowed; }
+    /* subtle moving sheen across the button */
+    .btn-login::before {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.45) 50%, transparent 70%);
+      transform: translateX(-120%);
+    }
+    .btn-login:hover:not(:disabled)::before { animation: shine 0.9s var(--ease); }
+    @keyframes shine { to { transform: translateX(120%); } }
+
+    .btn-login__label { position: relative; z-index: 1; transition: opacity 0.2s var(--ease); }
+    .btn-login__spinner {
+      position: absolute; top: 50%; left: 50%; margin: -10px 0 0 -10px;
+      width: 20px; height: 20px; border-radius: 50%;
+      border: 2.5px solid rgba(26,20,8,0.35);
+      border-top-color: #1a1408;
+      opacity: 0; z-index: 1;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn-login.is-loading { filter: saturate(0.9); }
+    .btn-login.is-loading .btn-login__label { opacity: 0; }
+    .btn-login.is-loading .btn-login__spinner { opacity: 1; }
+
+    /* =========================================================
+       11. FOOTER
+       ========================================================= */
+    .card-footer {
+      margin-top: 26px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      text-align: center;
+    }
+    .card-footer p { margin: 0; font-size: 12px; color: #6f6f79; line-height: 1.6; }
+    .card-footer p:first-child { color: var(--muted); }
+
+    /* =========================================================
+       12. RESPONSIVE
+       ========================================================= */
+    @media (max-width: 480px) {
+      body { padding: 16px; }
+      .login__card { padding: 34px 24px 26px; border-radius: 20px; }
+      .heading { font-size: 36px; }
+      .subheading { font-size: 14px; }
+      .options { font-size: 13px; }
+    }
+    @media (max-width: 340px) {
+      .options { flex-direction: column; align-items: flex-start; gap: 12px; }
+    }
+
+    /* =========================================================
+       13. ACCESSIBILITY — reduced motion
+       ========================================================= */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition-duration: 0.001ms !important; }
+      .glow { opacity: 0.4; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- ===== Animated background ===== -->
+  <div class="bg" aria-hidden="true">
+    <span class="glow glow--1"></span>
+    <span class="glow glow--2"></span>
+    <span class="glow glow--3"></span>
+  </div>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="particles" id="particles" aria-hidden="true"></div>
+
+  <!-- ===== Login ===== -->
+  <main class="login">
+    <section class="login__card">
+      <span class="edge-light" aria-hidden="true"></span>
+
+      <!-- Brand -->
+      <div class="brand">
+        <div class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="markGold" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#F6E7B0" />
+                <stop offset="0.55" stop-color="#D4AF37" />
+                <stop offset="1" stop-color="#B88A2A" />
+              </linearGradient>
+            </defs>
+            <!-- four-point sparkle: the "AI" spark -->
+            <path d="M12 1.5c.5 4.7 1.8 6 6.5 6.5-4.7.5-6 1.8-6.5 6.5-.5-4.7-1.8-6-6.5-6.5 4.7-.5 6-1.8 6.5-6.5Z" transform="translate(0 2.5)" fill="url(#markGold)"/>
+            <path d="M18.5 15.2c.25 2 .8 2.55 2.8 2.8-2 .25-2.55.8-2.8 2.8-.25-2-.8-2.55-2.8-2.8 2-.25 2.55-.8 2.8-2.8Z" fill="url(#markGold)"/>
+          </svg>
+        </div>
+        <div class="brand__name">Retail AI</div>
+        <div class="brand__tag">For Store Teams</div>
+      </div>
+
+      <!-- Headings -->
+      <h1 class="heading">Welcome Back</h1>
+      <p class="subheading">Sign in to access your Retail AI tools.</p>
+
+      <!-- Message areas -->
+      <div class="alert alert--error" id="errorBox" role="alert" aria-live="assertive">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="errorText"></span>
+      </div>
+      <div class="alert alert--success" id="successBox" role="status" aria-live="polite">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M20 6 9 17l-5-5"/>
+        </svg>
+        <span id="successText"></span>
+      </div>
+
+      <!-- Form -->
+      <form id="loginForm" novalidate>
+        <!-- Email -->
+        <div class="field">
+          <label class="field__label" for="email">Email Address</label>
+          <div class="input-wrap">
+            <svg class="icon-lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7 8.5 6 8.5-6"/>
+            </svg>
+            <input
+              class="field__input"
+              type="email"
+              id="email"
+              name="email"
+              placeholder="you@company.com"
+              autocomplete="username"
+              inputmode="email"
+              spellcheck="false"
+              required
+            />
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="field">
+          <label class="field__label" for="password">Password</label>
+          <div class="input-wrap">
+            <svg class="icon-lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>
+            </svg>
+            <input
+              class="field__input field__input--password"
+              type="password"
+              id="password"
+              name="password"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              required
+            />
+            <button type="button" class="toggle-pass" id="togglePass" aria-label="Show password" aria-pressed="false">
+              <!-- eye (show) -->
+              <svg class="icon-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+              <!-- eye-off (hide) -->
+              <svg class="icon-hide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M9.9 5.2A9.7 9.7 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.1 3.9M6.1 6.1A17 17 0 0 0 2 12s3.6 7 10 7a9.7 9.7 0 0 0 4.1-.9"/><path d="m4 4 16 16"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Options -->
+        <div class="options">
+          <label class="remember">
+            <input type="checkbox" id="remember" />
+            <span class="remember__box" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            </span>
+            <span>Remember me</span>
+          </label>
+          <a class="forgot" href="#" id="forgotLink">Forgot password?</a>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" class="btn-login" id="loginBtn">
+          <span class="btn-login__label" id="loginBtnLabel">Login</span>
+          <span class="btn-login__spinner" aria-hidden="true"></span>
+        </button>
+      </form>
+
+      <!-- Footer -->
+      <footer class="card-footer">
+        <p>© 2026 Retail AI</p>
+        <p>Built for Store Teams</p>
+      </footer>
+    </section>
+  </main>
+
+  <script>
+    "use strict";
+
+    /* =========================================================
+       CONFIG
+       ---------------------------------------------------------
+       Demo credentials live here only. When you move to Firebase,
+       you can delete these three lines — nothing else references
+       them except the demo body of authenticateUser().
+       ========================================================= */
+    const DEMO_EMAIL    = "admin@retailai.com";
+    const DEMO_PASSWORD = "Retail@123";
+    const REDIRECT_URL  = "index.html";
+    const REMEMBER_KEY  = "retailai_remember_email";
+    const EMAIL_RE      = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    /* =========================================================
+       CACHED ELEMENTS
+       ========================================================= */
+    const form         = document.getElementById("loginForm");
+    const emailInput   = document.getElementById("email");
+    const passwordInput= document.getElementById("password");
+    const rememberBox  = document.getElementById("remember");
+    const loginBtn     = document.getElementById("loginBtn");
+    const togglePassBtn= document.getElementById("togglePass");
+    const errorBox     = document.getElementById("errorBox");
+    const errorText    = document.getElementById("errorText");
+    const successBox   = document.getElementById("successBox");
+    const successText  = document.getElementById("successText");
+    const forgotLink   = document.getElementById("forgotLink");
+
+    /* =========================================================
+       validateForm()
+       Reads the current field values, validates them, and shows
+       a specific error if something is off. Returns true/false.
+       ========================================================= */
+    function validateForm() {
+      const email    = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      if (!email && !password) {
+        showError("Enter your email and password to continue.");
+        emailInput.focus();
+        return false;
+      }
+      if (!email) {
+        showError("Enter your email address.");
+        emailInput.focus();
+        return false;
+      }
+      if (!EMAIL_RE.test(email)) {
+        showError("Enter a valid email address.");
+        emailInput.focus();
+        return false;
+      }
+      if (!password) {
+        showError("Enter your password.");
+        passwordInput.focus();
+        return false;
+      }
+      return true;
+    }
+
+    /* =========================================================
+       showError(message)
+       ========================================================= */
+    function showError(message) {
+      hideMessages();
+      errorText.textContent = message;
+      errorBox.classList.add("is-visible", "is-shake");
+      // allow the shake animation to re-trigger on the next error
+      setTimeout(() => errorBox.classList.remove("is-shake"), 500);
+    }
+
+    /* =========================================================
+       showSuccess(message)
+       ========================================================= */
+    function showSuccess(message) {
+      hideMessages();
+      successText.textContent = message;
+      successBox.classList.add("is-visible");
+    }
+
+    /* Hide both message areas. */
+    function hideMessages() {
+      errorBox.classList.remove("is-visible");
+      successBox.classList.remove("is-visible");
+    }
+
+    /* =========================================================
+       togglePassword()
+       ========================================================= */
+    function togglePassword() {
+      const showing = passwordInput.type === "text";
+      passwordInput.type = showing ? "password" : "text";
+      togglePassBtn.classList.toggle("is-showing", !showing);
+      togglePassBtn.setAttribute("aria-pressed", String(!showing));
+      togglePassBtn.setAttribute("aria-label", showing ? "Show password" : "Hide password");
+      passwordInput.focus();
+    }
+
+    /* =========================================================
+       showLoading(isLoading)
+       Locks the form and shows the spinner while signing in.
+       ========================================================= */
+    function showLoading(isLoading) {
+      loginBtn.classList.toggle("is-loading", isLoading);
+      loginBtn.disabled   = isLoading;
+      emailInput.disabled = isLoading;
+      passwordInput.disabled = isLoading;
+      togglePassBtn.disabled = isLoading;
+    }
+
+    /* =========================================================
+       authenticateUser(email, password)  →  Promise
+       ---------------------------------------------------------
+       DEMO IMPLEMENTATION. Resolves on success, rejects with an
+       Error on failure — the same shape Firebase returns, so the
+       rest of the page keeps working after you swap it.
+
+       To connect Firebase Authentication, replace the body of
+       this function with:
+
+           import { getAuth, signInWithEmailAndPassword }
+               from "firebase/auth";
+           const auth = getAuth();
+           return signInWithEmailAndPassword(auth, email, password);
+
+       No other changes are required — handleLogin() already
+       awaits this promise and handles loading, success, errors
+       and the redirect.
+       ========================================================= */
+    function authenticateUser(email, password) {
+      return new Promise((resolve, reject) => {
+        // Simulated network latency so the loading state is visible.
+        setTimeout(() => {
+          if (email.toLowerCase() === DEMO_EMAIL && password === DEMO_PASSWORD) {
+            resolve({ email: email });
+          } else {
+            reject(new Error("Invalid Email or Password"));
+          }
+        }, 1100);
+      });
+    }
+
+    /* =========================================================
+       handleLogin(event)
+       Orchestrates validation → loading → auth → redirect.
+       ========================================================= */
+    async function handleLogin(event) {
+      event.preventDefault();
+      hideMessages();
+
+      if (!validateForm()) return;
+
+      const email    = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      showLoading(true);
+
+      try {
+        await authenticateUser(email, password);
+        rememberEmail(email);
+        showSuccess("Signed in. Taking you to your dashboard…");
+        // brief pause so the success state is visible before redirect
+        setTimeout(() => { window.location.href = REDIRECT_URL; }, 950);
+      } catch (err) {
+        showLoading(false);
+        showError(err.message || "Invalid Email or Password");
+        passwordInput.focus();
+        passwordInput.select();
+      }
+    }
+
+    /* =========================================================
+       REMEMBER ME (localStorage, safely wrapped)
+       ========================================================= */
+    function rememberEmail(email) {
+      try {
+        if (rememberBox.checked) {
+          localStorage.setItem(REMEMBER_KEY, email);
+        } else {
+          localStorage.removeItem(REMEMBER_KEY);
+        }
+      } catch (e) { /* storage unavailable — ignore */ }
+    }
+
+    function loadRememberedEmail() {
+      try {
+        const saved = localStorage.getItem(REMEMBER_KEY);
+        if (saved) {
+          emailInput.value = saved;
+          rememberBox.checked = true;
+          passwordInput.focus();
+          return;
+        }
+      } catch (e) { /* storage unavailable — ignore */ }
+      emailInput.focus();
+    }
+
+    /* =========================================================
+       FLOATING PARTICLES (skipped when reduced motion is on)
+       ========================================================= */
+    function buildParticles() {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      const layer = document.getElementById("particles");
+      const COUNT = 26;
+      const frag = document.createDocumentFragment();
+
+      for (let i = 0; i < COUNT; i++) {
+        const p = document.createElement("span");
+        p.className = "particle";
+        const size = (Math.random() * 2.4 + 1).toFixed(2);        // 1–3.4px
+        const dur  = (Math.random() * 14 + 16).toFixed(1);        // 16–30s
+        const delay= (-Math.random() * 30).toFixed(1);            // start mid-flight
+        const drift= (Math.random() * 80 - 40).toFixed(0);        // -40..40px sway
+        const pop  = (Math.random() * 0.4 + 0.35).toFixed(2);     // peak opacity
+        p.style.setProperty("--x",    (Math.random() * 100).toFixed(2) + "%");
+        p.style.setProperty("--s",    size + "px");
+        p.style.setProperty("--dur",  dur + "s");
+        p.style.setProperty("--delay",delay + "s");
+        p.style.setProperty("--dx",   drift + "px");
+        p.style.setProperty("--pop",  pop);
+        frag.appendChild(p);
+      }
+      layer.appendChild(frag);
+    }
+
+    /* =========================================================
+       EVENT WIRING
+       ========================================================= */
+    form.addEventListener("submit", handleLogin);
+    togglePassBtn.addEventListener("click", togglePassword);
+
+    // Clear any visible error as soon as the user starts fixing things.
+    [emailInput, passwordInput].forEach((el) =>
+      el.addEventListener("input", () => {
+        if (errorBox.classList.contains("is-visible")) hideMessages();
+      })
+    );
+
+    // Placeholder for the (future) password-reset flow.
+    forgotLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      showError("Password reset isn’t wired up yet — this will open the reset flow once connected.");
+    });
+
+    // Init
+    buildParticles();
+    loadRememberedEmail();
+  </script>
+</body>
+</html>
