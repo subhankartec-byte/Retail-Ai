@@ -729,7 +729,10 @@
         rememberEmail(email);
         showSuccess("Signed in. Taking you to your dashboard…");
         // brief pause so the success state is visible before redirect
-        setTimeout(() => { window.location.href = REDIRECT_URL; }, 950);
+        localStorage.setItem("loggedIn","true");
+setTimeout(() => {
+    window.location.href = REDIRECT_URL;
+}, 950);
       } catch (err) {
         showLoading(false);
         showError(err.message || "Invalid Email or Password");
