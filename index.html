@@ -1680,5 +1680,15 @@ $('#year').textContent = new Date().getFullYear();
 })();
 </script>
 
+   <script>
+function openProtectedTool(page) {
+    if (localStorage.getItem("loggedIn") === "true") {
+        window.location.href = page;
+    } else {
+        localStorage.setItem("redirectAfterLogin", page);
+        window.location.href = "login.html";
+    }
+}
+</script>
 </body>
 </html>
