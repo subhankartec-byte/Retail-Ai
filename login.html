@@ -731,7 +731,7 @@
         // brief pause so the success state is visible before redirect
         localStorage.setItem("loggedIn","true");
 setTimeout(() => {
-    window.location.href = REDIRECT_URL;
+    const nextPage = localStorage.getItem("redirectAfterLogin") || REDIRECT_URL; localStorage.removeItem("redirectAfterLogin"); window.location.href = nextPage;
 }, 950);
       } catch (err) {
         showLoading(false);
