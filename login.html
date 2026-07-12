@@ -50,13 +50,12 @@
       margin: 0;
       min-height: 100dvh;
       display: flex;
-      align-items: center;
-      justify-content: center;
       padding: 24px;
       font-family: var(--font-ui);
       color: var(--ivory);
       background: var(--noir);
-      overflow: hidden;               /* contain the particle field */
+      overflow-y: auto;               /* card can scroll on short screens */
+      overflow-x: hidden;             /* contain the particle field */
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
     }
@@ -141,12 +140,16 @@
       z-index: 2;
       width: 100%;
       max-width: 430px;
+      margin: auto;                    /* safe centering, scrolls when tall */
       animation: card-in 0.9s var(--ease) both;
     }
     @keyframes card-in {
       from { opacity: 0; transform: translateY(22px) scale(0.985); }
       to   { opacity: 1; transform: translateY(0) scale(1); }
     }
+    /* Card stays hidden until Firebase reports auth state (auto-login).
+       A 2.5s fallback in <head> reveals it even if Firebase can't load. */
+    html.auth-pending .login { animation-play-state: paused; }
 
     .login__card {
       position: relative;
@@ -397,7 +400,24 @@
     .btn-login.is-loading .btn-login__spinner { opacity: 1; }
 
     /* =========================================================
-       11. FOOTER
+       11. SWITCH LINK (create account)
+       ========================================================= */
+    .switch-auth {
+      margin: 20px 0 0;
+      text-align: center;
+      font-size: 13.5px;
+      color: var(--muted);
+    }
+    .switch-auth a {
+      color: var(--gold);
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.2s var(--ease);
+    }
+    .switch-auth a:hover { color: var(--gold-hi); text-decoration: underline; text-underline-offset: 3px; }
+
+    /* =========================================================
+       12. FOOTER
        ========================================================= */
     .card-footer {
       margin-top: 26px;
@@ -409,7 +429,7 @@
     .card-footer p:first-child { color: var(--muted); }
 
     /* =========================================================
-       12. RESPONSIVE
+       13. RESPONSIVE
        ========================================================= */
     @media (max-width: 480px) {
       body { padding: 16px; }
@@ -417,13 +437,14 @@
       .heading { font-size: 36px; }
       .subheading { font-size: 14px; }
       .options { font-size: 13px; }
+      .field__input { font-size: 16px; }   /* prevents iOS focus-zoom */
     }
     @media (max-width: 340px) {
       .options { flex-direction: column; align-items: flex-start; gap: 12px; }
     }
 
     /* =========================================================
-       13. ACCESSIBILITY — reduced motion
+       14. ACCESSIBILITY — reduced motion
        ========================================================= */
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation: none !important; transition-duration: 0.001ms !important; }
@@ -431,31 +452,16 @@
     }
   </style>
 
-  <script type="module">
-
- 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-import {
-  getAuth,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyBOtg8GlsffmCdSlSLff1LjRIYOG2ApeHw",
-  authDomain: "retail-ai-2c674.firebaseapp.com",
-  projectId: "retail-ai-2c674",
-  storageBucket: "retail-ai-2c674.firebasestorage.app",
-  messagingSenderId: "459591695672",
-  appId: "1:459591695672:web:f276e98941dc38924ad5cd",
-  measurementId: "G-N9J4TPW3VF"
-};
-    const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-</script>
-  
+  <script>
+    /* Anti-flash for auto-login: keep the card's entrance animation
+       paused until Firebase reports the auth state. The 2.5s timer is
+       a safety net — the form always appears even if Firebase is
+       unreachable (offline / blocked CDN). */
+    document.documentElement.classList.add("auth-pending");
+    setTimeout(function () {
+      document.documentElement.classList.remove("auth-pending");
+    }, 2500);
+  </script>
 </head>
 
 <body>
@@ -463,7 +469,6 @@ const auth = getAuth(app);
   <div class="bg" aria-hidden="true">
     <span class="glow glow--1"></span>
     <span class="glow glow--2"></span>
-       
     <span class="glow glow--3"></span>
   </div>
   <div class="grain" aria-hidden="true"></div>
@@ -573,7 +578,7 @@ const auth = getAuth(app);
             </span>
             <span>Remember me</span>
           </label>
-          <a class="forgot" href="#" id="forgotLink">Forgot password?</a>
+          <a class="forgot" href="forgot-password.html">Forgot password?</a>
         </div>
 
         <!-- Submit -->
@@ -582,6 +587,9 @@ const auth = getAuth(app);
           <span class="btn-login__spinner" aria-hidden="true"></span>
         </button>
       </form>
+
+      <!-- Switch to signup -->
+      <p class="switch-auth">Don't have an account? <a href="signup.html">Create Account</a></p>
 
       <!-- Footer -->
       <footer class="card-footer">
@@ -592,53 +600,65 @@ const auth = getAuth(app);
   </main>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-
-import {
-  getAuth,
-  signInWithEmailAndPassword
-} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBOtg8GlsffmCdSlSLff1LjRIYOG2ApeHw",
-  authDomain: "retail-ai-2c674.firebaseapp.com",
-  projectId: "retail-ai-2c674",
-  storageBucket: "retail-ai-2c674.firebasestorage.app",
-  messagingSenderId: "459591695672",
-  appId: "1:459591695672:web:f276e98941dc38924ad5cd",
-  measurementId: "G-N9J4TPW3VF"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-    "use strict";
+    /* =========================================================
+       RETAIL AI — LOGIN
+       Firebase Authentication via the shared firebase.js module.
+       Firebase is initialized ONCE (in firebase.js) — never here.
+       ========================================================= */
+    import { auth, db } from "./firebase.js";
+    import {
+      signInWithEmailAndPassword,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+    import {
+      doc,
+      setDoc,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
     /* =========================================================
        CONFIG
-       ---------------------------------------------------------
-       Demo credentials live here only. When you move to Firebase,
-       you can delete these three lines — nothing else references
-       them except the demo body of authenticateUser().
        ========================================================= */
-    
-    const REDIRECT_URL  = "index.html";
-    const REMEMBER_KEY  = "retailai_remember_email";
-    const EMAIL_RE      = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const REDIRECT_URL = "index.html";
+    const REMEMBER_KEY = "retailai_remember_email"; // pre-fills the email field only — never stores auth state
+    const EMAIL_RE     = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     /* =========================================================
        CACHED ELEMENTS
        ========================================================= */
-    const form         = document.getElementById("loginForm");
-    const emailInput   = document.getElementById("email");
-    const passwordInput= document.getElementById("password");
-    const rememberBox  = document.getElementById("remember");
-    const loginBtn     = document.getElementById("loginBtn");
-    const togglePassBtn= document.getElementById("togglePass");
-    const errorBox     = document.getElementById("errorBox");
-    const errorText    = document.getElementById("errorText");
-    const successBox   = document.getElementById("successBox");
-    const successText  = document.getElementById("successText");
-    const forgotLink   = document.getElementById("forgotLink");
+    const form          = document.getElementById("loginForm");
+    const emailInput    = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const rememberBox   = document.getElementById("remember");
+    const loginBtn      = document.getElementById("loginBtn");
+    const togglePassBtn = document.getElementById("togglePass");
+    const errorBox      = document.getElementById("errorBox");
+    const errorText     = document.getElementById("errorText");
+    const successBox    = document.getElementById("successBox");
+    const successText   = document.getElementById("successText");
+
+    /* True while a manual sign-in is in flight, so the auth
+       observer below doesn't redirect before the success state
+       and Firestore update have finished. */
+    let isAuthenticating = false;
+
+    /* =========================================================
+       AUTO LOGIN — onAuthStateChanged()
+       Already-signed-in users never see this page: they are
+       redirected immediately, before the card is revealed.
+       ========================================================= */
+    onAuthStateChanged(auth, (user) => {
+      if (user && !isAuthenticating) {
+        window.location.replace(getRedirectTarget());
+        return;
+      }
+      if (!user) revealPage();
+    });
+
+    /* Reveal the card once we know the visitor is signed out. */
+    function revealPage() {
+      document.documentElement.classList.remove("auth-pending");
+    }
 
     /* =========================================================
        validateForm()
@@ -699,15 +719,17 @@ const auth = getAuth(app);
     }
 
     /* =========================================================
-       togglePassword()
+       togglePassword() — show/hide via wirePasswordToggle()
        ========================================================= */
-    function togglePassword() {
-      const showing = passwordInput.type === "text";
-      passwordInput.type = showing ? "password" : "text";
-      togglePassBtn.classList.toggle("is-showing", !showing);
-      togglePassBtn.setAttribute("aria-pressed", String(!showing));
-      togglePassBtn.setAttribute("aria-label", showing ? "Show password" : "Hide password");
-      passwordInput.focus();
+    function wirePasswordToggle(input, btn) {
+      btn.addEventListener("click", () => {
+        const show = input.type === "password";
+        input.type = show ? "text" : "password";
+        btn.classList.toggle("is-showing", show);
+        btn.setAttribute("aria-pressed", String(show));
+        btn.setAttribute("aria-label", show ? "Hide password" : "Show password");
+        input.focus();
+      });
     }
 
     /* =========================================================
@@ -716,38 +738,76 @@ const auth = getAuth(app);
        ========================================================= */
     function showLoading(isLoading) {
       loginBtn.classList.toggle("is-loading", isLoading);
-      loginBtn.disabled   = isLoading;
-      emailInput.disabled = isLoading;
+      loginBtn.disabled      = isLoading;
+      emailInput.disabled    = isLoading;
       passwordInput.disabled = isLoading;
       togglePassBtn.disabled = isLoading;
     }
 
     /* =========================================================
-       authenticateUser(email, password)  →  Promise
-       ---------------------------------------------------------
-       DEMO IMPLEMENTATION. Resolves on success, rejects with an
-       Error on failure — the same shape Firebase returns, so the
-       rest of the page keeps working after you swap it.
-
-       To connect Firebase Authentication, replace the body of
-       this function with:
-
-           import { getAuth, signInWithEmailAndPassword }
-               from "firebase/auth";
-           const auth = getAuth();
-           return signInWithEmailAndPassword(auth, email, password);
-
-       No other changes are required — handleLogin() already
-       awaits this promise and handles loading, success, errors
-       and the redirect.
+       friendlyAuthError(err)
+       Maps Firebase error codes to human-friendly messages.
        ========================================================= */
-    function authenticateUser(email, password) {
-      return signInWithEmailAndPassword(auth, email, password);
+    function friendlyAuthError(err) {
+      switch (err && err.code) {
+        case "auth/invalid-credential":
+        case "auth/user-not-found":
+        case "auth/wrong-password":
+          return "Invalid Email or Password";
+        case "auth/invalid-email":
+          return "Enter a valid email address.";
+        case "auth/user-disabled":
+          return "This account has been disabled. Contact your administrator.";
+        case "auth/too-many-requests":
+          return "Too many attempts. Please wait a minute and try again.";
+        case "auth/network-request-failed":
+          return "Network error. Check your connection and try again.";
+        default:
+          return "Couldn't sign you in. Please try again.";
+      }
+    }
+
+    /* =========================================================
+       touchLastLogin(user)
+       Updates users/{uid}.lastLogin in Firestore. Uses a merge
+       so it also works for accounts created directly in the
+       Firebase console (which have no profile document yet).
+       Non-blocking: a Firestore failure never stops the login.
+       ========================================================= */
+    async function touchLastLogin(user) {
+      try {
+        await setDoc(
+          doc(db, "users", user.uid),
+          { email: user.email, lastLogin: serverTimestamp() },
+          { merge: true }
+        );
+      } catch (e) {
+        console.warn("Could not update lastLogin:", e);
+      }
+    }
+
+    /* =========================================================
+       getRedirectTarget()
+       Returns the page the user originally wanted (saved by
+       auth-guard.js) or index.html, and clears the stored value.
+       ========================================================= */
+    function getRedirectTarget() {
+      let target = REDIRECT_URL;
+      try {
+        target =
+          sessionStorage.getItem("redirectAfterLogin") ||
+          localStorage.getItem("redirectAfterLogin") ||
+          REDIRECT_URL;
+        sessionStorage.removeItem("redirectAfterLogin");
+        localStorage.removeItem("redirectAfterLogin");
+      } catch (e) { /* storage unavailable — ignore */ }
+      return target;
     }
 
     /* =========================================================
        handleLogin(event)
-       Orchestrates validation → loading → auth → redirect.
+       Orchestrates validation → loading → Firebase auth →
+       lastLogin update → success → redirect.
        ========================================================= */
     async function handleLogin(event) {
       event.preventDefault();
@@ -758,27 +818,34 @@ const auth = getAuth(app);
       const email    = emailInput.value.trim();
       const password = passwordInput.value;
 
+      isAuthenticating = true;
       showLoading(true);
 
       try {
-        await authenticateUser(email, password);
+        const credential = await signInWithEmailAndPassword(auth, email, password);
+
+        await touchLastLogin(credential.user);
         rememberEmail(email);
+
         showSuccess("Signed in. Taking you to your dashboard…");
         // brief pause so the success state is visible before redirect
-        localStorage.setItem("loggedIn","true");
-setTimeout(() => {
-    const nextPage = localStorage.getItem("redirectAfterLogin") || REDIRECT_URL; localStorage.removeItem("redirectAfterLogin"); window.location.href = nextPage;
-}, 950);
+        setTimeout(() => {
+          window.location.replace(getRedirectTarget());
+        }, 950);
       } catch (err) {
+        isAuthenticating = false;
         showLoading(false);
-        showError(err.message || "Invalid Email or Password");
+        showError(friendlyAuthError(err));
         passwordInput.focus();
         passwordInput.select();
       }
     }
 
     /* =========================================================
-       REMEMBER ME (localStorage, safely wrapped)
+       REMEMBER ME
+       Stores ONLY the email address for pre-filling the field.
+       Authentication state itself is handled exclusively by
+       Firebase Authentication — never by localStorage.
        ========================================================= */
     function rememberEmail(email) {
       try {
@@ -815,17 +882,17 @@ setTimeout(() => {
       for (let i = 0; i < COUNT; i++) {
         const p = document.createElement("span");
         p.className = "particle";
-        const size = (Math.random() * 2.4 + 1).toFixed(2);        // 1–3.4px
-        const dur  = (Math.random() * 14 + 16).toFixed(1);        // 16–30s
-        const delay= (-Math.random() * 30).toFixed(1);            // start mid-flight
-        const drift= (Math.random() * 80 - 40).toFixed(0);        // -40..40px sway
-        const pop  = (Math.random() * 0.4 + 0.35).toFixed(2);     // peak opacity
-        p.style.setProperty("--x",    (Math.random() * 100).toFixed(2) + "%");
-        p.style.setProperty("--s",    size + "px");
-        p.style.setProperty("--dur",  dur + "s");
-        p.style.setProperty("--delay",delay + "s");
-        p.style.setProperty("--dx",   drift + "px");
-        p.style.setProperty("--pop",  pop);
+        const size  = (Math.random() * 2.4 + 1).toFixed(2);   // 1–3.4px
+        const dur   = (Math.random() * 14 + 16).toFixed(1);   // 16–30s
+        const delay = (-Math.random() * 30).toFixed(1);       // start mid-flight
+        const drift = (Math.random() * 80 - 40).toFixed(0);   // -40..40px sway
+        const pop   = (Math.random() * 0.4 + 0.35).toFixed(2);// peak opacity
+        p.style.setProperty("--x",     (Math.random() * 100).toFixed(2) + "%");
+        p.style.setProperty("--s",     size + "px");
+        p.style.setProperty("--dur",   dur + "s");
+        p.style.setProperty("--delay", delay + "s");
+        p.style.setProperty("--dx",    drift + "px");
+        p.style.setProperty("--pop",   pop);
         frag.appendChild(p);
       }
       layer.appendChild(frag);
@@ -835,7 +902,7 @@ setTimeout(() => {
        EVENT WIRING
        ========================================================= */
     form.addEventListener("submit", handleLogin);
-    togglePassBtn.addEventListener("click", togglePassword);
+    wirePasswordToggle(passwordInput, togglePassBtn);
 
     // Clear any visible error as soon as the user starts fixing things.
     [emailInput, passwordInput].forEach((el) =>
@@ -843,12 +910,6 @@ setTimeout(() => {
         if (errorBox.classList.contains("is-visible")) hideMessages();
       })
     );
-
-    // Placeholder for the (future) password-reset flow.
-    forgotLink.addEventListener("click", (e) => {
-      e.preventDefault();
-      showError("Password reset isn’t wired up yet — this will open the reset flow once connected.");
-    });
 
     // Init
     buildParticles();
