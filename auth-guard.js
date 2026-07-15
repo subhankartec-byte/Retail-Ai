@@ -27,7 +27,10 @@ import {
 
 /* ---------- 1. Guard: signed-out visitors go to login ---------- */
 onAuthStateChanged(auth, (user) => {
-  if (user) return; // signed in — page may load normally
+  if (user) {
+    injectLogoutChip(); // signed in — page loads normally + Logout button
+    return;
+  }
 
   try {
     const here = (location.pathname.split("/").pop() || "index.html") + location.search;
@@ -36,6 +39,29 @@ onAuthStateChanged(auth, (user) => {
 
   location.replace("login.html");
 });
+
+/* ---------- 1b. Floating Logout chip on protected pages ---------- */
+function injectLogoutChip() {
+  const make = () => {
+    if (document.getElementById("ra-logout-chip")) return;
+    const btn = document.createElement("button");
+    btn.id = "ra-logout-chip";
+    btn.setAttribute("data-logout", "");
+    btn.type = "button";
+    btn.textContent = "Logout";
+    btn.style.cssText =
+      "position:fixed;bottom:18px;right:18px;z-index:2147483000;" +
+      "background:#0A1633;color:#D4AF37;border:1px solid rgba(212,175,55,.55);" +
+      "border-radius:999px;padding:10px 20px;font:600 14px/1 Inter,system-ui,sans-serif;" +
+      "cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.4);letter-spacing:.02em";
+    document.body.appendChild(btn);
+  };
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", make);
+  } else {
+    make();
+  }
+}
 
 /* ---------- 2. Reusable logout ---------- */
 export async function logout() {
