@@ -382,11 +382,6 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("sho
 
 })();
 
-<script>
-if (localStorage.getItem("loggedIn") !== "true") {
-    window.location.href = "login.html";
-}
-</script>
-  
+<script type="module" src="auth-guard.js"></script>
 </body>
 </html>

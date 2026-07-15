@@ -901,7 +901,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
              on the line below with:
              href="SOH_Image_Link_Builder.html"
         =============================================== -->
-        <a href="#" onclick="openProtectedTool('SOH_Image_Link_Builder.html'); return false;" class="tool-btn live tool-link">
+        <a href="SOH_Image_Link_Builder.html" class="tool-btn live tool-link">
           Open Tool
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
         </a>
@@ -922,8 +922,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
              on the line below with:
              href="inventory-validity.html"
         =============================================== -->
-        <a href="#"
-   onclick="openProtectedTool('Inventory_Validity_Console.html'); return false;"
+        <a href="Inventory_Validity_Console.html"
    class="tool-btn live tool-link">
           Open Tool
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
@@ -938,7 +937,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
         </span>
         <h3>SOH Audit</h3>
         <p>Analyse stock holding reports, catch mismatches and reconcile physical counts against system stock in one pass.</p>
-        <a href="#" onclick="openProtectedTool('Inventory_Audit_Toolf1.html'); return false;" class="tool-btn live tool-link">
+        <a href="Inventory_Audit_Toolf1.html" class="tool-btn live tool-link">
     Open Tool
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M5 12h14"></path>
@@ -978,8 +977,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 
     <p>Analyse inter-store transfers, complete broken size runs and consolidate cut pieces where they'll actually sell.</p>
 
-    <a href="#"
-   onclick="openProtectedTool('BlueDart_Etail_Waybill_Builder1.html'); return false;"
+    <a href="BlueDart_Etail_Waybill_Builder1.html"
    class="tool-btn live tool-link">
         Open Tool
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -1687,15 +1685,6 @@ $('#year').textContent = new Date().getFullYear();
 })();
 </script>
 
-   <script>
-function openProtectedTool(page) {
-    if (localStorage.getItem("loggedIn") === "true") {
-        window.location.href = page;
-    } else {
-        localStorage.setItem("redirectAfterLogin", page);
-        window.location.href = "login.html";
-    }
-}
-</script>
+   <script type="module" src="auth-guard.js"></script>
 </body>
 </html>
