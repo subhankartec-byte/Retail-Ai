@@ -762,7 +762,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
       <div class="hero-stats reveal" style="--d:.32s">
         <div class="hstat"><strong>10+</strong><span>AI Tools</span></div>
         <div class="hstat"><strong>800+</strong><span>Styles / Report</span></div>
-        <div class="hstat"><strong>100%</strong><span>Offline &amp; Private</span></div>
+        <div class="hstat"><strong>100%</strong><span>Private &amp; Secure</span></div>
       </div>
     </div>
 
@@ -1236,10 +1236,10 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
         <ul class="plan-list">
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5 10-11"/></svg>5 reports per month</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5 10-11"/></svg>Basic tools</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5 10-11"/></svg>Runs fully offline</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5 10-11"/></svg>Runs in your browser</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5 10-11"/></svg>Community support</li>
         </ul>
-        <a href="#" class="btn btn-ghost" data-coming-soon data-t="Free plan opening soon" data-s="Sign-ups are almost ready. Check back shortly.">Start Free</a>
+        <a href="signup.html" class="btn btn-ghost" data-free-cta>Start Free</a>
       </article>
 
       <!-- PRO — most popular -->
@@ -1363,11 +1363,11 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 
       <div class="faq-item reveal">
         <button class="faq-q" aria-expanded="false">
-          Do the tools really work offline?
+          Is my data uploaded anywhere?
           <span class="faq-chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
         </button>
         <div class="faq-a"><div class="faq-a-inner">
-          <p>Yes. Every Retail AI tool runs entirely in your browser. Once the page is open you can disconnect from the internet completely — perfect for stock rooms and shop floors with patchy connectivity.</p>
+          <p>No. Every Retail AI tool does its processing inside your own browser — your stock files are read on your device and the contents are never sent to our servers. You just need a connection to sign in and load the tool.</p>
         </div></div>
       </div>
 
@@ -1684,28 +1684,6 @@ $('#year').textContent = new Date().getFullYear();
 })();
 </script>
 
-   <script type="module">
-     import { auth } from "./firebase.js";
-     import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-
-     onAuthStateChanged(auth, (user) => {
-       if (!user) return; // signed out — landing stays public, Login / Get Started unchanged
-
-       document.querySelectorAll('a[href="login.html"]').forEach((link) => {
-         link.textContent = "Logout";
-         link.setAttribute("href", "#");
-         link.addEventListener("click", async (e) => {
-           e.preventDefault();
-           try { await signOut(auth); } catch (err) { console.warn(err); }
-           window.location.reload();
-         });
-       });
-
-       document.querySelectorAll('a[href="signup.html"]').forEach((btn) => {
-         btn.textContent = "Open Tools";
-         btn.setAttribute("href", "#tools");
-       });
-     });
-   </script>
+   <script type="module" src="auth-guard.js"></script>
 </body>
 </html>
