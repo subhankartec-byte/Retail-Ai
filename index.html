@@ -729,7 +729,6 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
   <a href="#contact">Contact</a>
   <div class="mm-actions">
     <a href="signup.html" class="btn btn-primary btn-sm">Get Started</a>
-    <a href="#" class="btn btn-primary btn-sm" data-coming-soon data-t="Sign-ups open soon" data-s="We're putting the finishing touches on onboarding.">Get Started</a>
   </div>
 </nav>
 
@@ -1685,6 +1684,28 @@ $('#year').textContent = new Date().getFullYear();
 })();
 </script>
 
-   <script type="module" src="auth-guard.js"></script>
+   <script type="module">
+     import { auth } from "./firebase.js";
+     import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+
+     onAuthStateChanged(auth, (user) => {
+       if (!user) return; // signed out — landing stays public, Login / Get Started unchanged
+
+       document.querySelectorAll('a[href="login.html"]').forEach((link) => {
+         link.textContent = "Logout";
+         link.setAttribute("href", "#");
+         link.addEventListener("click", async (e) => {
+           e.preventDefault();
+           try { await signOut(auth); } catch (err) { console.warn(err); }
+           window.location.reload();
+         });
+       });
+
+       document.querySelectorAll('a[href="signup.html"]').forEach((btn) => {
+         btn.textContent = "Open Tools";
+         btn.setAttribute("href", "#tools");
+       });
+     });
+   </script>
 </body>
 </html>
