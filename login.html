@@ -824,7 +824,11 @@
       try {
         const credential = await signInWithEmailAndPassword(auth, email, password);
 
-        await touchLastLogin(credential.user);
+        // Never let the lastLogin write block the login (2.5s cap)
+        await Promise.race([
+          touchLastLogin(credential.user),
+          new Promise((resolve) => setTimeout(resolve, 2500))
+        ]);
         rememberEmail(email);
 
         showSuccess("Signed in. Taking you to your dashboard…");

@@ -869,7 +869,11 @@
           console.warn("Could not set display name:", e);
         }
 
-        await createUserDocument(user, data);
+        // Never let the profile write block the signup (4s cap)
+        await Promise.race([
+          createUserDocument(user, data),
+          new Promise((resolve) => setTimeout(resolve, 4000))
+        ]);
 
         showSuccess("Account created! Taking you to your dashboard…");
         // Firebase has already signed the new user in automatically.
