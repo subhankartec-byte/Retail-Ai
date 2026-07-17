@@ -200,7 +200,16 @@ function importSOH (rows2D, opts) {
   var headerIdx = hdr.idx;
   var mapped = mapColumns(rows2D, headerIdx);
   var F = mapped.fields;
-  var houseInfo = detectHouse(rows2D, headerIdx, F);
+  if (opts.mapOverride) {                          /* Phase 4: user-confirmed mapping wins */
+    for (var of_ in opts.mapOverride) {
+      var oi = opts.mapOverride[of_];
+      if (oi === -1 || oi === null || oi === undefined) delete F[of_];
+      else F[of_] = { index: oi, header: S((rows2D[headerIdx] || [])[oi]), method: 'override' };
+    }
+  }
+  var houseInfo = opts.houseOverride
+    ? { house: opts.houseOverride, via: 'user override' }
+    : detectHouse(rows2D, headerIdx, F);
   var house = houseInfo.house;
 
   var gi = function (f) { return F[f] ? F[f].index : -1; };
