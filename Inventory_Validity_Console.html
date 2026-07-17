@@ -1018,12 +1018,25 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     cell.border = border(C.grid);
   }
 
+  // ---------------- House detection (Phase 3: multi-brand) ----------------
+  window.HOUSE_PREFIX = "";
+  window.updateHousePrefix = function(rows2D){
+    try{
+      if(window.HOUSE_PREFIX) return;              /* first successful detection wins per file */
+      if(!window.RetailImport || !window.RetailProfiles) return;
+      var hdr = RetailImport.findHeaderRow(rows2D);
+      var mapped = RetailImport.mapColumns(rows2D, hdr.idx);
+      var hi = RetailImport.detectHouse(rows2D, hdr.idx, mapped.fields);
+      window.HOUSE_PREFIX = RetailProfiles.get(hi.house).reportPrefix || "";
+    }catch(e){}
+  };
+
   // ---------------- Summary sheet ----------------
   function addSummary(wb, model, meta) {
     var ws = wb.addWorksheet("Summary", { views: [{ state: "frozen", ySplit: 5 }] });
     var groupLabel = model.multiStore ? "Store" : "Brand";
     var cols = 13;
-    titleBlock(ws, cols, "INVENTORY VALIDITY SUMMARY", meta.subtitle);
+    titleBlock(ws, cols, (window.HOUSE_PREFIX||"") + "INVENTORY VALIDITY SUMMARY", meta.subtitle);
 
     // Band header (row 4) merged per section
     var r1 = 4, r2 = 5;
@@ -1089,7 +1102,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     var cols = headers.length;
 
     var bandColor = opt.band || C.blue;
-    titleBlock(ws, cols, name.toUpperCase(), meta.subtitle + "  •  " + units.length + " styles");
+    titleBlock(ws, cols, (window.HOUSE_PREFIX||"") + name.toUpperCase(), meta.subtitle + "  •  " + units.length + " styles");
     // header band label row 4
     ws.mergeCells(4, 1, 4, cols);
     styleHeaderCell(ws.getCell(4, 1), bandColor, C.white);
@@ -1160,7 +1173,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     var o = model.offer;
     var ws = wb.addWorksheet("Offer Summary", { views: [{ state: "frozen", ySplit: 2 }] });
     var cols = 7;
-    titleBlock(ws, cols, "OFFER / DISCOUNT SUMMARY", meta.subtitle);
+    titleBlock(ws, cols, (window.HOUSE_PREFIX||"") + "OFFER / DISCOUNT SUMMARY", meta.subtitle);
     var rr = 4;
     function sectionTitle(text, bg) {
       ws.mergeCells(rr, 1, rr, cols);
@@ -1232,7 +1245,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     var ws = wb.addWorksheet("Breakdown", { views: [{ state: "frozen", ySplit: 5 }] });
     var headers = ["Brand", "Department", "Styles", "Valid", "Cut Piece", "Free Size", "Qty", "Value"];
     var cols = headers.length;
-    titleBlock(ws, cols, "BREAKDOWN (Brand × Department)", meta.subtitle);
+    titleBlock(ws, cols, (window.HOUSE_PREFIX||"") + "BREAKDOWN (Brand × Department)", meta.subtitle);
     ws.mergeCells(4, 1, 4, cols); styleHeaderCell(ws.getCell(4, 1), C.blue, C.white); ws.getCell(4, 1).value = "STYLE VALIDITY BY BRAND & DEPARTMENT";
     for (var i = 0; i < headers.length; i++) { var cell = ws.getCell(5, i + 1); cell.value = headers[i]; styleHeaderCell(cell, C.navy, C.gold); cell.font = { name: "Calibri", size: 9, bold: true, color: { argb: C.gold } }; }
     var rr = 6;
@@ -1268,7 +1281,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     var ws = wb.addWorksheet("Raw", { views: [{ state: "frozen", ySplit: 3, xSplit: 0 }] });
     var headers = model.headers;
     var cols = Math.max(headers.length, 1);
-    titleBlock(ws, cols, "RAW DATA (as uploaded)", meta.subtitle + "  •  " + model.rawRows.length + " rows");
+    titleBlock(ws, cols, (window.HOUSE_PREFIX||"") + "RAW DATA (as uploaded)", meta.subtitle + "  •  " + model.rawRows.length + " rows");
     for (var i = 0; i < headers.length; i++) { var cell = ws.getCell(3, i + 1); cell.value = headers[i]; styleHeaderCell(cell, C.navy, C.gold); cell.font = { name: "Calibri", size: 9, bold: true, color: { argb: C.gold } }; }
     var rr = 4;
     model.rawRows.forEach(function (row) {
@@ -1364,7 +1377,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     }catch(e){ return new TextDecoder().decode(buf); }
   }
   function aoaFromWorksheet(ws){
-    return XLSX.utils.sheet_to_json(ws,{header:1, raw:true, defval:"", blankrows:false});
+    var rows2D = XLSX.utils.sheet_to_json(ws,{header:1, raw:true, defval:"", blankrows:false});
+    if (window.updateHousePrefix) window.updateHousePrefix(rows2D);
+    return rows2D;
   }
 
   function handleFile(file){
@@ -1378,6 +1393,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         var isZip = bytes[0]===0x50&&bytes[1]===0x4B;                       // PK -> xlsx/xlsm
         var isCFB = bytes[0]===0xD0&&bytes[1]===0xCF&&bytes[2]===0x11&&bytes[3]===0xE0; // legacy .xls
         if(isZip||isCFB){
+          window.HOUSE_PREFIX = "";
           var wb=XLSX.read(bytes,{type:"array",cellDates:false,raw:true});
           wb.SheetNames.forEach(function(nm){ sheets.push({name:nm, aoa:aoaFromWorksheet(wb.Sheets[nm])}); });
         }else{
@@ -1385,6 +1401,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           var head=text.replace(/^\uFEFF/,"").slice(0,400).toLowerCase();
           if(head.indexOf("<table")>=0 || head.indexOf("<html")>=0 || head.indexOf("<!doctype")>=0 || head.indexOf("mime-version")>=0){
             try{
+              window.HOUSE_PREFIX = "";
               var wbh=XLSX.read(text,{type:"string"});
               wbh.SheetNames.forEach(function(nm){ sheets.push({name:nm, aoa:aoaFromWorksheet(wbh.Sheets[nm])}); });
             }catch(e){ sheets.push({name:"Sheet1", aoa:IVC.parseDelimited(text)}); }
@@ -1892,6 +1909,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 })();
 </script>
+<script src="retail-import.js"></script>
+<script src="retail-profiles.js"></script>
 <script type="module" src="auth-guard.js"></script>
 </body>
 </html>
