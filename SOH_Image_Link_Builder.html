@@ -97,8 +97,7 @@ a.plink:hover{color:var(--gold);border-bottom-color:var(--navy)}
         <div class="field"><label for="unknownSel">Unknown brands</label>
           <select id="unknownSel">
             <option value="none">No link (flag only)</option>
-            <option value="w">Route to wforwoman.com</option>
-            <option value="au">Route to shopforaurelia.com</option>
+            <!-- routable options populated from retail-profiles.js -->
           </select>
         </div>
       </div>
@@ -157,21 +156,18 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 (function(){
 "use strict";
 
-/* ---------- brand routing ---------- */
-const W_SET  = new Set(["W","WI","FS","HO","WISHFUL","FOLKSONG","W BRAND","WFORWOMAN"]);
-const AU_SET = new Set(["AU","EL","AURELIA","ELLEVEN","SHOPFORAURELIA"]);
-function brandFamily(b){
-  const k = String(b||"").trim().toUpperCase();
-  if(W_SET.has(k)) return "w";
-  if(AU_SET.has(k)) return "au";
-  return "un";
-}
-function buildUrl(fam, style){
-  const q = encodeURIComponent(style);
-  if(fam==="w")  return "https://www.wforwoman.com/pages/search?q="+q;
-  if(fam==="au") return "https://www.shopforaurelia.com/pages/search?q="+q;
-  return "";
-}
+/* ---------- brand routing (profile-driven: retail-profiles.js) ---------- */
+function brandFamily(b){ return RetailProfiles.familyOfBrand(b); }
+function buildUrl(fam, style){ return RetailProfiles.searchUrl(fam, style); }
+window.addEventListener("DOMContentLoaded", function(){
+  var sel = document.getElementById("unknownSel");
+  if(!sel) return;
+  RetailProfiles.routable().forEach(function(p){
+    var o = document.createElement("option");
+    o.value = p.fam; o.textContent = "Route to " + p.domain;
+    sel.appendChild(o);
+  });
+});
 
 /* ---------- scientific-notation & value guards ---------- */
 function cellToText(v){
@@ -349,7 +345,7 @@ function chip(cls,label,n){ return '<span class="chip"><span class="dot '+cls+'"
 $("exportXlsx").addEventListener("click",()=>{
   if(!records.length) return;
   const data=[["Style Code","Brand","Site","Product Link"]];
-  records.forEach(x=>data.push([x.style,x.brand,x.fam==="w"?"wforwoman.com":x.fam==="au"?"shopforaurelia.com":"Unknown",x.url||""]));
+  records.forEach(x=>data.push([x.style,x.brand,(RetailProfiles.domain(x.fam)||"Unknown"),x.url||""]));
   const ws=XLSX.utils.aoa_to_sheet(data);
   records.forEach((x,i)=>{ if(x.url){ ws["D"+(i+2)]={t:"s",v:x.url,l:{Target:x.url}}; } });
   ws["!cols"]=[{wch:22},{wch:12},{wch:20},{wch:70}];
@@ -361,7 +357,7 @@ $("exportXlsx").addEventListener("click",()=>{
 $("exportCsv").addEventListener("click",()=>{
   if(!records.length) return;
   const lines=["Style Code,Brand,Site,Product Link"];
-  records.forEach(x=>lines.push([csv(x.style),csv(x.brand),x.fam==="w"?"wforwoman.com":x.fam==="au"?"shopforaurelia.com":"Unknown",csv(x.url)].join(",")));
+  records.forEach(x=>lines.push([csv(x.style),csv(x.brand),(RetailProfiles.domain(x.fam)||"Unknown"),csv(x.url)].join(",")));
   const blob=new Blob(["\uFEFF"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="SOH_Product_Links.csv"; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),4000);
@@ -382,6 +378,7 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("sho
 
 })();
 
+<script src="retail-profiles.js"></script>
 <script type="module" src="auth-guard.js"></script>
 </body>
 </html>
