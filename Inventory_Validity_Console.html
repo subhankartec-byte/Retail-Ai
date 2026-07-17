@@ -1026,8 +1026,34 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       if(!window.RetailImport || !window.RetailProfiles) return;
       var hdr = RetailImport.findHeaderRow(rows2D);
       var mapped = RetailImport.mapColumns(rows2D, hdr.idx);
+      /* Phase 4: saved header-fingerprint memory wins */
+      if (window.RetailMapping) {
+        var fp = RetailMapping.fingerprintOf(mapped.headers);
+        var saved = RetailMapping.load(fp, mapped.headers);
+        if (saved && saved.house) {
+          window.HOUSE_PREFIX = RetailProfiles.get(saved.house).reportPrefix || "";
+          return;
+        }
+      }
       var hi = RetailImport.detectHouse(rows2D, hdr.idx, mapped.fields);
-      window.HOUSE_PREFIX = RetailProfiles.get(hi.house).reportPrefix || "";
+      if (hi.house !== 'unknown') {
+        window.HOUSE_PREFIX = RetailProfiles.get(hi.house).reportPrefix || "";
+        return;
+      }
+      /* unknown house: ask once per file (non-blocking), remembered by fingerprint */
+      if (window.RetailMapping && !window.__raiAsked) {
+        window.__raiAsked = true;
+        setTimeout(function(){
+          RetailMapping.confirm(rows2D, {
+            mapping: { headers: mapped.headers, fields: mapped.fields },
+            headerIndex: hdr.idx, house: 'unknown',
+            needsConfirmation: true,
+            confirmReasons: ['brand house could not be detected']
+          }, { mode: 'house' }).then(function(res){
+            if (res && res.house) window.HOUSE_PREFIX = RetailProfiles.get(res.house).reportPrefix || "";
+          });
+        }, 0);
+      }
     }catch(e){}
   };
 
@@ -1393,7 +1419,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         var isZip = bytes[0]===0x50&&bytes[1]===0x4B;                       // PK -> xlsx/xlsm
         var isCFB = bytes[0]===0xD0&&bytes[1]===0xCF&&bytes[2]===0x11&&bytes[3]===0xE0; // legacy .xls
         if(isZip||isCFB){
-          window.HOUSE_PREFIX = "";
+          window.HOUSE_PREFIX = ""; window.__raiAsked = false;
           var wb=XLSX.read(bytes,{type:"array",cellDates:false,raw:true});
           wb.SheetNames.forEach(function(nm){ sheets.push({name:nm, aoa:aoaFromWorksheet(wb.Sheets[nm])}); });
         }else{
@@ -1401,7 +1427,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           var head=text.replace(/^\uFEFF/,"").slice(0,400).toLowerCase();
           if(head.indexOf("<table")>=0 || head.indexOf("<html")>=0 || head.indexOf("<!doctype")>=0 || head.indexOf("mime-version")>=0){
             try{
-              window.HOUSE_PREFIX = "";
+              window.HOUSE_PREFIX = ""; window.__raiAsked = false;
               var wbh=XLSX.read(text,{type:"string"});
               wbh.SheetNames.forEach(function(nm){ sheets.push({name:nm, aoa:aoaFromWorksheet(wbh.Sheets[nm])}); });
             }catch(e){ sheets.push({name:"Sheet1", aoa:IVC.parseDelimited(text)}); }
@@ -1911,6 +1937,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 </script>
 <script src="retail-import.js"></script>
 <script src="retail-profiles.js"></script>
+<script src="retail-mapping.js"></script>
 <script type="module" src="auth-guard.js"></script>
 </body>
 </html>
