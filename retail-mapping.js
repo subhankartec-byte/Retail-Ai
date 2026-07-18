@@ -114,9 +114,15 @@ function showModal (rows2D, result, opts) {
     var mode = (opts && opts.mode) || 'full';
     var ovl = doc.createElement('div'); ovl.className = 'rai-map-ovl';
     var box = doc.createElement('div'); box.className = 'rai-map-box';
+    var nCols = headers.filter(function (h) { return String(h).trim(); }).length;
+    var sub = nCols + ' columns found. This choice is remembered for this file format.';
+    if (result.aiUsed) {
+      sub = nCols + ' columns found. AI suggested the highlighted ones from your ' +
+            'column names only \u2014 no data left your device. Please check and confirm.';
+    }
     box.innerHTML = '<h3>Confirm file mapping</h3>' +
-      '<p class="rai-map-sub">' + headers.filter(function(h){return String(h).trim();}).length +
-      ' columns found. This choice is remembered for this file format.</p>';
+      '<p class="rai-map-sub"' + (result.aiUsed ? ' style="color:#c9a227"' : '') + '></p>';
+    box.children[1].textContent = sub;
 
     /* house selector */
     var hRow = doc.createElement('div'); hRow.className = 'rai-map-row';
@@ -136,7 +142,9 @@ function showModal (rows2D, result, opts) {
       var reasons = (result.confirmReasons || []).join(' ');
       FIELD_LABELS.forEach(function (fl) {
         var f = fl[0], row = doc.createElement('div');
-        row.className = 'rai-map-row' + (reasons.indexOf(f === 'qty' ? 'quantity' : f) !== -1 ? ' rai-warn' : '');
+        var flagged = reasons.indexOf(f === 'qty' ? 'quantity' : f) !== -1 ||
+                      (fields[f] && fields[f].method === 'ai');
+        row.className = 'rai-map-row' + (flagged ? ' rai-warn' : '');
         row.innerHTML = '<label>' + fl[1] + '</label>';
         var sel = doc.createElement('select');
         var none = doc.createElement('option'); none.value = '-1'; none.textContent = '— not present —';
@@ -187,6 +195,32 @@ function showModal (rows2D, result, opts) {
   });
 }
 
+/* ---------- AI assist (optional) ----------
+   Merges an AI suggestion into a COPY of the import result so the
+   modal opens pre-filled instead of empty. AI only fills fields the
+   heuristics could not find — it never overrides a confident match,
+   and it never applies without the user pressing "Use & remember". */
+function mergeAi (result, ai) {
+  var headers = result.mapping.headers;
+  var fields = {};
+  for (var k in result.mapping.fields) fields[k] = result.mapping.fields[k];
+  for (var f in ai.fields) {
+    if (fields[f]) continue;                     /* heuristic wins */
+    var i = ai.fields[f];
+    fields[f] = { index: i, header: headers[i], method: 'ai' };
+  }
+  return {
+    house: (result.house && result.house !== 'unknown') ? result.house : (ai.house || 'unknown'),
+    houseVia: result.houseVia,
+    headerIndex: result.headerIndex,
+    mapping: { headers: headers, fields: fields },
+    needsConfirmation: result.needsConfirmation,
+    confirmReasons: result.confirmReasons,
+    aiUsed: true,
+    aiConfidence: ai.confidence
+  };
+}
+
 function confirm (rows2D, result, opts) {
   opts = opts || {};
   var headers = result.mapping.headers;
@@ -200,6 +234,20 @@ function confirm (rows2D, result, opts) {
   }
   if (typeof document === 'undefined' || !document.body) {
     return Promise.resolve({ house: result.house, fields: idxMap(result.mapping.fields), source: 'auto-nodom' });
+  }
+
+  /* Coding could not read this file. Ask AI to pre-fill the modal.
+     If AI is absent, offline, rate-limited or wrong-shaped, suggest()
+     resolves null and we show the plain modal exactly as before. */
+  var RA = (typeof window !== 'undefined') && window.RetailAssist;
+  if (RA && RA.suggest && !opts.noAI) {
+    return RA.suggest(rows2D, result)
+      .then(function (ai) {
+        return showModal(rows2D, ai ? mergeAi(result, ai) : result, opts);
+      })
+      .catch(function () {
+        return showModal(rows2D, result, opts);
+      });
   }
   return showModal(rows2D, result, opts);
 }
