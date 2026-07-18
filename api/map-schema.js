@@ -22,7 +22,15 @@
 
 const crypto = require('crypto');
 
-const MODEL      = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
+/* Model cascade: try each until one answers. Google renames models
+   often; the -latest aliases track the newest, dated ids are backup. */
+const MODEL_CANDIDATES = [
+  process.env.GEMINI_MODEL,
+  'gemini-flash-lite-latest',
+  'gemini-2.5-flash-lite',
+  'gemini-flash-latest',
+  'gemini-2.5-flash'
+].filter(Boolean);
 const PROJECT_ID = process.env.FIREBASE_PROJECT || 'retail-ai-2c674';
 const CERT_URL   = 'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com';
 
@@ -221,9 +229,22 @@ function buildPrompt(input) {
   ].join('\n');
 }
 
-async function callGemini(prompt) {
+async function callGeminiCascade(prompt) {
+  let lastErr;
+  for (const m of MODEL_CANDIDATES) {
+    try {
+      return { ai: await callGemini(prompt, m), model: m };
+    } catch (e) {
+      lastErr = e;
+      if (e.status !== 404) throw e;   /* only model-not-found falls through */
+    }
+  }
+  throw lastErr;
+}
+
+async function callGemini(prompt, model) {
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
-              encodeURIComponent(MODEL) + ':generateContent';
+              encodeURIComponent(model) + ':generateContent';
 
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), GEMINI_TIMEOUT);
@@ -251,6 +272,7 @@ async function callGemini(prompt) {
       const err = new Error('gemini_' + res.status);
       err.status = res.status;
       err.quota = res.status === 429;
+      err.detail = String(text || '').slice(0, 180);
       throw err;
     }
     const data = JSON.parse(text);
@@ -290,6 +312,7 @@ function sanitise(ai, headerCount) {
    ========================================================= */
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-RA-Version', '2');
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'method_not_allowed' });
@@ -332,19 +355,25 @@ module.exports = async function handler(req, res) {
 
   /* ai */
   try {
-    const ai = await callGemini(buildPrompt(input));
-    const clean = sanitise(ai, input.headers.length);
+    const got = await callGeminiCascade(buildPrompt(input));
+    const clean = sanitise(got.ai, input.headers.length);
     console.log(JSON.stringify({
-      evt: 'map', ok: true, model: MODEL,
+      evt: 'map', ok: true, model: got.model,
       cols: input.headers.length,
       mapped: Object.keys(clean.fields).length,
       conf: clean.confidence
     }));
-    return res.status(200).json({ ...clean, source: 'ai' });
+    return res.status(200).json({ ...clean, model: got.model, source: 'ai' });
   } catch (e) {
-    console.log(JSON.stringify({ evt: 'map', ok: false, code: e.message }));
+    console.log(JSON.stringify({
+      evt: 'map', ok: false, code: e.message,
+      detail: String(e.detail || '').slice(0, 180)
+    }));
+    /* code/detail are Google's public error text — never the key */
     return res.status(503).json({
-      error: e.quota ? 'ai_quota' : 'ai_unavailable'
+      error: e.quota ? 'ai_quota' : 'ai_unavailable',
+      code: String(e.message || '').slice(0, 60),
+      detail: String(e.detail || '').slice(0, 180)
     });
   }
 };
