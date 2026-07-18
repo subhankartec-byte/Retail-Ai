@@ -342,26 +342,66 @@ function render(){
 function chip(cls,label,n){ return '<span class="chip"><span class="dot '+cls+'"></span>'+label+' · '+n+"</span>"; }
 
 /* ---------- exports ---------- */
+/* The downloaded report is the uploaded SOH, unchanged, with ONE
+   extra "Product Link" column. Long digit runs (barcodes) are
+   written as text so Excel never collapses them to 8.9E+12. */
+function safeCell(v){
+  if(v==null || v==="") return null;
+  if(typeof v==="number"){
+    if(Number.isInteger(v) && Math.abs(v)>=1e11) return cellToText(v);
+    return v;
+  }
+  var s=String(v);
+  if(/^\d+(?:\.\d+)?[eE]\+?\d+$/.test(s.trim())) return cellToText(s);
+  return s;
+}
+function linkForRow(row, sc, bc, unk){
+  var style=cellToText(row[sc]);
+  if(!style) return "";
+  var fam=brandFamily(cellToText(row[bc]));
+  if(fam==="un" && unk!=="none") fam=unk;
+  return buildUrl(fam,style)||"";
+}
+function fullData(){
+  var sc=+$("styleSel").value, bc=+$("brandSel").value, unk=$("unknownSel").value;
+  var W=0, i, L;
+  for(i=0;i<sheetRows.length;i++){ L=(sheetRows[i]||[]).length; if(L>W) W=L; }
+  var data=[];
+  for(var r=0;r<sheetRows.length;r++){
+    var src=sheetRows[r]||[], row=[];
+    for(var c=0;c<W;c++) row.push(safeCell(src[c]));
+    if(r===headerRow) row.push("Product Link");
+    else if(r>headerRow) row.push(linkForRow(src,sc,bc,unk));
+    else row.push("");
+    data.push(row);
+  }
+  return {data:data, W:W};
+}
 $("exportXlsx").addEventListener("click",()=>{
-  if(!records.length) return;
-  const data=[["Style Code","Brand","Site","Product Link"]];
-  records.forEach(x=>data.push([x.style,x.brand,(RetailProfiles.domain(x.fam)||"Unknown"),x.url||""]));
+  if(!sheetRows.length) return;
+  const fd=fullData(), data=fd.data, W=fd.W;
   const ws=XLSX.utils.aoa_to_sheet(data);
-  records.forEach((x,i)=>{ if(x.url){ ws["D"+(i+2)]={t:"s",v:x.url,l:{Target:x.url}}; } });
-  ws["!cols"]=[{wch:22},{wch:12},{wch:20},{wch:70}];
+  const lc=XLSX.utils.encode_col(W);
+  for(let r=headerRow+1;r<data.length;r++){
+    const url=data[r][W];
+    if(url) ws[lc+(r+1)]={t:"s",v:url,l:{Target:url}};
+  }
+  const cols=[]; for(let c=0;c<W;c++) cols.push({wch:16}); cols.push({wch:70});
+  ws["!cols"]=cols;
   const out=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(out,ws,"Product Links");
-  XLSX.writeFile(out,"SOH_Product_Links.xlsx");
-  toast("Excel exported");
+  const shName=String((wb&&wb.SheetNames[+$("sheetSel").value])||"SOH").slice(0,31);
+  XLSX.utils.book_append_sheet(out,ws,shName);
+  XLSX.writeFile(out,"SOH_With_Product_Links.xlsx");
+  toast("Excel exported — full SOH + Product Link column");
 });
 $("exportCsv").addEventListener("click",()=>{
-  if(!records.length) return;
-  const lines=["Style Code,Brand,Site,Product Link"];
-  records.forEach(x=>lines.push([csv(x.style),csv(x.brand),(RetailProfiles.domain(x.fam)||"Unknown"),csv(x.url)].join(",")));
+  if(!sheetRows.length) return;
+  const fd=fullData(), data=fd.data;
+  const lines=data.map(row=>row.map(v=>csv(typeof v==="number"?String(v):v)).join(","));
   const blob=new Blob(["\uFEFF"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
-  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="SOH_Product_Links.csv"; a.click();
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="SOH_With_Product_Links.csv"; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-  toast("CSV exported");
+  toast("CSV exported — full SOH + Product Link column");
 });
 $("copyLinks").addEventListener("click",async()=>{
   const links=records.filter(x=>x.url).map(x=>x.url).join("\n");
@@ -377,7 +417,7 @@ let tt=null;
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove("show"),2600); }
 
 })();
-
+</script>
 <script src="retail-profiles.js"></script>
 <script type="module" src="auth-guard.js"></script>
 </body>
