@@ -1684,6 +1684,59 @@ $('#year').textContent = new Date().getFullYear();
 })();
 </script>
 
+   <!-- Suggest-a-report feedback widget -->
+   <script type="module">
+   import { auth, db } from "./firebase.js";
+   import { collection, addDoc, serverTimestamp }
+     from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+   (function(){
+     const css = document.createElement("style");
+     css.textContent =
+       "#ra-fb-btn{position:fixed;right:18px;bottom:18px;z-index:2147483000;display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#F2DE9A,#D4AF37 55%,#B8912F);color:#0A1633;font:600 13px/1 Inter,system-ui,sans-serif;border:none;border-radius:999px;padding:12px 18px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.45)}"+
+       "#ra-fb-panel{position:fixed;right:18px;bottom:74px;z-index:2147483001;width:min(340px,92vw);background:rgba(10,22,51,.98);border:1px solid rgba(212,175,55,.45);border-radius:16px;padding:16px;box-shadow:0 14px 44px rgba(0,0,0,.55);font-family:Inter,system-ui,sans-serif}"+
+       "#ra-fb-panel h4{margin:0 0 4px;color:#D4AF37;font-size:14px}"+
+       "#ra-fb-panel p{margin:0 0 10px;color:#9BA7C4;font-size:11.5px;line-height:1.45}"+
+       "#ra-fb-text{width:100%;min-height:92px;resize:vertical;background:#0F1E3F;color:#F4F6FB;border:1px solid rgba(155,167,196,.35);border-radius:10px;padding:10px;font:400 13px/1.45 Inter,system-ui,sans-serif;box-sizing:border-box}"+
+       "#ra-fb-send{margin-top:10px;width:100%;background:linear-gradient(135deg,#F2DE9A,#D4AF37 55%,#B8912F);color:#0A1633;font:700 13px/1 Inter,system-ui,sans-serif;border:none;border-radius:10px;padding:11px;cursor:pointer}"+
+       "#ra-fb-status{margin-top:8px;color:#9BA7C4;font-size:11.5px;min-height:14px}";
+     document.head.appendChild(css);
+     const btn = document.createElement("button");
+     btn.id="ra-fb-btn"; btn.type="button"; btn.textContent="\ud83d\udcac Suggest a report";
+     document.body.appendChild(btn);
+     const panel = document.createElement("div");
+     panel.id="ra-fb-panel"; panel.hidden=true;
+     panel.innerHTML =
+       '<h4>Suggest a report or feature</h4>'+
+       '<p>Need a new report or an improvement? Write it here \u2014 it goes straight to the Retail AI team.</p>'+
+       '<textarea id="ra-fb-text" maxlength="1500" placeholder="Example: I need a weekly ageing report by store\u2026"></textarea>'+
+       '<button id="ra-fb-send" type="button">Send suggestion</button>'+
+       '<div id="ra-fb-status"></div>';
+     document.body.appendChild(panel);
+     btn.addEventListener("click", ()=>{ panel.hidden = !panel.hidden; });
+     const status = panel.querySelector("#ra-fb-status");
+     panel.querySelector("#ra-fb-send").addEventListener("click", async ()=>{
+       const ta = panel.querySelector("#ra-fb-text");
+       const text = ta.value.trim();
+       if(!text){ status.textContent = "Please write your suggestion first."; return; }
+       const u = auth.currentUser;
+       if(!u){ status.textContent = "Please log in first, then send your suggestion."; return; }
+       status.textContent = "Sending\u2026";
+       try{
+         await addDoc(collection(db,"feedback"),{
+           uid:u.uid, email:u.email||"", text:text,
+           page:(location.pathname.split("/").pop()||"index.html"),
+           createdAt:serverTimestamp()
+         });
+         ta.value=""; status.textContent="Thank you! Your suggestion has been sent.";
+         setTimeout(()=>{ panel.hidden=true; status.textContent=""; },1600);
+       }catch(e){
+         console.warn("feedback save failed:",e);
+         status.textContent="Could not send right now \u2014 please try again in a minute.";
+       }
+     });
+   })();
+   </script>
+
    <script type="module" src="auth-guard.js"></script>
 </body>
 </html>
