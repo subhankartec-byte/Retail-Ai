@@ -211,6 +211,8 @@ function installDownloadQuota() {
     if (this.hasAttribute && this.hasAttribute("download")) {
       const msg = quotaBlocked();
       if (msg) { showToast("Free plan limit reached", msg); return; }
+      /* mark so the document click listener does not count it again */
+      this.__raCounted = Date.now();
       countReport();
     }
     return nativeClick.apply(this, arguments);
@@ -220,6 +222,8 @@ function installDownloadQuota() {
   document.addEventListener("click", (ev) => {
     const a = ev.target && ev.target.closest && ev.target.closest("a[download]");
     if (!a) return;
+    /* already counted by the .click() patch above — one report, one count */
+    if (a.__raCounted && Date.now() - a.__raCounted < 3000) return;
     const msg = quotaBlocked();
     if (msg) {
       ev.preventDefault();
