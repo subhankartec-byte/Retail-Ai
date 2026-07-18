@@ -124,7 +124,6 @@ function showModal (rows2D, result, opts) {
       '<p class="rai-map-sub"' + (result.aiUsed ? ' style="color:#c9a227"' : '') + '></p>';
     box.children[1].textContent = sub;
 
-    /* house selector */
     var hRow = doc.createElement('div'); hRow.className = 'rai-map-row';
     hRow.innerHTML = '<label>Brand house</label>';
     var hSel = doc.createElement('select');
@@ -136,7 +135,6 @@ function showModal (rows2D, result, opts) {
     hSel.value = (result.house && result.house !== 'unknown') ? result.house : '';
     hRow.appendChild(hSel); box.appendChild(hRow);
 
-    /* column selectors */
     var selMap = {};
     if (mode === 'full') {
       var reasons = (result.confirmReasons || []).join(' ');
@@ -195,17 +193,12 @@ function showModal (rows2D, result, opts) {
   });
 }
 
-/* ---------- AI assist (optional) ----------
-   Merges an AI suggestion into a COPY of the import result so the
-   modal opens pre-filled instead of empty. AI only fills fields the
-   heuristics could not find — it never overrides a confident match,
-   and it never applies without the user pressing "Use & remember". */
 function mergeAi (result, ai) {
   var headers = result.mapping.headers;
   var fields = {};
   for (var k in result.mapping.fields) fields[k] = result.mapping.fields[k];
   for (var f in ai.fields) {
-    if (fields[f]) continue;                     /* heuristic wins */
+    if (fields[f]) continue;
     var i = ai.fields[f];
     fields[f] = { index: i, header: headers[i], method: 'ai' };
   }
@@ -236,20 +229,54 @@ function confirm (rows2D, result, opts) {
     return Promise.resolve({ house: result.house, fields: idxMap(result.mapping.fields), source: 'auto-nodom' });
   }
 
-  /* Coding could not read this file. Ask AI to pre-fill the modal.
-     If AI is absent, offline, rate-limited or wrong-shaped, suggest()
-     resolves null and we show the plain modal exactly as before. */
-  var RA = (typeof window !== 'undefined') && window.RetailAssist;
-  if (RA && RA.suggest && !opts.noAI) {
-    return RA.suggest(rows2D, result)
-      .then(function (ai) {
-        return showModal(rows2D, ai ? mergeAi(result, ai) : result, opts);
-      })
-      .catch(function () {
-        return showModal(rows2D, result, opts);
-      });
+  if (!opts.noAI && typeof document !== 'undefined') {
+    return ensureAssist().then(function () {
+      var RA = (typeof window !== 'undefined') && window.RetailAssist;
+      if (RA && RA.suggest) {
+        return RA.suggest(rows2D, result)
+          .then(function (ai) {
+            return showModal(rows2D, ai ? mergeAi(result, ai) : result, opts);
+          })
+          .catch(function () {
+            return showModal(rows2D, result, opts);
+          });
+      }
+      return showModal(rows2D, result, opts);
+    });
   }
   return showModal(rows2D, result, opts);
+}
+
+var _assistP = null;
+function ensureAssist() {
+  if (typeof window !== 'undefined' && window.RetailAssist) return Promise.resolve();
+  if (_assistP) return _assistP;
+  if (typeof document === 'undefined') return Promise.resolve();
+  _assistP = new Promise(function (resolve) {
+    try {
+      var existing = document.querySelector('script[data-retail-assist]');
+      if (existing) {
+        if (window.RetailAssist) return resolve();
+        existing.addEventListener('load', function () { resolve(); });
+        existing.addEventListener('error', function () { resolve(); });
+        return;
+      }
+      var s = document.createElement('script');
+      s.type = 'module';
+      s.src = 'retail-assist.js';
+      s.setAttribute('data-retail-assist', '1');
+      s.onload = function () {
+        var tries = 0;
+        (function wait() {
+          if (window.RetailAssist || tries > 40) return resolve();
+          tries++; setTimeout(wait, 50);
+        })();
+      };
+      s.onerror = function () { resolve(); };
+      document.head.appendChild(s);
+    } catch (e) { resolve(); }
+  });
+  return _assistP;
 }
 
 return { fingerprintOf: fingerprintOf, load: load, save: save, forget: forget,
