@@ -165,8 +165,40 @@ import { auth } from "./firebase.js";
     }
   }
 
+  /* suggestBrands(tokens) -> { "<TOKEN>": "w|aurelia|jaypore|none" } | null
+     Tokens are digit-masked (# = digit) before sending. Never throws. */
+  async function suggestBrands (brands) {
+    try {
+      if (!Array.isArray(brands) || !brands.length) return null;
+      var toks = [], seen = {};
+      for (var i = 0; i < brands.length && toks.length < 15; i++) {
+        var t = String(brands[i] || '').trim().toUpperCase()
+                  .replace(/[0-9]/g, '#').slice(0, 24);
+        if (!t || seen[t]) continue;
+        seen[t] = 1; toks.push(t);
+      }
+      if (!toks.length) return null;
+      var token = await idToken();
+      if (!token) return null;
+      var res = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ task: 'brands', brands: toks })
+      });
+      if (!res.ok) return null;
+      var data = await res.json();
+      return (data && data.routes) ? data.routes : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   window.RetailAssist = {
     suggest: suggest,
+    suggestBrands: suggestBrands,
     maskValue: maskValue,
     _buildBody: buildBody               /* exposed for tests only */
   };
