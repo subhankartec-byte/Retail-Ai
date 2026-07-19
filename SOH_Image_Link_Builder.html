@@ -79,8 +79,9 @@ a.plink:hover{color:var(--gold);border-bottom-color:var(--navy)}
     <h2>1 · Load SOH file</h2>
     <div class="body">
       <div id="drop" tabindex="0" role="button" aria-label="Choose or drop an SOH file">
-        <div class="big">Drop your SOH export here, or tap to browse</div>
+        <div class="big">Drop your SOH export here</div>
         <div class="sub">.xlsx · .xls · .csv — layouts with junk rows above the header are handled</div>
+        <button type="button" class="btn btn-gold" id="browseBtn" style="margin-top:12px;touch-action:manipulation">+ Add file</button>
       </div>
       <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.xlsm">
       <div id="fileInfo" class="note hidden"></div>
@@ -94,15 +95,10 @@ a.plink:hover{color:var(--gold);border-bottom-color:var(--navy)}
         <div class="field"><label for="sheetSel">Sheet</label><select id="sheetSel"></select></div>
         <div class="field"><label for="styleSel">Style code column</label><select id="styleSel"></select></div>
         <div class="field"><label for="brandSel">Brand column</label><select id="brandSel"></select></div>
-        <div class="field"><label for="unknownSel">Unknown brands</label>
-          <select id="unknownSel">
-            <option value="none">No link (flag only)</option>
-            <!-- routable options populated from retail-profiles.js -->
-          </select>
-        </div>
       </div>
       <label class="toggle"><input type="checkbox" id="dedupe" checked> De-duplicate (one row per unique style + brand)</label>
       <div class="note" id="detectNote"></div>
+      <div class="note" id="aiNote" style="display:none"></div>
     </div>
   </div>
 
@@ -159,15 +155,6 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 /* ---------- brand routing (profile-driven: retail-profiles.js) ---------- */
 function brandFamily(b){ return RetailProfiles.familyOfBrand(b); }
 function buildUrl(fam, style){ return RetailProfiles.searchUrl(fam, style); }
-window.addEventListener("DOMContentLoaded", function(){
-  var sel = document.getElementById("unknownSel");
-  if(!sel) return;
-  RetailProfiles.routable().forEach(function(p){
-    var o = document.createElement("option");
-    o.value = p.fam; o.textContent = "Route to " + p.domain;
-    sel.appendChild(o);
-  });
-});
 
 /* ---------- scientific-notation & value guards ---------- */
 function cellToText(v){
@@ -238,6 +225,8 @@ const $=id=>document.getElementById(id);
 /* ---------- file load ---------- */
 const drop=$("drop"), fi=$("fileInput");
 drop.addEventListener("click",()=>fi.click());
+const bb=$("browseBtn");
+if(bb) bb.addEventListener("click",e=>{ e.stopPropagation(); fi.click(); });
 drop.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();fi.click();} });
 ["dragover","dragenter"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over");}));
 ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over");}));
@@ -277,6 +266,7 @@ function loadSheet(idx){
   header = (sheetRows[headerRow]||[]).map((h,i)=>cellToText(h)||("Column "+colName(i)));
   fillColSelect($("styleSel"), d.styleCol);
   fillColSelect($("brandSel"), d.brandCol);
+  unknownRoute={}; aiTriedKey=""; noteAI("");
   $("detectNote").innerHTML =
     "Header detected on row <b>"+(headerRow+1)+"</b>. " +
     (d.styleCol>=0 ? "Style column: <b>"+esc(header[d.styleCol])+"</b>. " : "<b>Style column not found — pick it above.</b> ") +
@@ -290,27 +280,78 @@ function fillColSelect(sel, chosen){
   sel.value = chosen>=0 ? chosen : 0;
 }
 
-["styleSel","brandSel","unknownSel","dedupe"].forEach(id=>$(id).addEventListener("change",rebuild));
+["styleSel","brandSel","dedupe"].forEach(id=>$(id).addEventListener("change",rebuild));
+
+/* ---------- unknown-brand resolution (silent: majority -> AI) ---------- */
+let unknownRoute = {};          // TOKEN -> 'w'|'au'|'jp' or null (no link)
+let aiTriedKey = "";
+function tokenOf(b){ return String(b||"").trim().toUpperCase().replace(/[0-9]/g,"#").slice(0,24); }
+function resolveFam(brandRaw){
+  const fam = brandFamily(brandRaw);
+  if(fam!=="un") return fam;
+  const t = tokenOf(brandRaw);
+  return (t && unknownRoute[t]) ? unknownRoute[t] : "un";
+}
+function noteAI(msg){
+  const n=$("aiNote"); if(!n) return;
+  if(msg){ n.style.display="block"; n.textContent=msg; }
+  else { n.style.display="none"; n.textContent=""; }
+}
+async function aiBrandRoutes(tokens){
+  try{
+    if(!window.RetailAssist) await import("./retail-assist.js").catch(()=>{});
+    if(window.RetailAssist && window.RetailAssist.suggestBrands)
+      return await window.RetailAssist.suggestBrands(tokens);
+  }catch(e){}
+  return null;
+}
+function resolveUnknowns(){
+  const toks=[...new Set(records.filter(x=>x.fam==="un").map(x=>tokenOf(x.brand)).filter(Boolean))];
+  if(!toks.length) return;
+  // 1) single-brand file: unknown codes follow the file's own brand
+  const fc={}; let known=0;
+  records.forEach(x=>{ if(x.fam!=="un"){ fc[x.fam]=(fc[x.fam]||0)+1; known++; } });
+  let top=null; for(const f in fc){ if(!top||fc[f]>fc[top]) top=f; }
+  if(top && known>=5 && fc[top]/known>=0.7){
+    toks.forEach(t=>{ unknownRoute[t]=top; });
+    noteAI(toks.length+" brand code(s) matched to this file automatically.");
+    rebuild(); return;
+  }
+  // 2) AI identifies the codes (once per set); silent fallback: no link
+  const key=toks.slice().sort().join("|");
+  if(key===aiTriedKey) return;
+  aiTriedKey=key;
+  aiBrandRoutes(toks).then(routes=>{
+    const MAP={w:"w",aurelia:"au",jaypore:"jp"};
+    let hit=0;
+    toks.forEach(t=>{
+      const v=routes ? String(routes[t]||"").toLowerCase() : "";
+      if(MAP[v]){ unknownRoute[t]=MAP[v]; hit++; } else { unknownRoute[t]=null; }
+    });
+    noteAI(hit ? hit+" brand code(s) identified automatically."
+               : "Some styles have no recognisable brand — no link added for them.");
+    rebuild();
+  });
+}
 
 /* ---------- build records ---------- */
 function rebuild(){
   if(!sheetRows.length) return;
-  const sc=+$("styleSel").value, bc=+$("brandSel").value;
-  const unk=$("unknownSel").value, dd=$("dedupe").checked;
+  const sc=+$("styleSel").value, bc=+$("brandSel").value, dd=$("dedupe").checked;
   const seen=new Set(); records=[];
   for(let r=headerRow+1;r<sheetRows.length;r++){
     const row=sheetRows[r]||[];
     const style=cellToText(row[sc]);
     if(!style) continue;                       // non-merchandise / blank rows
     const brandRaw=cellToText(row[bc]);
-    let fam=brandFamily(brandRaw);
-    if(fam==="un" && unk!=="none") fam=unk;
+    const fam=resolveFam(brandRaw);
     const key=style+"||"+brandRaw.toUpperCase();
     if(dd){ if(seen.has(key)) continue; seen.add(key); }
     records.push({style, brand:brandRaw||"—", fam, url:buildUrl(fam,style)});
   }
   applyFilter();
   $("resultCard").classList.remove("hidden");
+  resolveUnknowns();
 }
 
 $("search").addEventListener("input",applyFilter);
@@ -327,16 +368,15 @@ function render(){
   const frag=document.createDocumentFragment();
   for(let i=0;i<n;i++){
     const x=filtered[i], tr=document.createElement("tr");
-    const link = x.url ? '<a class="plink" href="'+x.url+'" target="_blank" rel="noopener">'+esc(x.url)+"</a>" : '<span style="color:#a02c2c">No link — unknown brand</span>';
+    const link = x.url ? '<a class="plink" href="'+x.url+'" target="_blank" rel="noopener">'+esc(x.url)+"</a>" : '<span style="color:#a02c2c">No link</span>';
     tr.innerHTML="<td>"+(i+1)+"</td><td><b>"+esc(x.style)+"</b></td><td><span class='badge "+x.fam+"'>"+esc(x.brand)+"</span></td><td>"+link+"</td>";
     frag.appendChild(tr);
   }
   tb.appendChild(frag);
-  // chips
-  const counts={w:0,au:0,un:0}; records.forEach(x=>counts[x.fam]++);
+  // chips (brand-neutral)
+  const linked=records.filter(x=>x.url).length, nolink=records.length-linked;
   $("chips").innerHTML =
-    chip("w","wforwoman.com",counts.w)+chip("au","shopforaurelia.com",counts.au)+
-    (counts.un?chip("un","Unknown brand",counts.un):"");
+    chip("w","Links built",linked)+(nolink?chip("un","No link",nolink):"");
   $("countLine").textContent = filtered.length+" row(s)"+(filtered.length>CAP?" — showing first "+CAP+" (exports include everything)":"")+(records.length!==filtered.length?" · filtered from "+records.length:"");
 }
 function chip(cls,label,n){ return '<span class="chip"><span class="dot '+cls+'"></span>'+label+' · '+n+"</span>"; }
@@ -355,15 +395,14 @@ function safeCell(v){
   if(/^\d+(?:\.\d+)?[eE]\+?\d+$/.test(s.trim())) return cellToText(s);
   return s;
 }
-function linkForRow(row, sc, bc, unk){
+function linkForRow(row, sc, bc){
   var style=cellToText(row[sc]);
   if(!style) return "";
-  var fam=brandFamily(cellToText(row[bc]));
-  if(fam==="un" && unk!=="none") fam=unk;
+  var fam=resolveFam(cellToText(row[bc]));
   return buildUrl(fam,style)||"";
 }
 function fullData(){
-  var sc=+$("styleSel").value, bc=+$("brandSel").value, unk=$("unknownSel").value;
+  var sc=+$("styleSel").value, bc=+$("brandSel").value;
   var W=0, i, L;
   for(i=0;i<sheetRows.length;i++){ L=(sheetRows[i]||[]).length; if(L>W) W=L; }
   var data=[];
@@ -371,7 +410,7 @@ function fullData(){
     var src=sheetRows[r]||[], row=[];
     for(var c=0;c<W;c++) row.push(safeCell(src[c]));
     if(r===headerRow) row.push("Product Link");
-    else if(r>headerRow) row.push(linkForRow(src,sc,bc,unk));
+    else if(r>headerRow) row.push(linkForRow(src,sc,bc));
     else row.push("");
     data.push(row);
   }
