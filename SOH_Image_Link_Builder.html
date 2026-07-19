@@ -306,7 +306,7 @@ async function aiBrandRoutes(tokens){
   return null;
 }
 function resolveUnknowns(){
-  const toks=[...new Set(records.filter(x=>x.fam==="un").map(x=>tokenOf(x.brand)).filter(Boolean))];
+  const toks=[...new Set(records.filter(x=>x.fam==="un").map(x=>tokenOf(x.brand)).filter(t=>t && !(t in unknownRoute)))];
   if(!toks.length) return;
   // 1) single-brand file: unknown codes follow the file's own brand
   const fc={}; let known=0;
