@@ -312,7 +312,7 @@ function sanitise(ai, headerCount) {
    ========================================================= */
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
-  res.setHeader('X-RA-Version', '2');
+  res.setHeader('X-RA-Version', '3');
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'method_not_allowed' });
@@ -335,6 +335,57 @@ module.exports = async function handler(req, res) {
   const limited = rateLimited(uid);
   if (limited) {
     return res.status(429).json({ error: 'rate_limited', window: limited });
+  }
+
+  /* ---- task: brands ------------------------------------------------
+     Classify unknown brand codes into a site family, silently.
+     Tokens arrive digit-masked (# = digit); the guard enforces it. */
+  {
+    let early = null;
+    try {
+      early = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+    } catch (e) { early = null; }
+    if (early && early.task === 'brands') {
+      let toks;
+      try {
+        if (!Array.isArray(early.brands)) throw new Error('brands_required');
+        toks = [...new Set(early.brands.map(x => String(x || '').trim()).filter(Boolean))].slice(0, 15);
+        if (!toks.length) throw new Error('brands_required');
+        for (const t of toks) {
+          if (t.length > 24 || /[0-9]/.test(t) || !/^[A-Za-z#][A-Za-z#&.,'\/\- ]*$/.test(t)) {
+            throw new Error('egress_guard_brand');
+          }
+        }
+      } catch (e) {
+        return res.status(e.message === 'egress_guard_brand' ? 403 : 400).json({ error: e.message });
+      }
+      try {
+        const prompt =
+          'You classify apparel brand codes from an Indian retail stock file into site families:\n' +
+          '"w" = W for Woman / W / Wishful / Folksong / W Prive (ladies western and fusion wear)\n' +
+          '"aurelia" = Aurelia / Elleven (ladies ethnic wear)\n' +
+          '"jaypore" = Jaypore (artisanal apparel, crafts, jewellery)\n' +
+          'Use "none" when a code does not clearly belong to any family. "#" stands for a digit.\n' +
+          'Reply ONLY with JSON {"routes":{"<code>":"w|aurelia|jaypore|none"}} covering every code.\n' +
+          'Codes: ' + JSON.stringify(toks);
+        const got = await callGeminiCascade(prompt);
+        const okv = { w: 1, aurelia: 1, jaypore: 1, none: 1 };
+        const raw = (got.ai && got.ai.routes) ? got.ai.routes : (got.ai || {});
+        const routes = {};
+        for (const t of toks) {
+          const v = String(raw[t] || 'none').toLowerCase();
+          routes[t] = okv[v] ? v : 'none';
+        }
+        console.log(JSON.stringify({ evt: 'brands', ok: true, model: got.model, n: toks.length }));
+        return res.status(200).json({ routes, model: got.model, source: 'ai' });
+      } catch (e) {
+        console.log(JSON.stringify({ evt: 'brands', ok: false, code: e.message }));
+        return res.status(503).json({
+          error: e.quota ? 'ai_quota' : 'ai_unavailable',
+          code: String(e.message || '').slice(0, 60)
+        });
+      }
+    }
   }
 
   /* body + egress guard */
