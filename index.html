@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Retail AI â AI tools that help retail store managers automate Excel analysis, stock validation, SOH auditing, inventory reports and daily retail operations.">
+<meta name="description" content="Retail AI — AI tools that help retail store managers automate Excel analysis, stock validation, SOH auditing, inventory reports and daily retail operations.">
 <meta name="theme-color" content="#05080F">
-<title>Retail AI â AI Tools for Retail Store Managers</title>
+<title>Retail AI — AI Tools for Retail Store Managers</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23E9B64D'/%3E%3Cpath d='M32 10l5.4 16.6L54 32l-16.6 5.4L32 54l-5.4-16.6L10 32l16.6-5.4z' fill='%23221503'/%3E%3C/svg%3E">
 
 <style>
-/* ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-   RETAIL AI â HOME PAGE STYLESHEET
+/* ══════════════════════════════════════════════════════════════
+   RETAIL AI — HOME PAGE STYLESHEET
    ----------------------------------------------------------------
    01. Design tokens        05. Hero + dashboard mock
    02. Reset & base         06. Trust marquee
@@ -20,11 +20,11 @@
    10. How it works         14. CTA band
    11. About                15. Footer
    12. Pricing + reviews    16. Toast, reveal, responsive
-   ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ */
+   ══════════════════════════════════════════════════════════════ */
 
-/* ââ 01. DESIGN TOKENS ââââââââââââââââââââââââââââââââââââââââ */
+/* ── 01. DESIGN TOKENS ──────────────────────────────────────── */
 :root{
-  /* Ink navy base â never pure black */
+  /* Ink navy base — never pure black */
   --bg-0:#05080F;
   --bg-1:#0A0F1C;
   --bg-2:#0E1526;
@@ -35,7 +35,7 @@
   --border:rgba(255,255,255,.09);
   --border-strong:rgba(255,255,255,.17);
 
-  /* Brass gold â the brand accent */
+  /* Brass gold — the brand accent */
   --gold:#E9B64D;
   --gold-soft:#F4D488;
   --gold-deep:#C9862A;
@@ -51,7 +51,7 @@
   --text-mid:#A9B2C6;
   --text-low:#67728A;
 
-  /* Type â display & body from the system, mono for data */
+  /* Type — display & body from the system, mono for data */
   --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --font-mono:ui-monospace,"SF Mono","Cascadia Code","Segoe UI Mono",Consolas,monospace;
 
@@ -60,7 +60,7 @@
   --container:1180px;
 }
 
-/* ââ 02. RESET & BASE âââââââââââââââââââââââââââââââââââââââââ */
+/* ── 02. RESET & BASE ───────────────────────────────────────── */
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:96px}
 body{
@@ -86,10 +86,10 @@ ul{list-style:none}
 
 .container{width:min(var(--container),92%);margin-inline:auto}
 
-/* Utility mono voice â eyebrows, tags, data labels */
+/* Utility mono voice — eyebrows, tags, data labels */
 .mono{font-family:var(--font-mono);letter-spacing:.14em;text-transform:uppercase}
 
-/* ââ 03. BACKGROUND LAYERS ââââââââââââââââââââââââââââââââââââ */
+/* ── 03. BACKGROUND LAYERS ──────────────────────────────────── */
 .bg-layer{position:fixed;inset:0;z-index:-2;background:
   radial-gradient(900px 520px at 85% -10%, rgba(233,182,77,.12), transparent 60%),
   radial-gradient(800px 600px at -10% 20%, rgba(96,165,250,.07), transparent 55%),
@@ -110,7 +110,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* ââ BUTTONS (shared) âââââââââââââââââââââââââââââââââââââââââ */
+/* ── BUTTONS (shared) ───────────────────────────────────────── */
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:.55rem;
   font-weight:600;font-size:.95rem;padding:.85rem 1.65rem;border-radius:999px;
@@ -137,7 +137,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 
 .btn-sm{padding:.58rem 1.2rem;font-size:.87rem}
 
-/* ââ 04. HEADER & NAVIGATION ââââââââââââââââââââââââââââââââââ */
+/* ── 04. HEADER & NAVIGATION ────────────────────────────────── */
 .site-header{
   position:fixed;top:0;left:0;right:0;z-index:100;
   border-bottom:1px solid transparent;
@@ -176,7 +176,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 .link-plain{font-size:.92rem;font-weight:500;color:var(--text-mid);padding:.5rem .4rem;transition:color .25s}
 .link-plain:hover{color:var(--text-hi)}
 
-/* Hamburger â mobile only */
+/* Hamburger — mobile only */
 .hamburger{
   display:none;width:42px;height:42px;border:1px solid var(--border);border-radius:12px;
   background:var(--surface);flex-direction:column;align-items:center;justify-content:center;gap:5px;
@@ -199,7 +199,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 .mm-actions{display:flex;gap:.8rem;margin-top:1rem}
 .mm-actions .btn{flex:1}
 
-/* ââ 05. HERO âââââââââââââââââââââââââââââââââââââââââââââââââ */
+/* ── 05. HERO ───────────────────────────────────────────────── */
 .hero{position:relative;padding:172px 0 96px}
 .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:4.2rem;align-items:center}
 
@@ -235,7 +235,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 .hstat strong{display:block;font-size:1.45rem;font-weight:700;letter-spacing:-.02em;color:var(--text-hi);font-variant-numeric:tabular-nums}
 .hstat span{font-family:var(--font-mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--text-low)}
 
-/* ââ DASHBOARD MOCK (hero signature) ââââââââââââââââââââââââââ */
+/* ── DASHBOARD MOCK (hero signature) ────────────────────────── */
 .dash-scene{position:relative;perspective:1600px}
 .dash{
   background:linear-gradient(160deg,rgba(255,255,255,.075),rgba(255,255,255,.02));
@@ -261,7 +261,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
   border:1px solid rgba(74,222,128,.35);border-radius:999px;padding:.22rem .62rem;
 }
 
-/* KPI tiles â real classification semantics */
+/* KPI tiles — real classification semantics */
 .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:.7rem;margin-bottom:1.1rem}
 .kpi{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:.78rem .85rem}
 .kpi-label{font-family:var(--font-mono);font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--text-low)}
@@ -323,7 +323,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 .chip-b{bottom:-22px;left:-18px;animation:chipFloat 7.5s ease-in-out infinite reverse}
 @keyframes chipFloat{0%,100%{translate:0 0}50%{translate:0 -10px}}
 
-/* ââ 06. TRUST MARQUEE ââââââââââââââââââââââââââââââââââââââââ */
+/* ── 06. TRUST MARQUEE ──────────────────────────────────────── */
 .trust{padding:2rem 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:rgba(255,255,255,.015)}
 .trust-inner{display:flex;align-items:center;gap:2.2rem}
 .trust-label{font-family:var(--font-mono);font-size:.64rem;letter-spacing:.2em;text-transform:uppercase;color:var(--text-low);white-space:nowrap}
@@ -336,7 +336,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 .marquee-track .sep{color:var(--gold);font-size:.6rem}
 @keyframes scrollX{to{transform:translateX(-50%)}}
 
-/* ââ 07. SECTION SHELLS âââââââââââââââââââââââââââââââââââââââ */
+/* ── 07. SECTION SHELLS ─────────────────────────────────────── */
 .section{padding:112px 0;position:relative}
 .section-head{max-width:660px;margin:0 auto 3.7rem;text-align:center}
 .eyebrow{font-family:var(--font-mono);font-size:.68rem;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);font-weight:600}
@@ -347,7 +347,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 }
 .section-head p{font-size:1.03rem}
 
-/* ââ 08. TOOLS GRID âââââââââââââââââââââââââââââââââââââââââââ */
+/* ── 08. TOOLS GRID ─────────────────────────────────────────── */
 .tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:1.3rem}
 .tool-card{
   position:relative;display:flex;flex-direction:column;gap:.95rem;overflow:hidden;
@@ -378,7 +378,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 .tool-card h3{color:var(--text-hi);font-size:1.07rem;font-weight:600;letter-spacing:-.012em}
 .tool-card p{font-size:.895rem;flex:1}
 
-/* Status tag â top-right corner */
+/* Status tag — top-right corner */
 .card-tag{
   position:absolute;top:1.15rem;right:1.15rem;
   font-family:var(--font-mono);font-size:.56rem;letter-spacing:.14em;font-weight:600;
@@ -410,7 +410,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 .tool-card.more p{flex:0}
 .tool-card.more .tool-btn{align-self:center}
 
-/* ââ 09. FEATURES âââââââââââââââââââââââââââââââââââââââââââââ */
+/* ── 09. FEATURES ───────────────────────────────────────────── */
 .features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:1.3rem}
 .feature{
   padding:1.9rem 1.65rem;border:1px solid var(--border);border-radius:var(--radius-lg);
@@ -426,7 +426,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 .feature h3{color:var(--text-hi);font-size:1.02rem;font-weight:600;margin-bottom:.45rem;letter-spacing:-.01em}
 .feature p{font-size:.9rem}
 
-/* ââ 10. HOW IT WORKS âââââââââââââââââââââââââââââââââââââââââ */
+/* ── 10. HOW IT WORKS ───────────────────────────────────────── */
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:2.4rem;position:relative}
 /* Dashed connector between step nodes (desktop) */
 .steps::before{
@@ -454,7 +454,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 /* Mobile: down-arrow between stacked steps */
 .step-arrow{display:none}
 
-/* ââ 11. ABOUT ââââââââââââââââââââââââââââââââââââââââââââââââ */
+/* ── 11. ABOUT ──────────────────────────────────────────────── */
 .about-wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:3.8rem;align-items:center}
 .about-copy h2{
   font-size:clamp(1.8rem,3.2vw,2.5rem);color:var(--text-hi);
@@ -475,7 +475,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 }
 .stat-txt{font-size:.9rem}
 
-/* ââ 12. PRICING ââââââââââââââââââââââââââââââââââââââââââââââ */
+/* ── 12. PRICING ────────────────────────────────────────────── */
 .pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem;align-items:stretch}
 .price-card{
   position:relative;display:flex;flex-direction:column;
@@ -508,7 +508,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 .plan-list svg{width:17px;height:17px;flex-shrink:0;margin-top:3px;color:var(--green)}
 .price-card .btn{width:100%}
 
-/* ââ TESTIMONIALS âââââââââââââââââââââââââââââââââââââââââââââ */
+/* ── TESTIMONIALS ───────────────────────────────────────────── */
 .testi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.3rem}
 .testi{
   display:flex;flex-direction:column;gap:1.05rem;
@@ -532,7 +532,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 .p-name{font-size:.92rem;font-weight:600;color:var(--text-hi);line-height:1.3}
 .p-role{font-family:var(--font-mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-low)}
 
-/* ââ 13. FAQ ââââââââââââââââââââââââââââââââââââââââââââââââââ */
+/* ── 13. FAQ ────────────────────────────────────────────────── */
 .faq-wrap{max-width:770px;margin:0 auto;display:grid;gap:.9rem}
 .faq-item{
   border:1px solid var(--border);border-radius:16px;background:var(--surface);
@@ -556,7 +556,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 .faq-a-inner{overflow:hidden}
 .faq-a-inner p{padding:0 1.45rem 1.35rem;font-size:.92rem}
 
-/* ââ 14. CTA BAND âââââââââââââââââââââââââââââââââââââââââââââ */
+/* ── 14. CTA BAND ───────────────────────────────────────────── */
 .cta-band{
   position:relative;overflow:hidden;text-align:center;
   padding:4.4rem 3rem;border-radius:28px;
@@ -577,7 +577,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 .cta-actions{position:relative;display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
 .cta-note{position:relative;margin-top:1.6rem;font-family:var(--font-mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--text-low)}
 
-/* ââ 15. FOOTER âââââââââââââââââââââââââââââââââââââââââââââââ */
+/* ── 15. FOOTER ─────────────────────────────────────────────── */
 .site-footer{border-top:1px solid var(--border);background:rgba(255,255,255,.015);padding:4.2rem 0 2rem}
 .footer-grid{
   display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:2.6rem;
@@ -601,7 +601,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 }
 .footer-bottom .mono{font-size:.6rem;color:var(--text-low)}
 
-/* ââ 16. TOAST ââââââââââââââââââââââââââââââââââââââââââââââââ */
+/* ── 16. TOAST ──────────────────────────────────────────────── */
 .toast{
   position:fixed;left:50%;bottom:30px;z-index:300;max-width:min(420px,92vw);
   display:flex;align-items:center;gap:.85rem;
@@ -621,11 +621,11 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 .toast strong{display:block;font-size:.9rem;font-weight:600;color:var(--text-hi);line-height:1.3}
 .toast span{font-size:.78rem;color:var(--text-low)}
 
-/* ââ SCROLL REVEAL ââââââââââââââââââââââââââââââââââââââââââââ */
+/* ── SCROLL REVEAL ──────────────────────────────────────────── */
 .reveal{opacity:0;translate:0 28px;transition:opacity .8s ease, translate .8s cubic-bezier(.22,1,.36,1);transition-delay:var(--d,0s)}
 .reveal.in{opacity:1;translate:0 0}
 
-/* ââ RESPONSIVE âââââââââââââââââââââââââââââââââââââââââââââââ */
+/* ── RESPONSIVE ─────────────────────────────────────────────── */
 @media (max-width:1080px){
   .hero{padding:150px 0 80px}
   .hero-grid{grid-template-columns:1fr;gap:3rem}
@@ -665,7 +665,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
   .footer-bottom{flex-direction:column;align-items:flex-start}
 }
 
-/* ââ REDUCED MOTION âââââââââââââââââââââââââââââââââââââââââââ */
+/* ── REDUCED MOTION ─────────────────────────────────────────── */
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none !important;transition:none !important}
   html{scroll-behavior:auto}
@@ -677,20 +677,20 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 
 <body>
 
-<!-- âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+<!-- ═══════════════════════════════════════════════════════════
      AMBIENT BACKGROUND LAYERS
-âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
+═══════════════════════════════════════════════════════════════ -->
 <div class="bg-layer" aria-hidden="true"></div>
 <div class="bg-grid" aria-hidden="true"></div>
 
-<!-- âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+<!-- ═══════════════════════════════════════════════════════════
      HEADER / STICKY NAVIGATION
-âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
+═══════════════════════════════════════════════════════════════ -->
 <header class="site-header" id="siteHeader">
   <div class="container nav">
 
     <!-- Brand -->
-    <a href="#home" class="brand" aria-label="Retail AI â home">
+    <a href="#home" class="brand" aria-label="Retail AI — home">
       <span class="logo-mark" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none"><path d="M12 2.6l2.1 6.2 6.3 2.1-6.3 2.1L12 19.2l-2.1-6.2-6.3-2.1 6.3-2.1L12 2.6z" fill="#221503"/><circle cx="18.8" cy="5.2" r="1.5" fill="#221503"/></svg>
       </span>
@@ -734,19 +734,19 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 
 <main>
 
-<!-- âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+<!-- ═══════════════════════════════════════════════════════════
      HERO
-âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
+═══════════════════════════════════════════════════════════════ -->
 <section class="hero" id="home">
   <div class="container hero-grid">
 
     <!-- Left: message -->
     <div>
-      <span class="eyebrow-chip reveal"><span class="pulse-dot" aria-hidden="true"></span>Live Â· Built for fashion retail</span>
+      <span class="eyebrow-chip reveal"><span class="pulse-dot" aria-hidden="true"></span>Live · Built for fashion retail</span>
 
       <h1 class="reveal" style="--d:.08s">AI Tools Built for <span class="grad-text">Retail Professionals</span></h1>
 
-      <p class="hero-sub reveal" style="--d:.16s">Automate retail operations, inventory analysis, Excel reporting, stock audits, merchandising, barcode validation and much more â in seconds, right from your browser.</p>
+      <p class="hero-sub reveal" style="--d:.16s">Automate retail operations, inventory analysis, Excel reporting, stock audits, merchandising, barcode validation and much more — in seconds, right from your browser.</p>
 
       <div class="hero-ctas reveal" style="--d:.24s">
         <a href="#tools" class="btn btn-primary">
@@ -774,8 +774,8 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
           <span class="dot" style="background:#FF5F57"></span>
           <span class="dot" style="background:#FEBC2E"></span>
           <span class="dot" style="background:#28C840"></span>
-          <span class="dash-title">Inventory Validity â Store xyz1</span>
-          <span class="live-badge">â LIVE</span>
+          <span class="dash-title">Inventory Validity — Store xyz1</span>
+          <span class="live-badge">● LIVE</span>
         </div>
 
         <div class="kpis">
@@ -797,7 +797,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
         </div>
 
         <div class="chart-card">
-          <div class="chart-head"><span>Stock movement Â· 7 days</span><b>2,697 pcs</b></div>
+          <div class="chart-head"><span>Stock movement · 7 days</span><b>2,697 pcs</b></div>
           <div class="bars" aria-hidden="true">
             <div class="bar" style="height:44%"></div>
             <div class="bar" style="height:60%"></div>
@@ -819,7 +819,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
             </span>
             <div>
               <strong>Validity_Report_xyz1.xlsx</strong>
-              <span>5 sheets Â· ready to download</span>
+              <span>5 sheets · ready to download</span>
             </div>
           </div>
           <button class="mini-btn" data-coming-soon data-t="This is a preview" data-s="Open a tool below to generate a real report.">Download</button>
@@ -845,35 +845,35 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
   </div>
 </section>
 
-<!-- âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-     TRUST MARQUEE â who Retail AI is built for
-âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
+<!-- ═══════════════════════════════════════════════════════════
+     TRUST MARQUEE — who Retail AI is built for
+═══════════════════════════════════════════════════════════════ -->
 <section class="trust" aria-label="Built for retail roles">
   <div class="container trust-inner">
     <span class="trust-label">Built for</span>
     <div class="marquee">
       <div class="marquee-track">
-        <!-- Track content Ã2 for a seamless loop -->
-        <span>Store Managers</span><span class="sep">â¦</span>
-        <span>Area Managers</span><span class="sep">â¦</span>
-        <span>Cluster Managers</span><span class="sep">â¦</span>
-        <span>Retail Executives</span><span class="sep">â¦</span>
-        <span>Inventory Teams</span><span class="sep">â¦</span>
-        <span>Fashion Retail Companies</span><span class="sep">â¦</span>
-        <span>Store Managers</span><span class="sep">â¦</span>
-        <span>Area Managers</span><span class="sep">â¦</span>
-        <span>Cluster Managers</span><span class="sep">â¦</span>
-        <span>Retail Executives</span><span class="sep">â¦</span>
-        <span>Inventory Teams</span><span class="sep">â¦</span>
-        <span>Fashion Retail Companies</span><span class="sep">â¦</span>
+        <!-- Track content ×2 for a seamless loop -->
+        <span>Store Managers</span><span class="sep">✦</span>
+        <span>Area Managers</span><span class="sep">✦</span>
+        <span>Cluster Managers</span><span class="sep">✦</span>
+        <span>Retail Executives</span><span class="sep">✦</span>
+        <span>Inventory Teams</span><span class="sep">✦</span>
+        <span>Fashion Retail Companies</span><span class="sep">✦</span>
+        <span>Store Managers</span><span class="sep">✦</span>
+        <span>Area Managers</span><span class="sep">✦</span>
+        <span>Cluster Managers</span><span class="sep">✦</span>
+        <span>Retail Executives</span><span class="sep">✦</span>
+        <span>Inventory Teams</span><span class="sep">✦</span>
+        <span>Fashion Retail Companies</span><span class="sep">✦</span>
       </div>
     </div>
   </div>
 </section>
 
-<!-- âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-     TOOLS â the product suite
-âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
+<!-- ═══════════════════════════════════════════════════════════
+     TOOLS — the product suite
+═══════════════════════════════════════════════════════════════ -->
 <section class="section" id="tools">
   <div class="container">
 
@@ -885,7 +885,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 
     <div class="tools-grid">
 
-      <!-- ââ Tool 1 Â· SOH Image Link Builder (LIVE) âââââââââââ -->
+      <!-- ── Tool 1 · SOH Image Link Builder (LIVE) ─────────── -->
       <article class="tool-card reveal">
         <span class="card-tag tag-live">Live</span>
         <span class="tool-icon" aria-hidden="true">
@@ -906,7 +906,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
         </a>
       </article>
 
-      <!-- ââ Tool 2 Â· Inventory Validity Console (LIVE) âââââââ -->
+      <!-- ── Tool 2 · Inventory Validity Console (LIVE) ─────── -->
       <article class="tool-card reveal" style="--d:.06s">
         <span class="card-tag tag-live">Live</span>
         <span class="tool-icon" aria-hidden="true">
@@ -928,7 +928,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
         </a>
       </article>
 
-      <!-- ââ Tool 3 Â· SOH Audit âââââââââââââââââââââââââââââââ -->
+      <!-- ── Tool 3 · SOH Audit ─────────────────────────────── -->
       <article class="tool-card reveal" style="--d:.12s">
         <span class="card-tag tag-live">Live</span>
         <span class="tool-icon" aria-hidden="true">
@@ -945,21 +945,21 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 </a>
       </article>
 
-      <!-- ââ Tool 4 Â· Stock Summary âââââââââââââââââââââââââââ -->
+      <!-- ── Tool 4 · Stock Summary ─────────────────────────── -->
       <article class="tool-card reveal" style="--d:.18s">
         <span class="card-tag tag-soon">Soon</span>
         <span class="tool-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20v-8"/><path d="M12 20V4.5"/><path d="M18 20v-11"/><path d="M3 20h18"/></svg>
         </span>
         <h3>Stock Summary</h3>
-        <p>Generate stock summary reports with brand, category and size-run breakdowns â formatted and filter-ready.</p>
+        <p>Generate stock summary reports with brand, category and size-run breakdowns — formatted and filter-ready.</p>
         <button class="tool-btn" data-coming-soon data-t="Stock Summary is coming soon" data-s="This tool is in the pipeline. Stay tuned!">
           Coming Soon
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.8"/></svg>
         </button>
       </article>
 
-      <!-- ââ Tool 5 Â· IST Analysis ââââââââââââââââââââââââââââ -->
+      <!-- ── Tool 5 · IST Analysis ──────────────────────────── -->
 <article class="tool-card reveal" style="--d:.24s">
     <span class="card-tag tag-live">Live</span>
 
@@ -987,7 +987,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 
 </article>
 
-      <!-- ââ Tool 6 Â· Barcode Validator âââââââââââââââââââââââ -->
+      <!-- ── Tool 6 · Barcode Validator ─────────────────────── -->
       <article class="tool-card reveal">
         <span class="card-tag tag-soon">Soon</span>
         <span class="tool-icon" aria-hidden="true">
@@ -1001,7 +1001,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
         </button>
       </article>
 
-      <!-- ââ Tool 7 Â· VM Checker ââââââââââââââââââââââââââââââ -->
+      <!-- ── Tool 7 · VM Checker ────────────────────────────── -->
       <article class="tool-card reveal" style="--d:.12s">
         <span class="card-tag tag-live">Live</span>
         <span class="tool-icon" aria-hidden="true">
@@ -1015,21 +1015,21 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
         </a>
       </article>
 
-      <!-- ââ Tool 9 Â· Image Generator âââââââââââââââââââââââââ -->
+      <!-- ── Tool 9 · Image Generator ───────────────────────── -->
       <article class="tool-card reveal" style="--d:.18s">
         <span class="card-tag tag-soon">Soon</span>
         <span class="tool-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.8 8.7 19 10.5l-5.2 1.8L12 17.5l-1.8-5.2L5 10.5l5.2-1.8L12 3.5z"/><path d="m18.5 15 .8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2z"/></svg>
         </span>
         <h3>Image Generator</h3>
-        <p>Create product visuals, festive creatives and campaign artwork with AI â sized for WhatsApp and social.</p>
+        <p>Create product visuals, festive creatives and campaign artwork with AI — sized for WhatsApp and social.</p>
         <button class="tool-btn" data-coming-soon data-t="Image Generator is coming soon" data-s="This tool is in the pipeline. Stay tuned!">
           Coming Soon
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.8"/></svg>
         </button>
       </article>
 
-      <!-- ââ Tool 10 Â· More on the way ââââââââââââââââââââââââ -->
+      <!-- ── Tool 10 · More on the way ──────────────────────── -->
       <article class="tool-card more reveal" style="--d:.24s">
         <span class="tool-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
@@ -1045,9 +1045,9 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
   </div>
 </section>
 
-<!-- âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-     FEATURES â why Retail AI
-âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
+<!-- ═══════════════════════════════════════════════════════════
+     FEATURES — why Retail AI
+═══════════════════════════════════════════════════════════════ -->
 <section class="section" id="features">
   <div class="container">
 
@@ -1064,7 +1064,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2.5 4 14h7l-1 7.5L19 10h-7l1-7.5z"/></svg>
         </span>
         <h3>Lightning Fast</h3>
-        <p>Reports that used to take hours of manual Excel work are ready in seconds â parsed, classified and formatted.</p>
+        <p>Reports that used to take hours of manual Excel work are ready in seconds — parsed, classified and formatted.</p>
       </article>
 
       <article class="feature reveal" style="--d:.06s">
@@ -1101,7 +1101,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2.2"/><rect x="9.4" y="9.4" width="5.2" height="5.2" rx="1"/><path d="M9 2v3"/><path d="M15 2v3"/><path d="M9 19v3"/><path d="M15 19v3"/><path d="M2 9h3"/><path d="M2 15h3"/><path d="M19 9h3"/><path d="M19 15h3"/></svg>
         </span>
         <h3>AI Powered</h3>
-        <p>Smart classification, style matching and analysis engines that understand retail data â sizes, barcodes, MRPs and all.</p>
+        <p>Smart classification, style matching and analysis engines that understand retail data — sizes, barcodes, MRPs and all.</p>
       </article>
 
       <article class="feature reveal" style="--d:.12s">
@@ -1109,23 +1109,23 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7l-5-5z"/><path d="M14 2v5h5"/><path d="m9 14.5 2 2 4-4.5"/></svg>
         </span>
         <h3>Professional Reports</h3>
-        <p>Boardroom-ready Excel output: clean header bands, â¹ formatting, filters, totals and colour-coded classifications.</p>
+        <p>Boardroom-ready Excel output: clean header bands, ₹ formatting, filters, totals and colour-coded classifications.</p>
       </article>
 
     </div>
   </div>
 </section>
 
-<!-- âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-     HOW IT WORKS â three-step timeline
-âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
+<!-- ═══════════════════════════════════════════════════════════
+     HOW IT WORKS — three-step timeline
+═══════════════════════════════════════════════════════════════ -->
 <section class="section" id="how">
   <div class="container">
 
     <div class="section-head reveal">
       <span class="eyebrow">How It Works</span>
       <h2>From raw export to finished report in three steps</h2>
-      <p>The workflow is the same across every tool â because that's how it should be.</p>
+      <p>The workflow is the same across every tool — because that's how it should be.</p>
     </div>
 
     <div class="steps">
@@ -1136,7 +1136,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
           <span class="step-badge">1</span>
         </div>
         <h3>Upload Excel</h3>
-        <p>Drop in your SOH, sales or audit export â .xlsx, .xls or even raw tab-separated SAP files.</p>
+        <p>Drop in your SOH, sales or audit export — .xlsx, .xls or even raw tab-separated SAP files.</p>
       </div>
 
       <div class="step-arrow" aria-hidden="true">
@@ -1149,7 +1149,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
           <span class="step-badge">2</span>
         </div>
         <h3>AI Analyses Data</h3>
-        <p>Styles are classified, barcodes protected, sizes counted and anomalies flagged â automatically.</p>
+        <p>Styles are classified, barcodes protected, sizes counted and anomalies flagged — automatically.</p>
       </div>
 
       <div class="step-arrow" aria-hidden="true">
@@ -1162,24 +1162,24 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
           <span class="step-badge">3</span>
         </div>
         <h3>Download Report</h3>
-        <p>Get a polished, multi-sheet Excel report with formatting, filters and totals â ready to forward.</p>
+        <p>Get a polished, multi-sheet Excel report with formatting, filters and totals — ready to forward.</p>
       </div>
 
     </div>
   </div>
 </section>
 
-<!-- âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-     ABOUT â the story behind the product
-âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
+<!-- ═══════════════════════════════════════════════════════════
+     ABOUT — the story behind the product
+═══════════════════════════════════════════════════════════════ -->
 <section class="section" id="about">
   <div class="container about-wrap">
 
     <div class="about-copy reveal">
       <span class="eyebrow">Our Story</span>
       <h2>Built on the shop floor, not in a boardroom</h2>
-      <p>Retail AI began inside a real store â with a manager tired of losing evenings to manual Excel work. Stock validation, audit reconciliation, transfer planning: every routine task became a tool, and every tool was tested against live SOH data from day one.</p>
-      <p>Today those tools help retail teams turn raw SAP exports into decisions in seconds â with the polish of enterprise software and the practicality of something built by someone who has actually closed a store at 10 pm.</p>
+      <p>Retail AI began inside a real store — with a manager tired of losing evenings to manual Excel work. Stock validation, audit reconciliation, transfer planning: every routine task became a tool, and every tool was tested against live SOH data from day one.</p>
+      <p>Today those tools help retail teams turn raw SAP exports into decisions in seconds — with the polish of enterprise software and the practicality of something built by someone who has actually closed a store at 10 pm.</p>
     </div>
 
     <div class="about-stats">
@@ -1193,16 +1193,16 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
       </div>
       <div class="stat-tile reveal" style="--d:.16s">
         <span class="stat-num">0</span>
-        <span class="stat-txt">files ever leave your device â everything runs locally</span>
+        <span class="stat-txt">files ever leave your device — everything runs locally</span>
       </div>
     </div>
 
   </div>
 </section>
 
-<!-- âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-     PRICING â three plans
-âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
+<!-- ═══════════════════════════════════════════════════════════
+     PRICING — three plans
+═══════════════════════════════════════════════════════════════ -->
 <section class="section" id="pricing">
   <div class="container">
 
@@ -1217,7 +1217,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
       <!-- FREE -->
       <article class="price-card reveal">
         <span class="plan-name">Free</span>
-        <div class="plan-price"><strong>â¹0</strong><span>forever</span></div>
+        <div class="plan-price"><strong>₹0</strong><span>forever</span></div>
         <p class="plan-desc">For trying Retail AI on your own store's data.</p>
         <ul class="plan-list">
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5 10-11"/></svg>5 reports per month</li>
@@ -1228,11 +1228,11 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
         <a href="signup.html" class="btn btn-ghost" data-free-cta>Start Free</a>
       </article>
 
-      <!-- PRO â most popular -->
+      <!-- PRO — most popular -->
       <article class="price-card popular reveal" style="--d:.08s">
         <span class="popular-badge">Most Popular</span>
         <span class="plan-name">Pro</span>
-        <div class="plan-price"><strong>â¹99</strong><span>/ month</span></div>
+        <div class="plan-price"><strong>₹99</strong><span>/ month</span></div>
         <p class="plan-desc">For store managers who run reports every single day.</p>
         <ul class="plan-list">
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5 10-11"/></svg>Unlimited reports</li>
@@ -1246,7 +1246,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
       <!-- BUSINESS -->
       <article class="price-card reveal" style="--d:.16s">
         <span class="plan-name">Business</span>
-        <div class="plan-price"><strong>â¹299</strong><span>/ month</span></div>
+        <div class="plan-price"><strong>₹299</strong><span>/ month</span></div>
         <p class="plan-desc">For area and cluster teams managing many stores.</p>
         <ul class="plan-list">
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5 10-11"/></svg>Unlimited everything</li>
@@ -1261,9 +1261,9 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
   </div>
 </section>
 
-<!-- âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-     TESTIMONIALS â voices from the floor
-âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
+<!-- ═══════════════════════════════════════════════════════════
+     TESTIMONIALS — voices from the floor
+═══════════════════════════════════════════════════════════════ -->
 <section class="section" id="testimonials">
   <div class="container">
 
@@ -1283,12 +1283,12 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.8l2.9 5.9 6.5.9-4.7 4.6 1.1 6.4-5.8-3-5.8 3 1.1-6.4L2.6 9.6l6.5-.9L12 2.8z"/></svg>
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.8l2.9 5.9 6.5.9-4.7 4.6 1.1 6.4-5.8-3-5.8 3 1.1-6.4L2.6 9.6l6.5-.9L12 2.8z"/></svg>
         </div>
-        <blockquote>"Month-end stock validation used to eat an entire evening. Now the report is ready before the morning huddle â classified, formatted and audit-ready."</blockquote>
+        <blockquote>"Month-end stock validation used to eat an entire evening. Now the report is ready before the morning huddle — classified, formatted and audit-ready."</blockquote>
         <div class="testi-person">
           <span class="avatar av-1" aria-hidden="true">PN</span>
           <div>
             <div class="p-name">Priya Nair</div>
-            <div class="p-role">Store Manager Â· Bengaluru</div>
+            <div class="p-role">Store Manager · Bengaluru</div>
           </div>
         </div>
       </article>
@@ -1306,7 +1306,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
           <span class="avatar av-2" aria-hidden="true">AM</span>
           <div>
             <div class="p-name">Arjun Mehta</div>
-            <div class="p-role">Area Manager Â· Apparel Chain</div>
+            <div class="p-role">Area Manager · Apparel Chain</div>
           </div>
         </div>
       </article>
@@ -1324,7 +1324,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
           <span class="avatar av-3" aria-hidden="true">SI</span>
           <div>
             <div class="p-name">Sneha Iyer</div>
-            <div class="p-role">Retail Executive Â· Lifestyle Brand</div>
+            <div class="p-role">Retail Executive · Lifestyle Brand</div>
           </div>
         </div>
       </article>
@@ -1333,9 +1333,9 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
   </div>
 </section>
 
-<!-- âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-     FAQ â collapsible accordion
-âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
+<!-- ═══════════════════════════════════════════════════════════
+     FAQ — collapsible accordion
+═══════════════════════════════════════════════════════════════ -->
 <section class="section" id="faq">
   <div class="container">
 
@@ -1353,7 +1353,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
           <span class="faq-chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
         </button>
         <div class="faq-a"><div class="faq-a-inner">
-          <p>No. Every Retail AI tool does its processing inside your own browser â your stock files are read on your device and the contents are never sent to our servers. You just need a connection to sign in and load the tool.</p>
+          <p>No. Every Retail AI tool does its processing inside your own browser — your stock files are read on your device and the contents are never sent to our servers. You just need a connection to sign in and load the tool.</p>
         </div></div>
       </div>
 
@@ -1363,7 +1363,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
           <span class="faq-chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
         </button>
         <div class="faq-a"><div class="faq-a-inner">
-          <p>Completely. Your Excel files are processed on your own device and never uploaded to any server. When you close the tab, nothing is left behind â no copies, no logs, no trace.</p>
+          <p>Completely. Your Excel files are processed on your own device and never uploaded to any server. When you close the tab, nothing is left behind — no copies, no logs, no trace.</p>
         </div></div>
       </div>
 
@@ -1373,7 +1373,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
           <span class="faq-chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
         </button>
         <div class="faq-a"><div class="faq-a-inner">
-          <p>Standard .xlsx and .xls files, tab-separated SAP SOH exports, and .csv files. The tools handle common quirks automatically â including 13-digit barcodes that Excel normally corrupts into scientific notation.</p>
+          <p>Standard .xlsx and .xls files, tab-separated SAP SOH exports, and .csv files. The tools handle common quirks automatically — including 13-digit barcodes that Excel normally corrupts into scientific notation.</p>
         </div></div>
       </div>
 
@@ -1393,7 +1393,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
           <span class="faq-chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
         </button>
         <div class="faq-a"><div class="faq-a-inner">
-          <p>Yes. The Business plan supports multiple users, so area and cluster managers can roll the same tools out across every store they manage â and finally get reports that match.</p>
+          <p>Yes. The Business plan supports multiple users, so area and cluster managers can roll the same tools out across every store they manage — and finally get reports that match.</p>
         </div></div>
       </div>
 
@@ -1403,7 +1403,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
           <span class="faq-chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
         </button>
         <div class="faq-a"><div class="faq-a-inner">
-          <p>We love building for real retail problems. Reach out through the contact section and tell us what's slowing your team down â audits, transfers, outreach, reporting â and we'll take it from there.</p>
+          <p>We love building for real retail problems. Reach out through the contact section and tell us what's slowing your team down — audits, transfers, outreach, reporting — and we'll take it from there.</p>
         </div></div>
       </div>
 
@@ -1411,14 +1411,14 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
   </div>
 </section>
 
-<!-- âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+<!-- ═══════════════════════════════════════════════════════════
      CONTACT / FINAL CTA
-âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
+═══════════════════════════════════════════════════════════════ -->
 <section class="section" id="contact">
   <div class="container">
     <div class="cta-band reveal">
       <h2>Ready to win back your evenings?</h2>
-      <p>Join retail teams who've automated the boring parts of store operations. Start free â upgrade when you're ready.</p>
+      <p>Join retail teams who've automated the boring parts of store operations. Start free — upgrade when you're ready.</p>
       <div class="cta-actions">
         <a href="signup.html" class="btn btn-primary">
           Get Started Free
@@ -1430,16 +1430,16 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
           Contact Us
         </a>
       </div>
-      <div class="cta-note">No credit card required Â· Works in any modern browser</div>
+      <div class="cta-note">No credit card required · Works in any modern browser</div>
     </div>
   </div>
 </section>
 
 </main>
 
-<!-- âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+<!-- ═══════════════════════════════════════════════════════════
      FOOTER
-âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
+═══════════════════════════════════════════════════════════════ -->
 <footer class="site-footer">
   <div class="container">
 
@@ -1447,7 +1447,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 
       <!-- Brand column -->
       <div class="f-brand">
-        <a href="#home" class="brand" aria-label="Retail AI â back to top">
+        <a href="#home" class="brand" aria-label="Retail AI — back to top">
           <span class="logo-mark" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none"><path d="M12 2.6l2.1 6.2 6.3 2.1-6.3 2.1L12 19.2l-2.1-6.2-6.3-2.1 6.3-2.1L12 2.6z" fill="#221503"/><circle cx="18.8" cy="5.2" r="1.5" fill="#221503"/></svg>
           </span>
@@ -1488,16 +1488,16 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
     </div>
 
     <div class="footer-bottom">
-      <span>Â© <span id="year">2026</span> Retail AI. All rights reserved.</span>
+      <span>© <span id="year">2026</span> Retail AI. All rights reserved.</span>
       <span class="mono">Made for retail teams in India</span>
     </div>
 
   </div>
 </footer>
 
-<!-- âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-     TOAST â "Coming Soon" notifications
-âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
+<!-- ═══════════════════════════════════════════════════════════
+     TOAST — "Coming Soon" notifications
+═══════════════════════════════════════════════════════════════ -->
 <div class="toast" id="toast" role="status" aria-live="polite">
   <span class="toast-ic" aria-hidden="true">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.8"/></svg>
@@ -1509,29 +1509,29 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 </div>
 
 <script>
-/* ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-   RETAIL AI â HOME PAGE SCRIPTS
+/* ══════════════════════════════════════════════════════════════
+   RETAIL AI — HOME PAGE SCRIPTS
    ----------------------------------------------------------------
    01. Helpers                05. FAQ accordion
    02. Sticky header          06. Toast + "Coming Soon" handlers
    03. Mobile menu            07. Tool link routing
    04. Scroll reveal          08. Dashboard animation & counters
                               09. Scroll-spy nav highlighting
-   ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ */
+   ══════════════════════════════════════════════════════════════ */
 (function(){
 'use strict';
 
-/* ââ 01. HELPERS ââââââââââââââââââââââââââââââââââââââââââââââ */
+/* ── 01. HELPERS ────────────────────────────────────────────── */
 const $  = (sel, ctx = document) => ctx.querySelector(sel);
 const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
 
-/* ââ 02. STICKY HEADER ââââââââââââââââââââââââââââââââââââââââ */
+/* ── 02. STICKY HEADER ──────────────────────────────────────── */
 const header = $('#siteHeader');
 const onScroll = () => header.classList.toggle('scrolled', window.scrollY > 10);
 window.addEventListener('scroll', onScroll, { passive: true });
 onScroll();
 
-/* ââ 03. MOBILE MENU ââââââââââââââââââââââââââââââââââââââââââ */
+/* ── 03. MOBILE MENU ────────────────────────────────────────── */
 const hamburger  = $('#hamburger');
 const mobileMenu = $('#mobileMenu');
 
@@ -1548,7 +1548,7 @@ hamburger.addEventListener('click', () => {
 $$('.mobile-menu a').forEach(a => a.addEventListener('click', closeMenu));
 window.addEventListener('resize', () => { if (window.innerWidth > 920) closeMenu(); });
 
-/* ââ 04. SCROLL REVEAL ââââââââââââââââââââââââââââââââââââââââ */
+/* ── 04. SCROLL REVEAL ──────────────────────────────────────── */
 const revealObserver = new IntersectionObserver(entries => {
   entries.forEach(entry => {
     if (entry.isIntersecting){
@@ -1559,7 +1559,7 @@ const revealObserver = new IntersectionObserver(entries => {
 }, { threshold: 0.14 });
 $$('.reveal').forEach(el => revealObserver.observe(el));
 
-/* ââ 05. FAQ ACCORDION ââââââââââââââââââââââââââââââââââââââââ */
+/* ── 05. FAQ ACCORDION ──────────────────────────────────────── */
 $$('.faq-item').forEach(item => {
   const btn = $('.faq-q', item);
   btn.addEventListener('click', () => {
@@ -1576,7 +1576,7 @@ $$('.faq-item').forEach(item => {
   });
 });
 
-/* ââ 06. TOAST + "COMING SOON" HANDLERS âââââââââââââââââââââââ */
+/* ── 06. TOAST + "COMING SOON" HANDLERS ─────────────────────── */
 const toast      = $('#toast');
 const toastTitle = $('#toastTitle');
 const toastSub   = $('#toastSub');
@@ -1600,11 +1600,11 @@ $$('[data-coming-soon]').forEach(el => {
   });
 });
 
-/* ââ 07. TOOL LINK ROUTING ââââââââââââââââââââââââââââââââââââ */
+/* ── 07. TOOL LINK ROUTING ──────────────────────────────────── */
 // The two "live" tool buttons are plain anchors. While their href is
 // still "#", clicking shows a toast. The moment the href is edited to
 // a real file (see the CHANGE LINK HERE comments in the Tools section),
-// the button navigates normally â no script changes needed.
+// the button navigates normally — no script changes needed.
 $$('.tool-link').forEach(link => {
   link.addEventListener('click', e => {
     if (link.getAttribute('href') === '#'){
@@ -1614,7 +1614,7 @@ $$('.tool-link').forEach(link => {
   });
 });
 
-/* ââ 08. DASHBOARD ANIMATION & COUNTERS âââââââââââââââââââââââ */
+/* ── 08. DASHBOARD ANIMATION & COUNTERS ─────────────────────── */
 // Count a KPI value up from 0 with an ease-out curve.
 function countUp(el){
   const target   = parseInt(el.dataset.count, 10) || 0;
@@ -1652,7 +1652,7 @@ $$('.tool-card').forEach(card => {
   });
 });
 
-/* ââ 09. SCROLL-SPY NAV HIGHLIGHTING ââââââââââââââââââââââââââ */
+/* ── 09. SCROLL-SPY NAV HIGHLIGHTING ────────────────────────── */
 const navAnchors = $$('.nav-links a');
 const spyObserver = new IntersectionObserver(entries => {
   entries.forEach(entry => {
@@ -1664,7 +1664,7 @@ const spyObserver = new IntersectionObserver(entries => {
 }, { rootMargin: '-40% 0px -55% 0px' });
 $$('main section[id]').forEach(sec => spyObserver.observe(sec));
 
-/* ââ FOOTER YEAR ââââââââââââââââââââââââââââââââââââââââââââââ */
+/* ── FOOTER YEAR ────────────────────────────────────────────── */
 $('#year').textContent = new Date().getFullYear();
 
 })();
