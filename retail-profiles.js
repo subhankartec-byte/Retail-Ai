@@ -38,7 +38,8 @@ var PROFILES = {
     displayName: 'JAYPORE', reportPrefix: 'JAYPORE \u2014 ',
     brands: [],                       /* no brand column in Jaypore SOH */
     domain: 'jaypore.com',
-    search: 'https://www.jaypore.com/search?q=',
+    search: 'https://www.jaypore.com/c/search?search_query=',
+    searchSuffix: '&page=1&hs=main',
     freeCodes: ['FS', 'WFS', ''],     /* blank size = free (sarees, dupattas, jewellery) */
     dualSizeColumns: true             /* Size (resolved) + Size Grid (raw) in reports */
   },
@@ -70,7 +71,7 @@ function familyOfBrand (brandCode) {
 function searchUrl (houseOrFam, style) {
   var p = get(houseOrFam);
   if (!p.search) return '';
-  return p.search + encodeURIComponent(style);
+  return p.search + encodeURIComponent(style) + (p.searchSuffix || '');
 }
 function domain (houseOrFam) { return get(houseOrFam).domain || ''; }
 function routable () {
