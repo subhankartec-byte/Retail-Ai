@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Store Business Review</title>
 <style>
@@ -159,7 +160,7 @@ table.rt tr.total-row td{font-weight:700; background:rgba(212,175,55,0.06); bord
         <div class="brandmark">R</div>
         <div>
           <div style="font-family:Georgia,serif;font-size:16px;font-weight:700;">Store Business Review</div>
-          <div style="font-size:10.5px;color:var(--ink-faint);">Works offline · any store's POS exports</div>
+          <div style="font-size:10.5px;color:var(--ink-faint);">Works offline · any store's POS exports · <span id="appVer"></span></div>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
@@ -167,7 +168,7 @@ table.rt tr.total-row td{font-weight:700; background:rgba(212,175,55,0.06); bord
         <input type="date" id="customStart" style="display:none" onchange="onPeriodChange()">
         <span id="customDash" style="display:none;color:var(--ink-faint)">→</span>
         <input type="date" id="customEnd" style="display:none" onchange="onPeriodChange()">
-        <button class="btn" onclick="exportCurrent()" title="Download Excel for the selected period">⬇ Excel</button>
+        <button class="btn" onclick="exportSmart()" title="Download Excel for whichever tab you are on">⬇ Excel</button>
         <button class="btn btn-gold" onclick="openUpload()">⬆ Upload</button>
       </div>
     </div>
@@ -771,18 +772,18 @@ function renderWeeklyReview(start, end) {
     '<tr class="r-grow"><td>Growth %</td>' + p(wrPctSigned(w.saleGrowth)) + p(wrPctSigned(w.billGrowth)) + p(wrPctSigned(w.qtyGrowth)) + '</tr></table>';
 
   const tblStaff = '<table class="wrt">' +
-    '<tr class="hdr-blue"><th>Salesman</th><th>Bill</th><th>Qty</th><th>Value</th><th>ABS</th><th>ABV</th><th>Con%</th></tr>' +
+    '<tr class="hdr-blue"><th>Salesman</th><th title="Number of bills">Bill</th><th title="Units sold">Qty</th><th title="Net sales value">Value</th><th title="Average Basket Size - units per bill">ABS</th><th title="Average Bill Value - value per bill">ABV</th><th title="Share of total sales">Con%</th></tr>' +
     w.salesman.map(s => '<tr><td>' + s.name + '</td>' + n(s.bills) + n(s.qty) + n(s.value) + n(s.abs, 1) + n(s.abv) + p(w.smTotal.value ? wrPct(s.value / w.smTotal.value) : '-') + '</tr>').join('') +
     '<tr class="tot-green"><td>Grand Total</td>' + n(w.smTotal.bills) + n(w.smTotal.qty) + n(w.smTotal.value) + '<td></td><td></td>' + p('100%') + '</tr></table>';
 
   const tblTopSkd = '<table class="wrt">' +
-    '<tr class="hdr"><th>TOP vs SKD</th><th>Value</th><th>Con%</th></tr>' +
+    '<tr class="hdr"><th title="SKD = suit/kurta-dupatta sets. TOP = single garments.">TOP vs SKD</th><th>Value</th><th>Con%</th></tr>' +
     '<tr><td>TOP</td>' + n(w.topVal) + p(w.tsTotal ? wrPct(w.topVal / w.tsTotal) : '-') + '</tr>' +
     '<tr><td>SKD</td>' + n(w.skdVal) + p(w.tsTotal ? wrPct(w.skdVal / w.tsTotal) : '-') + '</tr>' +
     '<tr class="tot-amber"><td>Total</td>' + n(w.tsTotal) + p('100%') + '</tr></table>';
 
   const tblSlab = '<table class="wrt">' +
-    '<tr class="hdr"><th>Slab</th><th>Sales</th><th>Bill</th><th>ATV</th></tr>' +
+    '<tr class="hdr"><th title="Slab 1 = moderate offer. Slab 2 = deep offer. Fresh = full price.">Slab</th><th>Sales</th><th>Bill</th><th title="Average Transaction Value">ATV</th></tr>' +
     '<tr><td>Slab 1</td>' + n(w.slab.s1Sales) + n(w.slab.s1Bills) + n(w.slab.s1Atv) + '</tr>' +
     '<tr><td>Slab 2</td>' + n(w.slab.s2Sales) + n(w.slab.s2Bills) + n(w.slab.s2Atv) + '</tr>' +
     '<tr><td>Fresh</td>' + n(w.slab.freshSales) + n(w.slab.freshBills) + n(w.slab.freshAtv) + '</tr>' +
@@ -802,9 +803,9 @@ function renderWeeklyReview(start, end) {
 
   const tblKpi = '<table class="wrt">' +
     '<tr class="hdr"><th>KPI</th><th>Last</th><th>This</th><th>Growth%</th></tr>' +
-    '<tr class="r-yellow"><td>ATV</td>' + n(w.kpi.atv.prev) + n(w.kpi.atv.now) + p(wrPctSigned(w.kpi.atv.growth)) + '</tr>' +
-    '<tr class="r-pink"><td>UPT</td>' + n(w.kpi.upt.prev, 2) + n(w.kpi.upt.now, 2) + p(wrPctSigned(w.kpi.upt.growth)) + '</tr>' +
-    '<tr class="r-green"><td>ASP</td>' + n(w.kpi.asp.prev) + n(w.kpi.asp.now) + p(wrPctSigned(w.kpi.asp.growth)) + '</tr>' +
+    '<tr class="r-yellow"><td title="Average Transaction Value - value per bill">ATV</td>' + n(w.kpi.atv.prev) + n(w.kpi.atv.now) + p(wrPctSigned(w.kpi.atv.growth)) + '</tr>' +
+    '<tr class="r-pink"><td title="Units Per Transaction - units per bill">UPT</td>' + n(w.kpi.upt.prev, 2) + n(w.kpi.upt.now, 2) + p(wrPctSigned(w.kpi.upt.growth)) + '</tr>' +
+    '<tr class="r-green"><td title="Average Selling Price - value per unit">ASP</td>' + n(w.kpi.asp.prev) + n(w.kpi.asp.now) + p(wrPctSigned(w.kpi.asp.growth)) + '</tr>' +
     '<tr class="r-lav"><td>Bill Count</td>' + n(w.kpi.bills.prev) + n(w.kpi.bills.now) + p(wrPctSigned(w.kpi.bills.growth)) + '</tr></table>';
 
   const tblClass = '<table class="wrt">' +
@@ -1127,10 +1128,30 @@ function addPending(p) { PENDING.push(p); }
 
 const TYPE_LABELS = { billItems: 'Bill Wise Item List', billSales: 'Bill Wise Sales', itemWise: 'Item Wise Sales', salesman: 'Salesman Register' };
 
+function importAllPending() {
+  PENDING.slice().forEach(p => confirmPending(p.tempId));
+}
+// Shows at a glance which of the four reports are in, ready, or still missing.
+function reportChecklist() {
+  const have = {}; STORE.batches.forEach(b => { have[b.type] = true; });
+  const pend = {}; PENDING.forEach(p => { pend[p.type] = true; });
+  return Object.keys(TYPE_LABELS).map(k => {
+    const loaded = !!have[k], ready = !loaded && !!pend[k];
+    const icon = loaded ? '\u2713' : (ready ? '\u2022' : '\u2014');
+    const col = loaded ? 'var(--emerald)' : (ready ? 'var(--gold)' : 'var(--ink-faint)');
+    return `<span style="color:${col};font-size:11.5px;margin-right:12px;white-space:nowrap;">${icon} ${TYPE_LABELS[k]}</span>`;
+  }).join('');
+}
+
 function renderPending() {
   const host = document.getElementById('uploadPending');
-  if (!PENDING.length) { host.innerHTML = ''; return; }
-  host.innerHTML = PENDING.map(p => {
+  const checklist = `<div class="badge-note" style="display:flex;flex-wrap:wrap;align-items:center;">${reportChecklist()}</div>`;
+  if (!PENDING.length) { host.innerHTML = checklist; return; }
+  const bar = `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+      <div style="font-size:12.5px;">${PENDING.length} file${PENDING.length !== 1 ? 's' : ''} ready to import</div>
+      <button class="btn btn-gold" style="padding:6px 12px;font-size:12px;" onclick="importAllPending()">\u2713 Import all</button>
+    </div>`;
+  host.innerHTML = checklist + bar + PENDING.map(p => {
     const rowCount = p.rows ? p.rows.length : (p.staff ? p.staff.length : 0);
     const dateNote = p.type === 'billItems'
       ? `Auto-detected dates: <b>${p.periodStart}</b> to <b>${p.periodEnd}</b> (${p.dateRange.length} day${p.dateRange.length !== 1 ? 's' : ''}). Re-importing the same dates will replace them — no double counting.`
@@ -1358,30 +1379,57 @@ function renderAIChat() {
 // ===== render.js =====
 // ===================== NAV / TABS =====================
 const TABS = [
-  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'dashboard', label: 'Dashboard', primary: true },
+  { id: 'weeklyreview', label: 'Weekly Review', primary: true },
+  { id: 'ai', label: 'Ask AI', primary: true },
   { id: 'weekly', label: 'Period Review' },
-  { id: 'weeklyreview', label: 'Weekly Review' },
   { id: 'staff', label: 'Staff' },
   { id: 'category', label: 'Category' },
   { id: 'festival', label: 'Festival' },
   { id: 'products', label: 'Products' },
   { id: 'hourly', label: 'Hourly' },
   { id: 'insights', label: 'AI Insights' },
-  { id: 'ai', label: 'Ask AI' },
   { id: 'settings', label: 'Settings' },
 ];
 let ACTIVE_TAB = 'dashboard';
 function initNav() {
-  document.getElementById('navtabs').innerHTML = TABS.map(t =>
+  const primary = TABS.filter(t => t.primary);
+  const rest = TABS.filter(t => !t.primary);
+  const activeRest = rest.filter(t => t.id === ACTIVE_TAB)[0];
+  let html = primary.map(t =>
     `<div class="navlink ${t.id === ACTIVE_TAB ? 'active' : ''}" id="nav-${t.id}" onclick="switchTab('${t.id}')">${t.label}</div>`
   ).join('');
+  if (activeRest) {
+    html += `<div class="navlink active" id="nav-${activeRest.id}" onclick="switchTab('${activeRest.id}')">${activeRest.label}</div>`;
+  }
+  html += `<div style="position:relative;">
+      <div class="navlink" onclick="toggleMoreMenu(event)">More \u25be</div>
+      <div id="moreMenu" style="display:none;position:absolute;left:0;top:34px;z-index:60;background:var(--navy-800);border:1px solid var(--glass-border);border-radius:10px;padding:6px;min-width:170px;box-shadow:0 10px 30px rgba(0,0,0,.5);">
+        ${rest.map(t => `<div class="navlink" style="display:block;" onclick="switchTab('${t.id}');closeMoreMenu();">${t.label}</div>`).join('')}
+      </div>
+    </div>`;
+  document.getElementById('navtabs').innerHTML = html;
 }
+function toggleMoreMenu(e) {
+  if (e) e.stopPropagation();
+  const m = document.getElementById('moreMenu');
+  if (m) m.style.display = (m.style.display === 'none' || !m.style.display) ? 'block' : 'none';
+}
+function closeMoreMenu() { const m = document.getElementById('moreMenu'); if (m) m.style.display = 'none'; }
+document.addEventListener('click', closeMoreMenu);
 function switchTab(id) {
   ACTIVE_TAB = id;
   TABS.forEach(t => {
-    document.getElementById('nav-' + t.id).classList.toggle('active', t.id === id);
-    document.getElementById('tab-' + t.id).classList.toggle('active', t.id === id);
+    const panel = document.getElementById('tab-' + t.id);
+    if (panel) panel.classList.toggle('active', t.id === id);
   });
+  initNav();
+  if (id === 'weeklyreview' && typeof wrApplyFit === 'function') setTimeout(wrApplyFit, 60);
+}
+// Topbar Excel button follows whichever tab you are on.
+function exportSmart() {
+  if (ACTIVE_TAB === 'weeklyreview' && typeof exportWeeklyReviewExcel === 'function') { exportWeeklyReviewExcel(); return; }
+  exportCurrent();
 }
 
 const PRESETS = [
@@ -2108,9 +2156,12 @@ function confirmResetAll() {
 }
 
 // ===================== BOOTSTRAP =====================
+const APP_VERSION = 'v3.0 (22 Jul 2026)';
 initNav();
 initPeriodSelect();
 switchTab('dashboard');
+const verEl = document.getElementById('appVer');
+if (verEl) verEl.textContent = APP_VERSION;
 refreshAll();
 
 </script>
