@@ -664,25 +664,20 @@ function pctStr(n) { return (n >= 0 ? '+' : '') + (n * 100).toFixed(1) + '%'; }
 <script>
 // ===== weekly_review.js =====
 // ===================== WEEKLY REVIEW (manual-sheet format) =====================
-// Reproduces the store's manual Weekly Review layout from POS exports.
-// Blocks: header, sale summary + WoW, salesman (ABS/ABV), TOP vs SKD, slabs,
-// festive split, W/F/WISH, category (dept), class-ranked (story substitute), KPI summary.
-// Values not present in exports (Walking, Convert, Cost%) are auto-skipped.
+// Compact, meeting-ready layout + colour-formatted Excel export.
+// Values not present in POS exports (Walking, Convert, Cost%) are skipped.
 
 function wrNum(n, d) { return Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: d || 0, minimumFractionDigits: d || 0 }); }
-function wrPct(n) { return (n == null || !isFinite(n)) ? '—' : (n * 100).toFixed(0) + '%'; }
-function wrPctSigned(n) { return (n == null || !isFinite(n)) ? '—' : ((n >= 0 ? '' : '') + (n * 100).toFixed(0) + '%'); }
+function wrPct(n) { return (n == null || !isFinite(n)) ? '-' : (n * 100).toFixed(0) + '%'; }
+function wrPctSigned(n) { return (n == null || !isFinite(n)) ? '-' : ((n * 100).toFixed(0) + '%'); }
+function wrDate(iso) { if (!iso) return ''; const p = iso.split('-'); return p.length === 3 ? (p[2] + '-' + p[1] + '-' + p[0]) : iso; }
 
-// Compute all weekly-review blocks for the selected range, with a prior-period comparison.
 function computeWeeklyReview(start, end) {
   const m = computeMetrics(start, end);
   const items = m.items;
+  const pr = priorPeriod(start, end);
+  const pm = computeMetrics(pr[0], pr[1]);
 
-  // --- Prior period (same length, immediately before) for WoW ---
-  const [pStart, pEnd] = priorPeriod(start, end);
-  const pm = computeMetrics(pStart, pEnd);
-
-  // --- Salesman table: bills, qty, value, ABS (avg bill size = qty/bills), ABV (avg bill value) ---
   const byStaff = new Map();
   items.forEach(r => {
     const k = (r.salesman || '(Unknown)').trim() || '(Unknown)';
@@ -692,282 +687,339 @@ function computeWeeklyReview(start, end) {
   });
   const salesman = Array.from(byStaff.values()).map(e => {
     const bills = e.bills.size;
-    return {
-      name: e.name, bills, qty: e.qty, value: e.value,
-      abs: bills ? e.qty / bills : 0,       // avg basket size (units/bill)
-      abv: bills ? e.value / bills : 0,     // avg bill value
-    };
+    return { name: e.name, bills: bills, qty: e.qty, value: e.value, abs: bills ? e.qty / bills : 0, abv: bills ? e.value / bills : 0 };
   }).sort((a, b) => b.value - a.value);
   const smTotal = salesman.reduce((a, s) => ({ bills: a.bills + s.bills, qty: a.qty + s.qty, value: a.value + s.value }), { bills: 0, qty: 0, value: 0 });
 
-  // --- TOP vs SKD (from ClassName: SKD-type classes vs the rest) ---
-  // SKD = suit/kurta-dupatta sets; TOP = single-garment tops/kurtas/etc.
-  const isSKD = (cn) => /SKD|DUPATTA|AND BOTTOM|BOTTOM AND|SET/i.test(cn || '');
+  const isSKD = function (cn) { return /SKD|DUPATTA|AND BOTTOM|BOTTOM AND|SET/i.test(cn || ''); };
   let topVal = 0, skdVal = 0;
   items.forEach(r => { if (isSKD(r.className)) skdVal += r.value; else topVal += r.value; });
   const tsTotal = topVal + skdVal;
 
-  // --- Slabs by discount% (Slab1 = low disc, Slab2 = high disc, Fresh = no/low disc) ---
-  // Uses bill-sales discount if available; otherwise splits by line value only.
   const bs = queryBillSales(start, end);
-  const billDisc = new Map(); // billNo -> discount fraction proxy (disc / (value+disc))
-  bs.forEach(b => {
-    const val = b.value || 0, disc = b.discount || 0;
-    const frac = (val + disc) > 0 ? disc / (val + disc) : 0;
-    billDisc.set(b.billNo, frac);
-  });
-  // Aggregate item value+qty into slabs by their bill's discount fraction
+  const billDisc = new Map();
+  bs.forEach(b => { const val = b.value || 0, disc = b.discount || 0; billDisc.set(b.billNo, (val + disc) > 0 ? disc / (val + disc) : 0); });
   const slab = { fresh: { v: 0, b: new Set() }, s1: { v: 0, b: new Set() }, s2: { v: 0, b: new Set() } };
   items.forEach(r => {
     const f = billDisc.has(r.billNo) ? billDisc.get(r.billNo) : 0;
-    let bucket;
-    if (f <= 0.05) bucket = slab.fresh;         // ~full price
-    else if (f <= 0.40) bucket = slab.s1;       // moderate offer
-    else bucket = slab.s2;                        // deep offer
+    const bucket = f <= 0.05 ? slab.fresh : (f <= 0.40 ? slab.s1 : slab.s2);
     bucket.v += r.value; bucket.b.add(r.billNo);
   });
   const slabOut = {
     s1Sales: slab.s1.v, s1Bills: slab.s1.b.size, s1Atv: slab.s1.b.size ? slab.s1.v / slab.s1.b.size : 0,
     s2Sales: slab.s2.v, s2Bills: slab.s2.b.size, s2Atv: slab.s2.b.size ? slab.s2.v / slab.s2.b.size : 0,
-    freshSales: slab.fresh.v, freshBills: slab.fresh.b.size, freshAtv: slab.fresh.b.size ? slab.fresh.v / slab.fresh.b.size : 0,
+    freshSales: slab.fresh.v, freshBills: slab.fresh.b.size, freshAtv: slab.fresh.b.size ? slab.fresh.v / slab.fresh.b.size : 0
   };
   const offerSales = slabOut.s1Sales + slabOut.s2Sales;
   const totSales = offerSales + slabOut.freshSales;
   slabOut.offerContribution = totSales ? offerSales / totSales : 0;
   slabOut.freshContribution = totSales ? slabOut.freshSales / totSales : 0;
 
-  // --- Festive vs Non-Festive (SubClass) ---
-  const fest = { FESTIVE: { q: 0, v: 0 }, 'NON FESTIVE': { q: 0, v: 0 } };
+  const fest = { FESTIVE: { q: 0, v: 0 }, NONFESTIVE: { q: 0, v: 0 } };
   items.forEach(r => {
     const sc = (r.subClass || '').toUpperCase();
-    if (sc.indexOf('NON') > -1 && sc.indexOf('FESTIVE') > -1) { fest['NON FESTIVE'].q += r.qty; fest['NON FESTIVE'].v += r.value; }
+    if (sc.indexOf('NON') > -1 && sc.indexOf('FESTIVE') > -1) { fest.NONFESTIVE.q += r.qty; fest.NONFESTIVE.v += r.value; }
     else if (sc.indexOf('FESTIVE') > -1) { fest.FESTIVE.q += r.qty; fest.FESTIVE.v += r.value; }
   });
-  const festTotV = fest.FESTIVE.v + fest['NON FESTIVE'].v;
+  const festTotV = fest.FESTIVE.v + fest.NONFESTIVE.v;
+  const festTotQ = fest.FESTIVE.q + fest.NONFESTIVE.q;
 
-  // --- Category by Department ---
   const dept = groupSum(items, r => (r.dept || '(Blank)').toUpperCase(), r => r.qty, r => r.value)
-    .filter(d => d.key && d.key !== '(BLANK)' && /^[A-Z ]+$/.test(d.key)); // keep clean dept names
+    .filter(d => d.key && d.key !== '(BLANK)' && /^[A-Z][A-Z ]*$/.test(d.key));
   const deptTotV = dept.reduce((a, d) => a + d.value, 0);
+  const deptTotQ = dept.reduce((a, d) => a + d.qty, 0);
 
-  // --- Class-wise ranked (STORY substitute) ---
   const classRank = groupSum(items, r => (r.className || '(Blank)').toUpperCase(), r => r.qty, r => r.value)
-    .filter(c => c.key && c.key !== '(BLANK)');
-  const classTot = classRank.reduce((a, c) => ({ q: a.q + c.qty, v: a.v + c.value }), { q: 0, v: 0 });
+    .filter(x => x.key && x.key !== '(BLANK)');
+  const classTot = classRank.reduce((a, x) => ({ q: a.q + x.qty, v: a.v + x.value }), { q: 0, v: 0 });
 
-  // --- KPI summary with WoW ---
   const kpi = {
-    atv: { now: m.atv, prev: pm.atv },
-    upt: { now: m.upt, prev: pm.upt },
-    asp: { now: m.asp, prev: pm.asp },
-    bills: { now: m.netBills, prev: pm.netBills },
+    atv: { now: m.atv, prev: pm.atv }, upt: { now: m.upt, prev: pm.upt },
+    asp: { now: m.asp, prev: pm.asp }, bills: { now: m.netBills, prev: pm.netBills }
   };
-  Object.values(kpi).forEach(k => { k.growth = k.prev ? (k.now - k.prev) / k.prev : null; });
-
-  const saleGrowth = pm.netValue ? (m.netValue - pm.netValue) / pm.netValue : null;
-  const billGrowth = pm.netBills ? (m.netBills - pm.netBills) / pm.netBills : null;
-  const qtyGrowth = pm.netQty ? (m.netQty - pm.netQty) / pm.netQty : null;
+  Object.keys(kpi).forEach(k => { const o = kpi[k]; o.growth = o.prev ? (o.now - o.prev) / o.prev : null; });
 
   return {
-    start, end, pStart, pEnd,
+    start: start, end: end,
     thisSale: m.netValue, thisBills: m.netBills, thisQty: m.netQty,
     lastSale: pm.netValue, lastBills: pm.netBills, lastQty: pm.netQty,
-    saleGrowth, billGrowth, qtyGrowth,
-    salesman, smTotal,
-    topVal, skdVal, tsTotal,
-    slab: slabOut,
-    fest, festTotV,
-    dept, deptTotV,
-    classRank, classTot,
-    kpi,
-    hasBillSales: m.hasBillSales,
+    saleGrowth: pm.netValue ? (m.netValue - pm.netValue) / pm.netValue : null,
+    billGrowth: pm.netBills ? (m.netBills - pm.netBills) / pm.netBills : null,
+    qtyGrowth: pm.netQty ? (m.netQty - pm.netQty) / pm.netQty : null,
+    salesman: salesman, smTotal: smTotal, topVal: topVal, skdVal: skdVal, tsTotal: tsTotal,
+    slab: slabOut, fest: fest, festTotV: festTotV, festTotQ: festTotQ,
+    dept: dept, deptTotV: deptTotV, deptTotQ: deptTotQ,
+    classRank: classRank, classTot: classTot, kpi: kpi
   };
 }
 
-// ===================== RENDER (screen, sheet-style) =====================
+// ===================== SCREEN RENDER =====================
+let WR_FIT = true;
+
 function renderWeeklyReview(start, end) {
   const el = document.getElementById('tab-weeklyreview');
   if (!el) return;
   const w = computeWeeklyReview(start, end);
-  const dateLabel = start === end ? fmtDate(start) : (fmtDate(start) + ' → ' + fmtDate(end));
+  const dateLabel = start === end ? wrDate(start) : (wrDate(start) + ' to ' + wrDate(end));
+  const n = function (v, d) { return '<td class="wn">' + wrNum(v, d) + '</td>'; };
+  const p = function (v) { return '<td class="wn">' + v + '</td>'; };
 
-  const th = (t, extra) => `<th ${extra || ''}>${t}</th>`;
-  const td = (t, cls) => `<td class="${cls || ''}">${t}</td>`;
+  const tblSummary = '<table class="wrt">' +
+    '<tr class="hdr"><th>Metric</th><th>Value</th><th>Bill</th><th>Qty</th></tr>' +
+    '<tr class="r-last"><td>Last Period</td>' + n(w.lastSale) + n(w.lastBills) + n(w.lastQty) + '</tr>' +
+    '<tr class="r-this"><td>This Period</td>' + n(w.thisSale) + n(w.thisBills) + n(w.thisQty) + '</tr>' +
+    '<tr class="r-grow"><td>Growth %</td>' + p(wrPctSigned(w.saleGrowth)) + p(wrPctSigned(w.billGrowth)) + p(wrPctSigned(w.qtyGrowth)) + '</tr></table>';
 
-  // Sale summary block
-  const summary = `
-    <table class="rt wr-block">
-      <tr><th>Metric</th><th class="num">Value</th><th class="num">Bill</th><th class="num">Qty</th></tr>
-      <tr><td>Last Period Sale (₹)</td>${td(wrNum(w.lastSale), 'num')}${td(wrNum(w.lastBills), 'num')}${td(wrNum(w.lastQty), 'num')}</tr>
-      <tr><td>This Period Sale (₹)</td>${td(wrNum(w.thisSale), 'num')}${td(wrNum(w.thisBills), 'num')}${td(wrNum(w.thisQty), 'num')}</tr>
-      <tr class="total-row"><td>Growth (%)</td>${td(wrPctSigned(w.saleGrowth), 'num')}${td(wrPctSigned(w.billGrowth), 'num')}${td(wrPctSigned(w.qtyGrowth), 'num')}</tr>
-    </table>`;
+  const tblStaff = '<table class="wrt">' +
+    '<tr class="hdr-blue"><th>Salesman</th><th>Bill</th><th>Qty</th><th>Value</th><th>ABS</th><th>ABV</th><th>Con%</th></tr>' +
+    w.salesman.map(s => '<tr><td>' + s.name + '</td>' + n(s.bills) + n(s.qty) + n(s.value) + n(s.abs, 1) + n(s.abv) + p(w.smTotal.value ? wrPct(s.value / w.smTotal.value) : '-') + '</tr>').join('') +
+    '<tr class="tot-green"><td>Grand Total</td>' + n(w.smTotal.bills) + n(w.smTotal.qty) + n(w.smTotal.value) + '<td></td><td></td>' + p('100%') + '</tr></table>';
 
-  // Salesman block
-  const smRows = w.salesman.map(s => `<tr>
-    <td>${s.name}</td>${td(wrNum(s.bills), 'num')}${td(wrNum(s.qty), 'num')}${td(wrNum(s.value), 'num')}
-    ${td(wrNum(s.abs, 1), 'num')}${td(wrNum(s.abv), 'num')}${td(w.smTotal.value ? wrPct(s.value / w.smTotal.value) : '—', 'num')}</tr>`).join('');
-  const salesmanTbl = `
-    <table class="rt wr-block">
-      <tr><th>Salesman Name</th><th class="num">Bills</th><th class="num">Qty</th><th class="num">Value</th><th class="num">ABS</th><th class="num">ABV</th><th class="num">Con%</th></tr>
-      ${smRows}
-      <tr class="total-row"><td>Grand Total</td>${td(wrNum(w.smTotal.bills), 'num')}${td(wrNum(w.smTotal.qty), 'num')}${td(wrNum(w.smTotal.value), 'num')}<td class="num"></td><td class="num"></td>${td('100%', 'num')}</tr>
-    </table>`;
+  const tblTopSkd = '<table class="wrt">' +
+    '<tr class="hdr"><th>TOP vs SKD</th><th>Value</th><th>Con%</th></tr>' +
+    '<tr><td>TOP</td>' + n(w.topVal) + p(w.tsTotal ? wrPct(w.topVal / w.tsTotal) : '-') + '</tr>' +
+    '<tr><td>SKD</td>' + n(w.skdVal) + p(w.tsTotal ? wrPct(w.skdVal / w.tsTotal) : '-') + '</tr>' +
+    '<tr class="tot-amber"><td>Total</td>' + n(w.tsTotal) + p('100%') + '</tr></table>';
 
-  // TOP vs SKD
-  const topSkd = `
-    <table class="rt wr-block">
-      <tr><th>TOP vs SKD</th><th class="num">Value</th><th class="num">Con%</th></tr>
-      <tr><td>TOP</td>${td(wrNum(w.topVal), 'num')}${td(w.tsTotal ? wrPct(w.topVal / w.tsTotal) : '—', 'num')}</tr>
-      <tr><td>SKD</td>${td(wrNum(w.skdVal), 'num')}${td(w.tsTotal ? wrPct(w.skdVal / w.tsTotal) : '—', 'num')}</tr>
-      <tr class="total-row"><td>Total</td>${td(wrNum(w.tsTotal), 'num')}${td('100%', 'num')}</tr>
-    </table>`;
+  const tblSlab = '<table class="wrt">' +
+    '<tr class="hdr"><th>Slab</th><th>Sales</th><th>Bill</th><th>ATV</th></tr>' +
+    '<tr><td>Slab 1</td>' + n(w.slab.s1Sales) + n(w.slab.s1Bills) + n(w.slab.s1Atv) + '</tr>' +
+    '<tr><td>Slab 2</td>' + n(w.slab.s2Sales) + n(w.slab.s2Bills) + n(w.slab.s2Atv) + '</tr>' +
+    '<tr><td>Fresh</td>' + n(w.slab.freshSales) + n(w.slab.freshBills) + n(w.slab.freshAtv) + '</tr>' +
+    '<tr class="r-yellow"><td>Offer Contribution</td>' + p(wrPct(w.slab.offerContribution)) + '<td></td><td></td></tr>' +
+    '<tr class="r-yellow"><td>Fresh Contribution</td>' + p(wrPct(w.slab.freshContribution)) + '<td></td><td></td></tr></table>';
 
-  // Slabs
-  const slabTbl = `
-    <table class="rt wr-block">
-      <tr><th>Slab</th><th class="num">Sales</th><th class="num">Bills</th><th class="num">ATV</th></tr>
-      <tr><td>Slab 1 (moderate offer)</td>${td(wrNum(w.slab.s1Sales), 'num')}${td(wrNum(w.slab.s1Bills), 'num')}${td(wrNum(w.slab.s1Atv), 'num')}</tr>
-      <tr><td>Slab 2 (deep offer)</td>${td(wrNum(w.slab.s2Sales), 'num')}${td(wrNum(w.slab.s2Bills), 'num')}${td(wrNum(w.slab.s2Atv), 'num')}</tr>
-      <tr><td>Fresh (full price)</td>${td(wrNum(w.slab.freshSales), 'num')}${td(wrNum(w.slab.freshBills), 'num')}${td(wrNum(w.slab.freshAtv), 'num')}</tr>
-      <tr class="total-row"><td>Offer Contribution</td>${td(wrPct(w.slab.offerContribution), 'num')}<td class="num"></td><td class="num"></td></tr>
-      <tr class="total-row"><td>Fresh Contribution</td>${td(wrPct(w.slab.freshContribution), 'num')}<td class="num"></td><td class="num"></td></tr>
-    </table>` + (w.hasBillSales ? '' : `<div class="badge-note">Slab split needs Bill Wise Sales (discount) data — upload it for accurate slabs.</div>`);
+  const tblFest = '<table class="wrt">' +
+    '<tr class="hdr"><th>Festive</th><th>Qty</th><th>Value</th><th>Con%</th></tr>' +
+    '<tr><td>FESTIVE</td>' + n(w.fest.FESTIVE.q) + n(w.fest.FESTIVE.v) + p(w.festTotV ? wrPct(w.fest.FESTIVE.v / w.festTotV) : '-') + '</tr>' +
+    '<tr><td>NON FESTIVE</td>' + n(w.fest.NONFESTIVE.q) + n(w.fest.NONFESTIVE.v) + p(w.festTotV ? wrPct(w.fest.NONFESTIVE.v / w.festTotV) : '-') + '</tr>' +
+    '<tr class="tot-amber"><td>Grand Total</td>' + n(w.festTotQ) + n(w.festTotV) + p('100%') + '</tr></table>';
 
-  // Festive
-  const festTbl = `
-    <table class="rt wr-block">
-      <tr><th>Festive Split</th><th class="num">Qty</th><th class="num">Value</th><th class="num">Con%</th></tr>
-      <tr><td>Festive</td>${td(wrNum(w.fest.FESTIVE.q), 'num')}${td(wrNum(w.fest.FESTIVE.v), 'num')}${td(w.festTotV ? wrPct(w.fest.FESTIVE.v / w.festTotV) : '—', 'num')}</tr>
-      <tr><td>Non-Festive</td>${td(wrNum(w.fest['NON FESTIVE'].q), 'num')}${td(wrNum(w.fest['NON FESTIVE'].v), 'num')}${td(w.festTotV ? wrPct(w.fest['NON FESTIVE'].v / w.festTotV) : '—', 'num')}</tr>
-      <tr class="total-row"><td>Grand Total</td><td class="num"></td>${td(wrNum(w.festTotV), 'num')}${td('100%', 'num')}</tr>
-    </table>`;
+  const tblDept = '<table class="wrt">' +
+    '<tr class="hdr"><th>Category</th><th>Qty</th><th>Value</th><th>Con%</th></tr>' +
+    w.dept.map(d => '<tr><td>' + d.key + '</td>' + n(d.qty) + n(d.value) + p(w.deptTotV ? wrPct(d.value / w.deptTotV) : '-') + '</tr>').join('') +
+    '<tr class="tot-amber"><td>Grand Total</td>' + n(w.deptTotQ) + n(w.deptTotV) + p('100%') + '</tr></table>';
 
-  // Category (Department)
-  const deptRows = w.dept.map(d => `<tr><td>${d.key}</td>${td(wrNum(d.qty), 'num')}${td(wrNum(d.value), 'num')}${td(w.deptTotV ? wrPct(d.value / w.deptTotV) : '—', 'num')}</tr>`).join('');
-  const deptTbl = `
-    <table class="rt wr-block">
-      <tr><th>Category (Dept)</th><th class="num">Qty</th><th class="num">Value</th><th class="num">Con%</th></tr>
-      ${deptRows}
-      <tr class="total-row"><td>Grand Total</td><td class="num"></td>${td(wrNum(w.deptTotV), 'num')}${td('100%', 'num')}</tr>
-    </table>`;
+  const tblKpi = '<table class="wrt">' +
+    '<tr class="hdr"><th>KPI</th><th>Last</th><th>This</th><th>Growth%</th></tr>' +
+    '<tr class="r-yellow"><td>ATV</td>' + n(w.kpi.atv.prev) + n(w.kpi.atv.now) + p(wrPctSigned(w.kpi.atv.growth)) + '</tr>' +
+    '<tr class="r-pink"><td>UPT</td>' + n(w.kpi.upt.prev, 2) + n(w.kpi.upt.now, 2) + p(wrPctSigned(w.kpi.upt.growth)) + '</tr>' +
+    '<tr class="r-green"><td>ASP</td>' + n(w.kpi.asp.prev) + n(w.kpi.asp.now) + p(wrPctSigned(w.kpi.asp.growth)) + '</tr>' +
+    '<tr class="r-lav"><td>Bill Count</td>' + n(w.kpi.bills.prev) + n(w.kpi.bills.now) + p(wrPctSigned(w.kpi.bills.growth)) + '</tr></table>';
 
-  // Class-ranked (STORY substitute)
-  const classRows = w.classRank.map(c => `<tr><td>${c.key}</td>${td(wrNum(c.qty), 'num')}${td(wrNum(c.value), 'num')}</tr>`).join('');
-  const classTbl = `
-    <table class="rt wr-block">
-      <tr><th colspan="3">Class-wise (Story substitute — POS exports carry no Story field)</th></tr>
-      <tr><th>Class</th><th class="num">Qty</th><th class="num">Value</th></tr>
-      ${classRows}
-      <tr class="total-row"><td>Grand Total</td>${td(wrNum(w.classTot.q), 'num')}${td(wrNum(w.classTot.v), 'num')}</tr>
-    </table>`;
+  const tblClass = '<table class="wrt">' +
+    '<tr class="hdr-gold"><th>CLASS</th><th>QTY</th><th>VALUE</th></tr>' +
+    w.classRank.map(x => '<tr><td>' + x.key + '</td>' + n(x.qty) + n(x.value) + '</tr>').join('') +
+    '<tr class="tot-gold"><td>Grand Total</td>' + n(w.classTot.q) + n(w.classTot.v) + '</tr></table>';
 
-  // KPI summary
-  const kpiRow = (label, k, dec) => `<tr><td>${label}</td>${td(wrNum(k.prev, dec || 0), 'num')}${td(wrNum(k.now, dec || 0), 'num')}${td(wrPctSigned(k.growth), 'num')}</tr>`;
-  const kpiTbl = `
-    <table class="rt wr-block">
-      <tr><th>KPI Summary</th><th class="num">Last</th><th class="num">This</th><th class="num">Growth%</th></tr>
-      ${kpiRow('ATV', w.kpi.atv)}
-      ${kpiRow('UPT', w.kpi.upt, 2)}
-      ${kpiRow('ASP', w.kpi.asp)}
-      ${kpiRow('Bill Count', w.kpi.bills)}
-    </table>`;
+  const css = '<style>' +
+    '.wr-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;}' +
+    '.wr-title{background:#000;color:#fff;font-weight:800;letter-spacing:1px;padding:5px 12px;border-radius:5px;font-size:13px;}' +
+    '.wr-title b{color:#FFE14D;}' +
+    '#wrScaleWrap{transform-origin:top left;}' +
+    '.wr-grid{display:grid;grid-template-columns:max-content max-content max-content;gap:10px;align-items:start;}' +
+    '.wr-col{display:flex;flex-direction:column;gap:10px;}' +
+    'table.wrt{border-collapse:collapse;font-size:11px;font-family:Segoe UI,Arial,sans-serif;background:#fff;color:#111;}' +
+    'table.wrt th,table.wrt td{border:1px solid #9aa;padding:2px 6px;white-space:nowrap;text-align:left;}' +
+    'table.wrt td.wn{text-align:right;font-variant-numeric:tabular-nums;}' +
+    'table.wrt tr.hdr th{background:#D9D2E9;color:#111;font-weight:700;}' +
+    'table.wrt tr.hdr-blue th{background:#1F4E79;color:#fff;font-weight:700;}' +
+    'table.wrt tr.hdr-gold th{background:#FFFF00;color:#111;font-weight:800;}' +
+    'table.wrt tr.tot-green td{background:#2E7D32;color:#fff;font-weight:700;}' +
+    'table.wrt tr.tot-amber td{background:#FFC000;font-weight:700;}' +
+    'table.wrt tr.tot-gold td{background:#FFFF00;font-weight:800;}' +
+    'table.wrt tr.r-last td{background:#D9D2E9;}' +
+    'table.wrt tr.r-this td{background:#FCE5CD;}' +
+    'table.wrt tr.r-grow td{background:#D9EAD3;font-weight:700;}' +
+    'table.wrt tr.r-yellow td{background:#FFF2CC;}' +
+    'table.wrt tr.r-pink td{background:#F4CCCC;}' +
+    'table.wrt tr.r-green td{background:#D9EAD3;}' +
+    'table.wrt tr.r-lav td{background:#D9D2E9;}' +
+    '.wr-note{font-size:11px;color:var(--ink-faint);margin-top:8px;}' +
+    '</style>';
 
-  el.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
-      <div>
-        <div class="section-title"><span class="eyebrow">Weekly Review</span></div>
-        <div class="section-sub">${dateLabel} · matches your manual review sheet</div>
-      </div>
-      <button class="btn btn-gold" onclick="exportWeeklyReviewExcel()">⬇ Download Weekly Review (Excel)</button>
-    </div>
-    <div class="grid-2">
-      <div>${summary}${salesmanTbl}${slabTbl}${topSkd}</div>
-      <div>${festTbl}${deptTbl}${kpiTbl}</div>
-    </div>
-    <div style="margin-top:14px;">${classTbl}</div>
-    <div class="badge-note" style="margin-top:12px;">Walking, Conversion and Cost% aren't in POS exports, so they're left out. ABS = avg units/bill, ABV = avg bill value. Growth compares this period vs the immediately preceding one of equal length.</div>
-  `;
+  el.innerHTML = css +
+    '<div class="wr-bar no-print">' +
+    '<div class="wr-title">' + dateLabel + ' &nbsp; <b>WEEKLY REVIEW</b></div>' +
+    '<div style="display:flex;gap:7px;flex-wrap:wrap;">' +
+    '<button class="btn" onclick="wrToggleFit()">' + (WR_FIT ? 'Actual size' : 'Fit to screen') + '</button>' +
+    '<button class="btn" onclick="wrPrint()">Print / PDF</button>' +
+    '<button class="btn btn-gold" onclick="exportWeeklyReviewExcel()">Excel (coloured)</button>' +
+    '</div></div>' +
+    '<div id="wrScaleWrap"><div class="wr-grid" id="wrGrid">' +
+    '<div class="wr-col">' + tblSummary + tblSlab + tblKpi + '</div>' +
+    '<div class="wr-col">' + tblStaff + tblTopSkd + tblFest + tblDept + '</div>' +
+    '<div class="wr-col">' + tblClass + '</div>' +
+    '</div></div>' +
+    '<div class="wr-note">ABS = units per bill. ABV = value per bill. Growth vs the previous period of equal length. Walking, Conversion and Cost% are not in POS exports. Class-wise replaces Story (no Story field in exports).</div>';
+
+  wrApplyFit();
 }
 
-function fmtDate(iso) {
-  if (!iso) return '';
-  const p = iso.split('-');
-  return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : iso;
+function wrToggleFit() { WR_FIT = !WR_FIT; const r = getSelectedRange(); renderWeeklyReview(r[0], r[1]); }
+
+// Print only this tab, landscape, scaled to one page.
+function wrPrint() {
+  const panels = Array.prototype.slice.call(document.querySelectorAll('.tab-panel'));
+  const prev = panels.map(p => p.style.display);
+  panels.forEach(p => { if (p.id !== 'tab-weeklyreview') p.style.display = 'none'; });
+  const st = document.createElement('style');
+  st.id = 'wrPrintStyle';
+  st.textContent = '@media print{@page{size:landscape;margin:8mm;}' +
+    '#tab-weeklyreview{display:block !important;}' +
+    '#wrScaleWrap{transform:none !important;height:auto !important;}' +
+    'table.wrt{font-size:8.5pt;} .wr-bar{display:none !important;}}';
+  document.head.appendChild(st);
+  window.print();
+  setTimeout(function () {
+    panels.forEach((p, i) => { p.style.display = prev[i]; });
+    const s = document.getElementById('wrPrintStyle');
+    if (s) s.remove();
+  }, 800);
 }
 
-// ===================== EXCEL EXPORT (sheet format) =====================
+function wrApplyFit() {
+  const wrap = document.getElementById('wrScaleWrap');
+  const grid = document.getElementById('wrGrid');
+  if (!wrap || !grid) return;
+  wrap.style.transform = 'none'; wrap.style.height = '';
+  if (!WR_FIT) return;
+  const availW = (wrap.parentElement && wrap.parentElement.clientWidth) || window.innerWidth;
+  const top = grid.getBoundingClientRect().top;
+  const availH = Math.max(300, window.innerHeight - top - 60);
+  const sw = availW / Math.max(1, grid.scrollWidth);
+  const sh = availH / Math.max(1, grid.scrollHeight);
+  const scale = Math.min(1, sw, sh);
+  if (scale < 1) {
+    wrap.style.transform = 'scale(' + scale + ')';
+    wrap.style.height = (grid.scrollHeight * scale) + 'px';
+  }
+}
+window.addEventListener('resize', function () { if (document.getElementById('wrScaleWrap')) wrApplyFit(); });
+
+// ===================== COLOURED EXCEL EXPORT =====================
+// Written as an HTML workbook so fills/fonts/borders survive: SheetJS community
+// build cannot write cell colours. Opens in Excel and Google Sheets.
 function exportWeeklyReviewExcel() {
-  const [start, end] = getSelectedRange();
+  const rng = getSelectedRange();
+  const start = rng[0], end = rng[1];
   const w = computeWeeklyReview(start, end);
-  if (typeof XLSX === 'undefined') { pushToast('Excel library not loaded'); return; }
+  const dateLabel = start === end ? wrDate(start) : (wrDate(start) + ' to ' + wrDate(end));
 
-  const wb = XLSX.utils.book_new();
-  const rows = [];
-  const push = (arr) => rows.push(arr);
-  const blank = () => rows.push([]);
+  const S = {
+    hdr: 'background:#D9D2E9;font-weight:bold;border:1px solid #888888;',
+    hdrBlue: 'background:#1F4E79;color:#FFFFFF;font-weight:bold;border:1px solid #888888;',
+    hdrGold: 'background:#FFFF00;font-weight:bold;border:1px solid #888888;',
+    cell: 'border:1px solid #AAAAAA;',
+    num: 'border:1px solid #AAAAAA;text-align:right;',
+    totGreen: 'background:#2E7D32;color:#FFFFFF;font-weight:bold;border:1px solid #888888;',
+    totAmber: 'background:#FFC000;font-weight:bold;border:1px solid #888888;',
+    totGold: 'background:#FFFF00;font-weight:bold;border:1px solid #888888;',
+    last: 'background:#D9D2E9;border:1px solid #AAAAAA;',
+    now: 'background:#FCE5CD;border:1px solid #AAAAAA;',
+    grow: 'background:#D9EAD3;font-weight:bold;border:1px solid #AAAAAA;',
+    yellow: 'background:#FFF2CC;border:1px solid #AAAAAA;',
+    pink: 'background:#F4CCCC;border:1px solid #AAAAAA;',
+    green: 'background:#D9EAD3;border:1px solid #AAAAAA;',
+    lav: 'background:#D9D2E9;border:1px solid #AAAAAA;'
+  };
+  const esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+  const c = function (v, st) { return '<td style="' + (st || S.cell) + '">' + esc(v) + '</td>'; };
+  const cn = function (v, st) { const num = Math.round(Number(v) || 0); return '<td style="' + (st || S.num) + '" x:num="' + num + '">' + num + '</td>'; };
+  const cf = function (v, st) { const num = (Number(v) || 0).toFixed(2); return '<td style="' + (st || S.num) + '" x:num="' + num + '">' + num + '</td>'; };
+  const cp = function (v, st) { return '<td style="' + (st || S.num) + '">' + esc(v) + '</td>'; };
 
-  push(['WEEKLY REVIEW', '', fmtDate(start) + (start === end ? '' : ' to ' + fmtDate(end))]);
-  blank();
-  push(['Metric', 'Value', 'Bill', 'Qty']);
-  push(['Last Period Sale', w.lastSale, w.lastBills, w.lastQty]);
-  push(['This Period Sale', w.thisSale, w.thisBills, w.thisQty]);
-  push(['Growth %', pctCell(w.saleGrowth), pctCell(w.billGrowth), pctCell(w.qtyGrowth)]);
-  blank();
+  const bSummary = [
+    [c('Metric', S.hdr), c('Value', S.hdr), c('Bill', S.hdr), c('Qty', S.hdr)],
+    [c('Last Period', S.last), cn(w.lastSale, S.last), cn(w.lastBills, S.last), cn(w.lastQty, S.last)],
+    [c('This Period', S.now), cn(w.thisSale, S.now), cn(w.thisBills, S.now), cn(w.thisQty, S.now)],
+    [c('Growth %', S.grow), cp(wrPctSigned(w.saleGrowth), S.grow), cp(wrPctSigned(w.billGrowth), S.grow), cp(wrPctSigned(w.qtyGrowth), S.grow)]
+  ];
+  const bSlab = [
+    [c('Slab', S.hdr), c('Sales', S.hdr), c('Bill', S.hdr), c('ATV', S.hdr)],
+    [c('Slab 1'), cn(w.slab.s1Sales), cn(w.slab.s1Bills), cn(w.slab.s1Atv)],
+    [c('Slab 2'), cn(w.slab.s2Sales), cn(w.slab.s2Bills), cn(w.slab.s2Atv)],
+    [c('Fresh'), cn(w.slab.freshSales), cn(w.slab.freshBills), cn(w.slab.freshAtv)],
+    [c('Offer Contribution', S.yellow), cp(wrPct(w.slab.offerContribution), S.yellow), c('', S.yellow), c('', S.yellow)],
+    [c('Fresh Contribution', S.yellow), cp(wrPct(w.slab.freshContribution), S.yellow), c('', S.yellow), c('', S.yellow)]
+  ];
+  const bKpi = [
+    [c('KPI', S.hdr), c('Last', S.hdr), c('This', S.hdr), c('Growth%', S.hdr)],
+    [c('ATV', S.yellow), cn(w.kpi.atv.prev, S.yellow), cn(w.kpi.atv.now, S.yellow), cp(wrPctSigned(w.kpi.atv.growth), S.yellow)],
+    [c('UPT', S.pink), cf(w.kpi.upt.prev, S.pink), cf(w.kpi.upt.now, S.pink), cp(wrPctSigned(w.kpi.upt.growth), S.pink)],
+    [c('ASP', S.green), cn(w.kpi.asp.prev, S.green), cn(w.kpi.asp.now, S.green), cp(wrPctSigned(w.kpi.asp.growth), S.green)],
+    [c('Bill Count', S.lav), cn(w.kpi.bills.prev, S.lav), cn(w.kpi.bills.now, S.lav), cp(wrPctSigned(w.kpi.bills.growth), S.lav)]
+  ];
+  let bStaff = [[c('Salesman Name', S.hdrBlue), c('Bill', S.hdrBlue), c('Qty', S.hdrBlue), c('Value', S.hdrBlue), c('ABS', S.hdrBlue), c('ABV', S.hdrBlue), c('Con%', S.hdrBlue)]];
+  w.salesman.forEach(s => bStaff.push([c(s.name), cn(s.bills), cn(s.qty), cn(s.value), cf(s.abs), cn(s.abv), cp(w.smTotal.value ? wrPct(s.value / w.smTotal.value) : '')]));
+  bStaff.push([c('Grand Total', S.totGreen), cn(w.smTotal.bills, S.totGreen), cn(w.smTotal.qty, S.totGreen), cn(w.smTotal.value, S.totGreen), c('', S.totGreen), c('', S.totGreen), c('100%', S.totGreen)]);
+  const bTopSkd = [
+    [c('TOP vs SKD', S.hdr), c('Value', S.hdr), c('Con%', S.hdr)],
+    [c('TOP'), cn(w.topVal), cp(w.tsTotal ? wrPct(w.topVal / w.tsTotal) : '')],
+    [c('SKD'), cn(w.skdVal), cp(w.tsTotal ? wrPct(w.skdVal / w.tsTotal) : '')],
+    [c('Total', S.totAmber), cn(w.tsTotal, S.totAmber), c('100%', S.totAmber)]
+  ];
+  const bFest = [
+    [c('Festive', S.hdr), c('Qty', S.hdr), c('Value', S.hdr), c('Con%', S.hdr)],
+    [c('FESTIVE'), cn(w.fest.FESTIVE.q), cn(w.fest.FESTIVE.v), cp(w.festTotV ? wrPct(w.fest.FESTIVE.v / w.festTotV) : '')],
+    [c('NON FESTIVE'), cn(w.fest.NONFESTIVE.q), cn(w.fest.NONFESTIVE.v), cp(w.festTotV ? wrPct(w.fest.NONFESTIVE.v / w.festTotV) : '')],
+    [c('Grand Total', S.totAmber), cn(w.festTotQ, S.totAmber), cn(w.festTotV, S.totAmber), c('100%', S.totAmber)]
+  ];
+  let bDept = [[c('Category', S.hdr), c('Qty', S.hdr), c('Value', S.hdr), c('Con%', S.hdr)]];
+  w.dept.forEach(d => bDept.push([c(d.key), cn(d.qty), cn(d.value), cp(w.deptTotV ? wrPct(d.value / w.deptTotV) : '')]));
+  bDept.push([c('Grand Total', S.totAmber), cn(w.deptTotQ, S.totAmber), cn(w.deptTotV, S.totAmber), c('100%', S.totAmber)]);
+  let bClass = [[c('CLASS', S.hdrGold), c('QTY', S.hdrGold), c('VALUE', S.hdrGold)]];
+  w.classRank.forEach(x => bClass.push([c(x.key), cn(x.qty), cn(x.value)]));
+  bClass.push([c('Grand Total', S.totGold), cn(w.classTot.q, S.totGold), cn(w.classTot.v, S.totGold)]);
 
-  push(['SALESMAN', 'Bills', 'Qty', 'Value', 'ABS', 'ABV', 'Con%']);
-  w.salesman.forEach(s => push([s.name, s.bills, s.qty, Math.round(s.value), +s.abs.toFixed(1), Math.round(s.abv), w.smTotal.value ? pctCell(s.value / w.smTotal.value) : '']));
-  push(['Grand Total', w.smTotal.bills, w.smTotal.qty, Math.round(w.smTotal.value), '', '', '100%']);
-  blank();
+  const LEFT = 0, MID = 5, RIGHT = 13, WIDTH = 16;
+  const matrix = [];
+  const place = function (block, startRow, startCol) {
+    for (let ri = 0; ri < block.length; ri++) {
+      const r = startRow + ri;
+      if (!matrix[r]) matrix[r] = [];
+      for (let ci = 0; ci < block[ri].length; ci++) matrix[r][startCol + ci] = block[ri][ci];
+    }
+    return startRow + block.length;
+  };
+  let rowL = 0, rowM = 0;
+  rowL = place(bSummary, rowL, LEFT) + 1;
+  rowL = place(bSlab, rowL, LEFT) + 1;
+  rowL = place(bKpi, rowL, LEFT) + 1;
+  rowM = place(bStaff, rowM, MID) + 1;
+  rowM = place(bTopSkd, rowM, MID) + 1;
+  rowM = place(bFest, rowM, MID) + 1;
+  rowM = place(bDept, rowM, MID) + 1;
+  place(bClass, 0, RIGHT);
 
-  push(['TOP vs SKD', 'Value', 'Con%']);
-  push(['TOP', Math.round(w.topVal), w.tsTotal ? pctCell(w.topVal / w.tsTotal) : '']);
-  push(['SKD', Math.round(w.skdVal), w.tsTotal ? pctCell(w.skdVal / w.tsTotal) : '']);
-  push(['Total', Math.round(w.tsTotal), '100%']);
-  blank();
+  const totalRows = Math.max(matrix.length, 1);
+  let body = '';
+  for (let r = 0; r < totalRows; r++) {
+    body += '<tr>';
+    for (let col = 0; col < WIDTH; col++) body += (matrix[r] && matrix[r][col]) ? matrix[r][col] : '<td></td>';
+    body += '</tr>';
+  }
 
-  push(['SLAB', 'Sales', 'Bills', 'ATV']);
-  push(['Slab 1', Math.round(w.slab.s1Sales), w.slab.s1Bills, Math.round(w.slab.s1Atv)]);
-  push(['Slab 2', Math.round(w.slab.s2Sales), w.slab.s2Bills, Math.round(w.slab.s2Atv)]);
-  push(['Fresh', Math.round(w.slab.freshSales), w.slab.freshBills, Math.round(w.slab.freshAtv)]);
-  push(['Offer Contribution', pctCell(w.slab.offerContribution)]);
-  push(['Fresh Contribution', pctCell(w.slab.freshContribution)]);
-  blank();
+  const titleRow = '<tr>' +
+    '<td colspan="4" style="background:#000000;color:#FFFFFF;font-weight:bold;font-size:14px;">' + esc(dateLabel) + '</td>' +
+    '<td></td>' +
+    '<td colspan="7" style="background:#FFFF00;color:#000000;font-weight:bold;font-size:14px;text-align:center;">WEEKLY REVIEW</td>' +
+    '<td></td>' +
+    '<td colspan="3" style="background:#000000;color:#FFE14D;font-weight:bold;text-align:center;">CLASS-WISE</td>' +
+    '</tr><tr></tr>';
 
-  push(['FESTIVE SPLIT', 'Qty', 'Value', 'Con%']);
-  push(['Festive', w.fest.FESTIVE.q, Math.round(w.fest.FESTIVE.v), w.festTotV ? pctCell(w.fest.FESTIVE.v / w.festTotV) : '']);
-  push(['Non-Festive', w.fest['NON FESTIVE'].q, Math.round(w.fest['NON FESTIVE'].v), w.festTotV ? pctCell(w.fest['NON FESTIVE'].v / w.festTotV) : '']);
-  push(['Grand Total', '', Math.round(w.festTotV), '100%']);
-  blank();
+  const html = '<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8">' +
+    '<xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>' +
+    '<x:Name>Weekly Review</x:Name><x:WorksheetOptions><x:Print>' +
+    '<x:ValidPrinterInfo/><x:Scale>60</x:Scale><x:FitWidth>1</x:FitWidth><x:FitHeight>1</x:FitHeight>' +
+    '<x:Layout x:Orientation="Landscape"/></x:Print></x:WorksheetOptions>' +
+    '</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml>' +
+    '<style>td{font-family:Calibri,Arial,sans-serif;font-size:10pt;}</style></head><body>' +
+    '<table border="0" cellspacing="0" cellpadding="2">' + titleRow + body + '</table></body></html>';
 
-  push(['CATEGORY (DEPT)', 'Qty', 'Value', 'Con%']);
-  w.dept.forEach(d => push([d.key, d.qty, Math.round(d.value), w.deptTotV ? pctCell(d.value / w.deptTotV) : '']));
-  push(['Grand Total', '', Math.round(w.deptTotV), '100%']);
-  blank();
-
-  push(['KPI SUMMARY', 'Last', 'This', 'Growth%']);
-  push(['ATV', Math.round(w.kpi.atv.prev), Math.round(w.kpi.atv.now), pctCell(w.kpi.atv.growth)]);
-  push(['UPT', +w.kpi.upt.prev.toFixed(2), +w.kpi.upt.now.toFixed(2), pctCell(w.kpi.upt.growth)]);
-  push(['ASP', Math.round(w.kpi.asp.prev), Math.round(w.kpi.asp.now), pctCell(w.kpi.asp.growth)]);
-  push(['Bill Count', w.kpi.bills.prev, w.kpi.bills.now, pctCell(w.kpi.bills.growth)]);
-  blank();
-
-  push(['CLASS-WISE (Story substitute)', 'Qty', 'Value']);
-  w.classRank.forEach(c => push([c.key, c.qty, Math.round(c.value)]));
-  push(['Grand Total', w.classTot.q, Math.round(w.classTot.v)]);
-
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{ wch: 26 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 8 }];
-  XLSX.utils.book_append_sheet(wb, ws, 'Weekly Review');
-  const fname = 'Weekly_Review_' + start + '_to_' + end + '.xlsx';
-  let blob;
-  try {
-    const ab = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    blob = new Blob([ab], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  } catch (e) { pushToast('Excel build failed: ' + e.message); return; }
-  deliverFile(blob, fname);
+  const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  deliverFile(blob, 'Weekly_Review_' + start + '_to_' + end + '.xls');
 }
-function pctCell(n) { return (n == null || !isFinite(n)) ? '' : (n * 100).toFixed(0) + '%'; }
 
 </script>
 
