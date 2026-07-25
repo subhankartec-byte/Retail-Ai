@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terms of Service · Retail AI</title>
+<meta name="description" content="The terms that govern your use of Retail AI's website and tools, including accounts, plans and acceptable use.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23E9B64D'/%3E%3Cpath d='M16 8v16M8 16h16' stroke='%230A0F1C' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg-0:#05080F; --bg-1:#0A0F1C; --bg-2:#0E1526;
+  --surface:rgba(255,255,255,.035); --surface-2:rgba(255,255,255,.065);
+  --border:rgba(255,255,255,.09); --border-strong:rgba(255,255,255,.17);
+  --gold:#E9B64D; --gold-soft:#F4D488; --gold-deep:#C9862A; --gold-glow:rgba(233,182,77,.35);
+  --text-hi:#F2F5FB; --text-mid:#A9B2C6; --text-low:#67728A;
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --radius-lg:20px; --radius-md:14px; --container:780px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg-0); color:var(--text-mid);
+  font-family:var(--font-sans); line-height:1.7; font-size:16.5px;
+  -webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(1100px 520px at 50% -8%,rgba(233,182,77,.10),transparent 60%);
+  background-repeat:no-repeat;
+}
+a{color:var(--gold-soft); text-decoration:none}
+a:hover{color:var(--gold)}
+a:focus-visible{outline:2px solid var(--gold); outline-offset:3px; border-radius:4px}
+
+.top{position:sticky; top:0; z-index:20; backdrop-filter:blur(14px);
+  background:rgba(5,8,15,.72); border-bottom:1px solid var(--border)}
+.top .wrap{max-width:var(--container); margin:0 auto; padding:14px 22px;
+  display:flex; align-items:center; gap:14px}
+.brand{display:flex; align-items:center; gap:11px}
+.mark{width:38px; height:38px; border-radius:11px; flex:none;
+  background:linear-gradient(150deg,var(--gold-soft),var(--gold-deep));
+  display:grid; place-items:center; color:#0A0F1C; font-weight:800; font-size:22px;
+  box-shadow:0 6px 18px rgba(233,182,77,.28)}
+.brand b{color:var(--text-hi); font-size:16px; letter-spacing:.2px; display:block; line-height:1.05}
+.brand span{color:var(--text-low); font-size:9.5px; letter-spacing:.22em; font-weight:700}
+.back{margin-left:auto; font-size:13.5px; font-weight:600; color:var(--text-mid);
+  border:1px solid var(--border-strong); padding:8px 14px; border-radius:10px}
+.back:hover{border-color:var(--gold); color:var(--gold)}
+
+main{max-width:var(--container); margin:0 auto; padding:52px 22px 30px}
+.eyebrow{color:var(--gold); font-size:11.5px; font-weight:800; letter-spacing:.24em; text-transform:uppercase}
+h1{color:var(--text-hi); font-size:clamp(30px,6vw,44px); line-height:1.1; margin:14px 0 10px; letter-spacing:-.02em}
+.updated{color:var(--text-low); font-size:13.5px; margin-bottom:26px}
+.updated b{color:var(--text-mid); font-weight:600}
+.lead{color:var(--text-mid); font-size:17.5px; margin:0 0 30px}
+
+.toc{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md);
+  padding:18px 22px; margin:0 0 44px}
+.toc h2{margin:0 0 12px; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--text-low)}
+.toc ol{margin:0; padding:0; list-style:none; counter-reset:t;
+  display:grid; grid-template-columns:1fr 1fr; gap:7px 26px}
+.toc li{counter-increment:t; font-size:14.5px}
+.toc li::before{content:counter(t,decimal-leading-zero); color:var(--gold-deep); font-weight:700; margin-right:9px; font-variant-numeric:tabular-nums}
+.toc a{color:var(--text-mid)}
+.toc a:hover{color:var(--gold)}
+
+section{margin:0 0 38px; scroll-margin-top:80px}
+h2.sec{color:var(--text-hi); font-size:22px; letter-spacing:-.01em; margin:0 0 14px;
+  display:flex; align-items:baseline; gap:13px}
+h2.sec .n{color:var(--gold); font-size:15px; font-weight:800; font-variant-numeric:tabular-nums; flex:none}
+p{margin:0 0 14px}
+strong{color:var(--text-hi); font-weight:650}
+ul{margin:0 0 14px; padding-left:2px; list-style:none}
+ul li{position:relative; padding-left:22px; margin-bottom:9px}
+ul li::before{content:""; position:absolute; left:2px; top:11px; width:6px; height:6px;
+  border-radius:50%; background:var(--gold-deep)}
+.callout{background:var(--surface-2); border:1px solid var(--border);
+  border-left:3px solid var(--gold); border-radius:12px; padding:16px 20px; margin:0 0 16px}
+.callout p:last-child{margin-bottom:0}
+
+footer{border-top:1px solid var(--border); margin-top:30px}
+footer .wrap{max-width:var(--container); margin:0 auto; padding:34px 22px;
+  display:flex; flex-wrap:wrap; gap:18px 30px; align-items:center}
+footer nav{display:flex; flex-wrap:wrap; gap:8px 22px; font-size:14px}
+footer nav a{color:var(--text-mid)}
+footer .copy{color:var(--text-low); font-size:13px; width:100%; margin-top:6px}
+
+@media(max-width:560px){
+  .toc ol{grid-template-columns:1fr}
+  .brand span{display:none}
+  main{padding-top:38px}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="index.html#home">
+      <span class="mark">+</span>
+      <span><b>Retail AI</b><span>FOR STORE TEAMS</span></span>
+    </a>
+    <a class="back" href="index.html#home">← Back to site</a>
+  </div>
+</header>
+
+<main>
+  <div class="eyebrow">Legal</div>
+  <h1>Terms of Service</h1>
+  <p class="updated">Last updated <b>26 July 2026</b></p>
+  <p class="lead">These terms are the agreement between you and Retail AI for using our website and tools. Please read them before you create an account or run a report. By using Retail AI, you agree to what follows.</p>
+
+  <nav class="toc" aria-label="Contents">
+    <h2>On this page</h2>
+    <ol>
+      <li><a href="#accept">Acceptance</a></li>
+      <li><a href="#service">The service</a></li>
+      <li><a href="#accounts">Accounts</a></li>
+      <li><a href="#plans">Plans &amp; billing</a></li>
+      <li><a href="#yourdata">Your data</a></li>
+      <li><a href="#use">Acceptable use</a></li>
+      <li><a href="#ip">Intellectual property</a></li>
+      <li><a href="#third">Third-party services</a></li>
+      <li><a href="#warranty">Disclaimers</a></li>
+      <li><a href="#liability">Liability</a></li>
+      <li><a href="#term">Termination</a></li>
+      <li><a href="#law">Governing law</a></li>
+    </ol>
+  </nav>
+
+  <section id="accept">
+    <h2 class="sec"><span class="n">01</span> Acceptance of terms</h2>
+    <p>By accessing or using Retail AI, you confirm that you have read and agree to these Terms of Service and our <a href="privacy.html">Privacy Policy</a>. If you are using Retail AI for an organisation, you confirm you are authorised to accept these terms on its behalf. If you do not agree, please do not use the service.</p>
+  </section>
+
+  <section id="service">
+    <h2 class="sec"><span class="n">02</span> The service</h2>
+    <p>Retail AI provides browser-based tools for retail store teams — including inventory analysis, stock validation, auditing, transfer planning and reporting. The tools are aids that help you work faster; they are <strong>not a substitute for your own review and judgement</strong>. We may add, change or remove features over time.</p>
+  </section>
+
+  <section id="accounts">
+    <h2 class="sec"><span class="n">03</span> Accounts</h2>
+    <ul>
+      <li>You must provide accurate information when creating an account and keep it up to date.</li>
+      <li>You are responsible for keeping your login credentials safe and for activity under your account.</li>
+      <li>You must be at least 18 years old to use Retail AI.</li>
+      <li>Tell us promptly at <a href="mailto:hello@retailai.in">hello@retailai.in</a> if you believe your account has been accessed without permission.</li>
+    </ul>
+  </section>
+
+  <section id="plans">
+    <h2 class="sec"><span class="n">04</span> Plans &amp; billing</h2>
+    <p>Retail AI offers a free plan and paid plans:</p>
+    <ul>
+      <li><strong>Free</strong> — ₹0, with the limits shown on the pricing page.</li>
+      <li><strong>Pro</strong> — ₹99 per month.</li>
+      <li><strong>Business</strong> — ₹299 per month.</li>
+    </ul>
+    <div class="callout">
+      <p>Where paid billing is enabled, fees are stated in Indian Rupees and are charged in advance for each billing period. Prices may change with notice, and applicable taxes may apply. Paid features are being rolled out — the exact plan availability and payment options shown on the pricing page apply.</p>
+    </div>
+    <p>You can cancel a paid plan at any time; cancellation stops future charges and takes effect at the end of the current billing period. Except where the law requires otherwise, fees already paid are non-refundable.</p>
+  </section>
+
+  <section id="yourdata">
+    <h2 class="sec"><span class="n">05</span> Your data &amp; responsibility</h2>
+    <ul>
+      <li>You keep ownership of the store data and files you use with Retail AI.</li>
+      <li>You are responsible for having the right to use that data and for its accuracy.</li>
+      <li>Reports and figures produced by the tools are provided to assist you. <strong>Always verify important numbers before acting on them</strong> — for example before submitting stock, transfer or financial decisions.</li>
+    </ul>
+    <p>How your data is handled is described in our <a href="privacy.html">Privacy Policy</a>.</p>
+  </section>
+
+  <section id="use">
+    <h2 class="sec"><span class="n">06</span> Acceptable use</h2>
+    <p>When using Retail AI, you agree not to:</p>
+    <ul>
+      <li>Use the service for anything unlawful, or upload data you do not have permission to use.</li>
+      <li>Attempt to disrupt, overload, reverse-engineer or gain unauthorised access to the service.</li>
+      <li>Resell, sublicense or copy the tools or website without our written permission.</li>
+      <li>Use the service in a way that infringes someone else's rights.</li>
+    </ul>
+  </section>
+
+  <section id="ip">
+    <h2 class="sec"><span class="n">07</span> Intellectual property</h2>
+    <p>The Retail AI website, tools, design and content are owned by Retail AI and protected by applicable laws. These terms give you a limited, personal, non-transferable right to use the service — they do not transfer any ownership to you. Your own data remains yours.</p>
+  </section>
+
+  <section id="third">
+    <h2 class="sec"><span class="n">08</span> Third-party services</h2>
+    <p>Retail AI relies on third-party providers (for example, for authentication, hosting and the optional Ask AI feature). Your use of those features is also subject to the relevant provider's terms. We are not responsible for third-party services we do not control.</p>
+  </section>
+
+  <section id="warranty">
+    <h2 class="sec"><span class="n">09</span> Disclaimers</h2>
+    <p>Retail AI is provided on an <strong>"as is" and "as available"</strong> basis. We do not warrant that the service will be uninterrupted, error-free, or that reports and calculations will be complete or accurate for every situation. To the fullest extent permitted by law, we disclaim all warranties not expressly stated in these terms.</p>
+  </section>
+
+  <section id="liability">
+    <h2 class="sec"><span class="n">10</span> Limitation of liability</h2>
+    <p>To the fullest extent permitted by law, Retail AI will not be liable for any indirect, incidental or consequential losses, or for loss of profits, data or business, arising from your use of (or inability to use) the service. Nothing in these terms limits liability that cannot be limited under applicable law.</p>
+  </section>
+
+  <section id="term">
+    <h2 class="sec"><span class="n">11</span> Termination</h2>
+    <p>You can stop using Retail AI and close your account at any time. We may suspend or end your access if you breach these terms or use the service in a way that could harm Retail AI or other users. Sections that by their nature should survive termination (such as intellectual property, disclaimers and liability) will continue to apply.</p>
+  </section>
+
+  <section id="law">
+    <h2 class="sec"><span class="n">12</span> Governing law &amp; contact</h2>
+    <p>These terms are governed by the laws of India, and the courts at Bengaluru, Karnataka will have jurisdiction over any disputes. We may update these terms from time to time; the "Last updated" date above shows the current version, and continued use means you accept the changes.</p>
+    <p>Questions about these terms? Email <a href="mailto:hello@retailai.in">hello@retailai.in</a>.</p>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="index.html#home">
+      <span class="mark">+</span>
+      <span><b>Retail AI</b><span>FOR STORE TEAMS</span></span>
+    </a>
+    <nav>
+      <a href="index.html#home">Home</a>
+      <a href="index.html#tools">Tools</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="mailto:hello@retailai.in">Contact</a>
+    </nav>
+    <div class="copy">© 2026 Retail AI. Built for store teams.</div>
+  </div>
+</footer>
+
+</body>
+</html>

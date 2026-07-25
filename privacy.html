@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy · Retail AI</title>
+<meta name="description" content="How Retail AI collects, uses and protects your information — including the store data you upload and your account details.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23E9B64D'/%3E%3Cpath d='M16 8v16M8 16h16' stroke='%230A0F1C' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg-0:#05080F; --bg-1:#0A0F1C; --bg-2:#0E1526;
+  --surface:rgba(255,255,255,.035); --surface-2:rgba(255,255,255,.065);
+  --border:rgba(255,255,255,.09); --border-strong:rgba(255,255,255,.17);
+  --gold:#E9B64D; --gold-soft:#F4D488; --gold-deep:#C9862A; --gold-glow:rgba(233,182,77,.35);
+  --text-hi:#F2F5FB; --text-mid:#A9B2C6; --text-low:#67728A;
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --radius-lg:20px; --radius-md:14px; --container:780px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg-0); color:var(--text-mid);
+  font-family:var(--font-sans); line-height:1.7; font-size:16.5px;
+  -webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(1100px 520px at 50% -8%,rgba(233,182,77,.10),transparent 60%);
+  background-repeat:no-repeat;
+}
+a{color:var(--gold-soft); text-decoration:none}
+a:hover{color:var(--gold)}
+a:focus-visible{outline:2px solid var(--gold); outline-offset:3px; border-radius:4px}
+
+/* header */
+.top{position:sticky; top:0; z-index:20; backdrop-filter:blur(14px);
+  background:rgba(5,8,15,.72); border-bottom:1px solid var(--border)}
+.top .wrap{max-width:var(--container); margin:0 auto; padding:14px 22px;
+  display:flex; align-items:center; gap:14px}
+.brand{display:flex; align-items:center; gap:11px}
+.mark{width:38px; height:38px; border-radius:11px; flex:none;
+  background:linear-gradient(150deg,var(--gold-soft),var(--gold-deep));
+  display:grid; place-items:center; color:#0A0F1C; font-weight:800; font-size:22px;
+  box-shadow:0 6px 18px rgba(233,182,77,.28)}
+.brand b{color:var(--text-hi); font-size:16px; letter-spacing:.2px; display:block; line-height:1.05}
+.brand span{color:var(--text-low); font-size:9.5px; letter-spacing:.22em; font-weight:700}
+.back{margin-left:auto; font-size:13.5px; font-weight:600; color:var(--text-mid);
+  border:1px solid var(--border-strong); padding:8px 14px; border-radius:10px}
+.back:hover{border-color:var(--gold); color:var(--gold)}
+
+/* doc */
+main{max-width:var(--container); margin:0 auto; padding:52px 22px 30px}
+.eyebrow{color:var(--gold); font-size:11.5px; font-weight:800; letter-spacing:.24em; text-transform:uppercase}
+h1{color:var(--text-hi); font-size:clamp(30px,6vw,44px); line-height:1.1; margin:14px 0 10px; letter-spacing:-.02em}
+.updated{color:var(--text-low); font-size:13.5px; margin-bottom:26px}
+.updated b{color:var(--text-mid); font-weight:600}
+.lead{color:var(--text-mid); font-size:17.5px; margin:0 0 30px}
+
+.toc{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md);
+  padding:18px 22px; margin:0 0 44px}
+.toc h2{margin:0 0 12px; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--text-low)}
+.toc ol{margin:0; padding:0; list-style:none; counter-reset:t;
+  display:grid; grid-template-columns:1fr 1fr; gap:7px 26px}
+.toc li{counter-increment:t; font-size:14.5px}
+.toc li::before{content:counter(t,decimal-leading-zero); color:var(--gold-deep); font-weight:700; margin-right:9px; font-variant-numeric:tabular-nums}
+.toc a{color:var(--text-mid)}
+.toc a:hover{color:var(--gold)}
+
+section{margin:0 0 38px; scroll-margin-top:80px}
+h2.sec{color:var(--text-hi); font-size:22px; letter-spacing:-.01em; margin:0 0 14px;
+  display:flex; align-items:baseline; gap:13px}
+h2.sec .n{color:var(--gold); font-size:15px; font-weight:800; font-variant-numeric:tabular-nums; flex:none}
+h3{color:var(--text-hi); font-size:16.5px; margin:22px 0 6px}
+p{margin:0 0 14px}
+strong{color:var(--text-hi); font-weight:650}
+ul{margin:0 0 14px; padding-left:2px; list-style:none}
+ul li{position:relative; padding-left:22px; margin-bottom:9px}
+ul li::before{content:""; position:absolute; left:2px; top:11px; width:6px; height:6px;
+  border-radius:50%; background:var(--gold-deep)}
+.callout{background:var(--surface-2); border:1px solid var(--border);
+  border-left:3px solid var(--gold); border-radius:12px; padding:16px 20px; margin:0 0 16px}
+.callout p:last-child{margin-bottom:0}
+
+/* footer */
+footer{border-top:1px solid var(--border); margin-top:30px}
+footer .wrap{max-width:var(--container); margin:0 auto; padding:34px 22px;
+  display:flex; flex-wrap:wrap; gap:18px 30px; align-items:center}
+footer nav{display:flex; flex-wrap:wrap; gap:8px 22px; font-size:14px}
+footer nav a{color:var(--text-mid)}
+footer .copy{color:var(--text-low); font-size:13px; width:100%; margin-top:6px}
+
+@media(max-width:560px){
+  .toc ol{grid-template-columns:1fr}
+  .brand span{display:none}
+  main{padding-top:38px}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="index.html#home">
+      <span class="mark">+</span>
+      <span><b>Retail AI</b><span>FOR STORE TEAMS</span></span>
+    </a>
+    <a class="back" href="index.html#home">← Back to site</a>
+  </div>
+</header>
+
+<main>
+  <div class="eyebrow">Legal</div>
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated <b>26 July 2026</b></p>
+  <p class="lead">Retail AI is built for store managers, and store data is sensitive. This policy explains what we collect, how the tools handle the files you upload, and the choices you have. In plain terms, not legalese where we can help it.</p>
+
+  <nav class="toc" aria-label="Contents">
+    <h2>On this page</h2>
+    <ol>
+      <li><a href="#who">Who we are</a></li>
+      <li><a href="#collect">Information we collect</a></li>
+      <li><a href="#uploads">Your uploaded store data</a></li>
+      <li><a href="#use">How we use information</a></li>
+      <li><a href="#ai">The Ask AI feature</a></li>
+      <li><a href="#share">Sharing &amp; third parties</a></li>
+      <li><a href="#retain">Retention</a></li>
+      <li><a href="#security">Security</a></li>
+      <li><a href="#rights">Your rights</a></li>
+      <li><a href="#children">Children</a></li>
+      <li><a href="#changes">Changes</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ol>
+  </nav>
+
+  <section id="who">
+    <h2 class="sec"><span class="n">01</span> Who we are</h2>
+    <p>Retail AI ("Retail AI", "we", "us") provides browser-based tools that help retail store teams automate inventory analysis, stock validation, auditing, transfer planning and reporting. This policy applies to our website and the tools accessed through it. If you have questions, reach us at <a href="mailto:hello@retailai.in">hello@retailai.in</a>.</p>
+  </section>
+
+  <section id="collect">
+    <h2 class="sec"><span class="n">02</span> Information we collect</h2>
+    <p>We keep collection to what the service actually needs:</p>
+    <h3>Account information</h3>
+    <ul>
+      <li>Your <strong>name, email address and phone number</strong>, provided when you create an account.</li>
+      <li>Authentication data managed through our sign-in provider (for example, a securely stored password credential — we never see your password in plain text).</li>
+    </ul>
+    <h3>Business data you choose to upload</h3>
+    <ul>
+      <li>Retail files you load into the tools — <strong>POS exports, stock-on-hand (SOH) reports, item masters, sales and transfer data</strong> — so a tool can generate the report you asked for. How this is handled is described in section 03.</li>
+    </ul>
+    <h3>Usage &amp; device information</h3>
+    <ul>
+      <li>Basic technical data such as browser type, device and pages visited, used to keep the service working and improve it.</li>
+      <li>Local browser storage (<code>localStorage</code>) for your preferences and settings. This stays on your device.</li>
+    </ul>
+  </section>
+
+  <section id="uploads">
+    <h2 class="sec"><span class="n">03</span> Your uploaded store data</h2>
+    <div class="callout">
+      <p><strong>Most Retail AI tools run entirely inside your browser.</strong> When you upload an Excel or POS file to generate a report, that file is read and processed on your own device. The tools do not upload your raw store files to a Retail AI server, and we do not store copies of them.</p>
+    </div>
+    <p>Because the processing happens locally, closing or refreshing the page clears the loaded data from memory. If a future feature needs to send data to a server, we will make that clear before it happens and update this policy.</p>
+  </section>
+
+  <section id="use">
+    <h2 class="sec"><span class="n">04</span> How we use information</h2>
+    <ul>
+      <li>To create and manage your account and let you sign in.</li>
+      <li>To provide, maintain and improve the tools and website.</li>
+      <li>To respond to your messages and support requests.</li>
+      <li>To keep the service secure and prevent misuse.</li>
+      <li>To send essential service messages (for example, account or security notices). We do not sell your information, and we do not send marketing you did not ask for.</li>
+    </ul>
+  </section>
+
+  <section id="ai">
+    <h2 class="sec"><span class="n">05</span> The Ask AI feature</h2>
+    <p>Some tools include an optional <strong>Ask AI</strong> assistant. It is off until you turn it on:</p>
+    <ul>
+      <li>You add your own AI provider API key in the tool's settings. That key is stored <strong>only in your browser</strong> and is never sent to Retail AI.</li>
+      <li>When you ask a question, the on-screen report summary and your question are sent directly from your browser to the AI provider (Anthropic) to generate an answer.</li>
+      <li>If you do not add a key, the tool answers using built-in analysis and nothing leaves your device.</li>
+    </ul>
+    <p>The AI provider processes that request under its own terms and privacy policy. Avoid including information in your questions that you would not want processed by a third-party AI service.</p>
+  </section>
+
+  <section id="share">
+    <h2 class="sec"><span class="n">06</span> Sharing &amp; third parties</h2>
+    <p>We do not sell your personal information. We share it only with service providers that help us run Retail AI, and only as needed:</p>
+    <ul>
+      <li><strong>Authentication &amp; database</strong> (Google Firebase) — to sign you in and store your account profile.</li>
+      <li><strong>Hosting</strong> (Vercel) — to serve the website and tools.</li>
+      <li><strong>AI provider</strong> (Anthropic) — only for the optional Ask AI feature you enable, as described in section 05.</li>
+    </ul>
+    <p>These providers may process data outside India under their own safeguards. We may also disclose information if required by law or to protect our rights and users.</p>
+  </section>
+
+  <section id="retain">
+    <h2 class="sec"><span class="n">07</span> Retention</h2>
+    <p>We keep account information for as long as your account is active. If you close your account, we delete or anonymise your account information within a reasonable period, except where we must keep it to meet legal obligations. Uploaded store files are not retained by us (see section 03).</p>
+  </section>
+
+  <section id="security">
+    <h2 class="sec"><span class="n">08</span> Security</h2>
+    <p>We use reasonable technical and organisational measures — encryption in transit, trusted infrastructure providers and access controls — to protect your information. No method of transmission or storage is perfectly secure, so we cannot guarantee absolute security, but we work to protect your data and to fix issues quickly.</p>
+  </section>
+
+  <section id="rights">
+    <h2 class="sec"><span class="n">09</span> Your rights &amp; choices</h2>
+    <p>You can:</p>
+    <ul>
+      <li>Access or correct your account details from your profile, or by contacting us.</li>
+      <li>Request a copy of your personal information or ask us to delete it.</li>
+      <li>Withdraw consent for optional features at any time.</li>
+    </ul>
+    <p>To make a request, email <a href="mailto:hello@retailai.in">hello@retailai.in</a>. We may need to verify your identity before acting.</p>
+  </section>
+
+  <section id="children">
+    <h2 class="sec"><span class="n">10</span> Children</h2>
+    <p>Retail AI is a workplace tool intended for people aged 18 and over. It is not directed at children, and we do not knowingly collect information from anyone under 18.</p>
+  </section>
+
+  <section id="changes">
+    <h2 class="sec"><span class="n">11</span> Changes to this policy</h2>
+    <p>We may update this policy as the service evolves. When we do, we will change the "Last updated" date above, and for significant changes we will provide a clearer notice. Continuing to use Retail AI after an update means you accept the revised policy.</p>
+  </section>
+
+  <section id="contact">
+    <h2 class="sec"><span class="n">12</span> Contact</h2>
+    <p>Questions about this policy or your data? Email <a href="mailto:hello@retailai.in">hello@retailai.in</a> and we'll get back to you.</p>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="index.html#home">
+      <span class="mark">+</span>
+      <span><b>Retail AI</b><span>FOR STORE TEAMS</span></span>
+    </a>
+    <nav>
+      <a href="index.html#home">Home</a>
+      <a href="index.html#tools">Tools</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="mailto:hello@retailai.in">Contact</a>
+    </nav>
+    <div class="copy">© 2026 Retail AI. Built for store teams.</div>
+  </div>
+</footer>
+
+</body>
+</html>
