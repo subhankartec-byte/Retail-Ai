@@ -1724,33 +1724,5 @@ $('#year').textContent = new Date().getFullYear();
    </script>
 
    <script type="module" src="auth-guard.js"></script>
-<script>
-/* Auth-aware header: wire Logout when signed in, show Log in when signed out */
-(function(){
-  function initAuthHeader(){
-    var loggedIn=false;
-    try{ loggedIn=localStorage.getItem("loggedIn")==="true"; }catch(e){}
-    var links=document.querySelectorAll("a");
-    for(var i=0;i<links.length;i++){
-      var a=links[i];
-      if(((a.textContent||"").trim().toLowerCase())!=="logout") continue;
-      if(loggedIn){
-        a.addEventListener("click",function(e){
-          e.preventDefault();
-          if(typeof window.logout==="function"){ window.logout(); return; }
-          try{ localStorage.removeItem("loggedIn"); localStorage.removeItem("bd_profile"); }catch(_){}
-          window.location.href="login.html";
-        });
-      } else {
-        a.textContent="Log in";
-        a.setAttribute("href","login.html");
-        a.removeAttribute("data-coming-soon");
-      }
-    }
-  }
-  if(document.readyState==="loading"){ document.addEventListener("DOMContentLoaded",initAuthHeader); }
-  else { initAuthHeader(); }
-})();
-</script>
 </body>
 </html>
