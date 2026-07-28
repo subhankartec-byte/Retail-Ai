@@ -120,6 +120,17 @@ td.b{font-weight:600}
 .warn{background:var(--blue-soft);border-left:3px solid var(--blue);padding:7px 10px;border-radius:4px;
   font-size:11px;color:#123a6b;margin:8px auto;max-width:1560px}
 .hidden{display:none!important}
+/* ---------- AI Executive Summary (Tier 1) ---------- */
+.ai-summary-card{max-width:1560px;margin:8px auto;border:1px solid var(--gold-line);border-radius:6px;
+  overflow:hidden;background:#fff}
+.ai-summary-card>.hd{margin:0;padding:6px 10px;font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
+  background:var(--navy2);color:#fff;display:flex;align-items:center;gap:8px}
+.ai-summary-card>.bd{padding:12px 14px;font-size:12.5px;color:var(--ink)}
+.ai-summary-card .headline{font-weight:700;margin:0 0 8px;color:var(--navy)}
+.ai-summary-card ul{margin:0;padding-left:18px}
+.ai-summary-card li{margin:0 0 5px}
+.ai-summary-card .note{color:var(--mute);font-size:11px;margin-top:8px}
+.ai-summary-card .err{color:#a3341f}
 /* ---------- Ask AI ---------- */
 .tb-btn.ai{background:var(--plum);border-color:var(--plum)}
 .tb-btn.ai:hover{background:#7d4fb5}
@@ -181,6 +192,7 @@ td.b{font-weight:600}
     <button class="tb-btn" id="btnSetup">Inputs</button>
     <button class="tb-btn" id="btnFit">Fit to screen</button>
     <button class="tb-btn" id="btnPrint">Print / PDF</button>
+    <button class="tb-btn ai" id="btnSummary">AI Summary</button>
     <button class="tb-btn ai" id="btnAI">Ask AI</button>
     <button class="tb-btn go" id="btnXls">Export Excel</button>
   </div>
@@ -246,6 +258,10 @@ td.b{font-weight:600}
 </div>
 
 <div class="warn noprint hidden" id="banner"></div>
+<div class="ai-summary-card hidden noprint" id="aiSummaryCard">
+  <div class="hd">AI Summary</div>
+  <div class="bd" id="aiSummaryBody"></div>
+</div>
 <div id="reportWrap"><div id="report"></div></div>
 
 <div class="ai-overlay hidden" id="aiOverlay">
@@ -384,6 +400,7 @@ const seasonRank=s=>{const m=styKey(s).match(/^(SS|MF|AU|FE)\s*(\d{4})$/); if(!m
 
 /* ---------- state ---------- */
 let ROWS=[], LOOKUP=null, LOOKUP_STY=null, LOOKUP_SRC='', DMIN=null, DMAX=null, FIT=false;
+let AI_CONTEXT=null, AI_BUSY=false;
 const meta=r=>{ if(!LOOKUP)return null;
   return LOOKUP[r.barcode] || (LOOKUP_STY?LOOKUP_STY[styKey(r.style)]:null) || null; };
 const deptOf=r=>{ if(r.dept)return r.dept; const m=meta(r); return (m&&m.dept)?m.dept:''; };
@@ -733,9 +750,11 @@ function render(){
 
   /* ================= column 3 ================= */
   H.push('<div class="stack">');
+  let aiBrand=null;
   if(LOOKUP){
     const br=pairs(r=>{const m=meta(r);return m&&m.brand?m.brand:'Unmapped';}).sort((a,b)=>b.c.val-a.c.val);
     const bC=sumC(br), bP=sumP(br);
+    aiBrand=br.slice(0,15).map(o=>({brand:String(o.k).slice(0,60),qty:Math.round(o.c.qty),value:Math.round(o.c.val)}));
     H.push(blk('Brand','acc-gold',LOOKUP_SRC,tbl(['Brand','Qty','Value','Con %',...CH()],
       br.map(o=>[`<span class="pill ${BRAND_CLS[o.k]||'un'}">${esc(o.k)}</span>`,
         td(inr(o.c.qty)),td(inr(o.c.val)),`<td class="hl">${pct(o.c.val,bC)}</td>`,...CC(o.c.val,o.p.val)]),
@@ -794,6 +813,28 @@ function render(){
           ...(hasB?[td(inr(FSr.p.qty),'b'),gcd(FSr.c.qty,FSr.p.qty)]:[])]]:[]))
     +(numMode?'<div class="empty-note">XS/WXS→6 · S/WS→8 · M/WM→10 · L/WL→14 · XL/WG→16 · XXL→18 · net of returns. Free size is jewellery and drapes, kept out of the curve.</div>':'<div class="empty-note">Net of returns. Free size is jewellery and drapes, kept out of the curve.</div>')));
   H.push('</div></div>');
+
+  /* ---- AI Summary context: already-aggregated numbers only, nothing
+     row-level. Rebuilt every render() so it always matches what's on
+     screen; read by the "AI Summary" button handler, never sent anywhere
+     on its own. ---- */
+  AI_CONTEXT = {
+    currency:'INR',
+    period:{label:LA,days:nDays(A[0],A[1])},
+    comparePeriod:hasB?{label:LB,days:nDays(B[0],B[1])}:null,
+    billRule:rule,
+    totals:{value:Math.round(t.val),bills:t.bills,qty:t.qty,atv:Math.round(t.atv),upt:+t.upt.toFixed(2),asp:Math.round(t.asp)},
+    compareTotals:(hasB&&l)?{value:Math.round(l.val),bills:l.bills,qty:l.qty,atv:Math.round(l.atv),upt:+l.upt.toFixed(2),asp:Math.round(l.asp)}:null,
+    discountPctOnMrp:discC!=null?+discC.toFixed(1):null,
+    offerMix:{onOfferValue:Math.round(offC.val),fullPriceValue:Math.round(fulC.val)},
+    weekend:{value:Math.round(wt.val),shareOfPeriod:t.val?+(100*wt.val/t.val).toFixed(1):0},
+    staff:smRows.slice(0,30).map(o=>({name:String(o.n).slice(0,60),bills:o.a.bills,qty:o.a.qty,value:Math.round(o.a.val),abv:o.a.bills?Math.round(o.a.val/o.a.bills):0})),
+    departments:deps.slice(0,30).map(o=>({dept:String(o.k).slice(0,60),qty:o.c.qty,value:Math.round(o.c.val)})),
+    festive:fes.slice(0,15).map(o=>({segment:String(o.k).slice(0,60),qty:o.c.qty,value:Math.round(o.c.val)})),
+    brand:aiBrand,
+    sizeCurve:curve.slice(0,30).map(k=>({size:String(SLAB[k]||k).slice(0,60),qty:szG(k).c.qty}))
+  };
+  renderAiSummaryStale();
   $('report').innerHTML=H.join('');
 
   const retB=new Set(RA.filter(r=>r.qty<0).map(r=>r.bill));
@@ -823,6 +864,46 @@ $('btnFit').addEventListener('click',()=>{FIT=!FIT;
 window.addEventListener('resize',()=>{if(FIT)applyFit();});
 $('btnSetup').addEventListener('click',()=>$('setup').classList.toggle('hide'));
 $('btnPrint').addEventListener('click',()=>window.print());
+
+/* ============================================================ AI Summary (Tier 1) */
+function renderAiSummaryStale(){
+  $('aiSummaryCard').classList.add('hidden');
+  $('aiSummaryBody').innerHTML='';
+}
+const AI_FAIL_MSG={
+  signed_out:'Sign in to use AI Summary.',
+  rate_limited:'AI Summary limit reached for now — try again later.',
+  unavailable:'AI Summary is temporarily unavailable. Try again in a moment.',
+  network:'Could not reach the AI service. Check your connection and try again.',
+  bad_response:'AI Summary returned something unexpected. Try again.'
+};
+$('btnSummary').addEventListener('click',async()=>{
+  if(AI_BUSY)return;
+  if(!ROWS.length){alert('Load the Bill Wise Item List first.');return;}
+  if(!AI_CONTEXT){alert('Pick a date range first.');return;}
+  if(typeof RetailInsights==='undefined'||!RetailInsights){
+    $('aiSummaryCard').classList.remove('hidden');
+    $('aiSummaryBody').innerHTML='<div class="err">AI Summary could not load. Refresh the page and try again.</div>';
+    return;
+  }
+  AI_BUSY=true;
+  const btn=$('btnSummary'), prevLabel=btn.textContent;
+  btn.textContent='Thinking…'; btn.disabled=true;
+  $('aiSummaryCard').classList.remove('hidden');
+  $('aiSummaryBody').innerHTML='<div class="note">Generating summary from this view’s numbers…</div>';
+  const ctx=AI_CONTEXT;
+  const res=await RetailInsights.summarize(ctx);
+  btn.textContent=prevLabel; btn.disabled=false; AI_BUSY=false;
+  if(ctx!==AI_CONTEXT)return; // the period/inputs changed while we were waiting — discard
+  if(!res||!res.ok){
+    $('aiSummaryBody').innerHTML='<div class="err">'+esc(AI_FAIL_MSG[res&&res.reason]||'Could not generate a summary. Try again.')+'</div>';
+    return;
+  }
+  $('aiSummaryBody').innerHTML=
+    (res.headline?'<p class="headline">'+esc(res.headline)+'</p>':'')+
+    '<ul>'+res.bullets.map(b=>'<li>'+esc(b)+'</li>').join('')+'</ul>'+
+    '<div class="note">AI-generated from this view’s aggregated numbers only — always check against the tables above.</div>';
+});
 
 function download(blob,name){
   const f=new File([blob],name,{type:blob.type});
@@ -1063,5 +1144,6 @@ $('aiInput').addEventListener('keydown',e=>{if(e.key==='Enter')askAI();});
 
 render();
 </script>
+<script type="module" src="retail-insights.js"></script>
 </body>
 </html>
