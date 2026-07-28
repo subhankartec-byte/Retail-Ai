@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Inventory Validity Console</title>
+<link rel="stylesheet" href="retail-theme.css">
 <style>
 :root{
   --navy:#0F2A4E; --navy-deep:#0B2140; --gold:#C9A227; --gold-bright:#D8B23A;
@@ -16,7 +17,6 @@
   --shadow:0 1px 2px rgba(15,42,78,.06),0 6px 20px rgba(15,42,78,.08);
   --radius:12px;
 }
-*{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{
   font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -226,7 +226,6 @@ tr.totalrow td.red{color:var(--red)}
 /* spinner */
 .spin{width:15px;height:15px;border:2px solid rgba(15,42,78,.25);border-top-color:var(--navy);border-radius:50%;animation:sp .7s linear infinite;display:inline-block}
 .dlbtn .spin{border-color:rgba(11,33,64,.3);border-top-color:var(--navy-deep)}
-@keyframes sp{to{transform:rotate(360deg)}}
 
 .footer{margin-top:26px;text-align:center;font-size:11.5px;color:var(--muted)}
 .footer b{color:var(--navy)}
