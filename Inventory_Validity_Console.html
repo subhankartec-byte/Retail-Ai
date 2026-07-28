@@ -1361,6 +1361,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 })(typeof window !== "undefined" ? window : this);
 
 </script>
+<script src="retail-ui.js"></script>
 <script>
 "use strict";
 (function(){
@@ -1387,10 +1388,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   var drop=$("#drop"), fileInput=$("#fileInput");
   $("#pickBtn").addEventListener("click",function(){fileInput.click();});
   drop.addEventListener("click",function(e){ if(e.target.id!=="pickBtn") fileInput.click(); });
-  fileInput.addEventListener("change",function(e){ if(e.target.files&&e.target.files[0]) handleFile(e.target.files[0]); });
-  ["dragenter","dragover"].forEach(function(ev){drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.add("drag");});});
-  ["dragleave","drop"].forEach(function(ev){drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.remove("drag");});});
-  drop.addEventListener("drop",function(e){ if(e.dataTransfer.files&&e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+  RetailUI.wireDropZone(drop, fileInput, {
+    activeClass: "drag",
+    groupedEvents: true,
+    bindClick: false,
+    onFile: handleFile
+  });
 
   function decodeText(buf){
     try{

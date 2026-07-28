@@ -589,6 +589,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   return { norm, up, idstr, numOf, classify, buildInvoices, buildPOMap, parseIST, defaultIstSheets, codeFrom, buildDirectory, assemble, generate, findHeaderRow, colIdx };
 });
 </script>
+<script src="retail-ui.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const INR = n => '₹' + Math.round(n).toLocaleString('en-IN');
@@ -622,11 +623,13 @@ const ui = {
     if(p){ $('pStore').value=p.store; $('pBilling').value=p.billing; $('pAddr').value=p.address; $('pPin').value=p.pin; $('pMobile').value=p.mobile; this.reflectProfile(p); $('cardProfile').classList.add('hidden'); }
     $('oDate').value = new Date().toISOString().slice(0,10);
     const drop = $('drop');
-    drop.onclick = ()=> $('fileInput').click();
-    $('fileInput').onchange = e => ui.takeFiles(e.target.files);
-    ;['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('on');}));
-    ;['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('on');}));
-    drop.addEventListener('drop', e=> ui.takeFiles(e.dataTransfer.files));
+    RetailUI.wireDropZone(drop, $('fileInput'), {
+      activeClass: 'on',
+      groupedEvents: true,
+      multiple: true,
+      requireNonEmpty: false,
+      onFile: files => ui.takeFiles(files)
+    });
   },
   toggleProfile(){ $('cardProfile').classList.toggle('hidden'); },
   reflectProfile(p){ $('chipStore').textContent = '⚙ ' + p.store + ' · ' + p.billing; },

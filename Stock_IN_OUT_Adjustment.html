@@ -178,6 +178,7 @@ tfoot td.n{text-align:right}
   </div>
 </div>
 
+<script src="retail-ui.js"></script>
 <script>
 "use strict";
 /* ===== helpers ===== */
@@ -206,10 +207,13 @@ let POOL=[], RES=null;
 
 /* ===== file intake ===== */
 const drop=document.getElementById('drop'), file=document.getElementById('file');
-['dragenter','dragover'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add('over');}));
-['dragleave','drop'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove('over');}));
-drop.addEventListener('drop',ev=>{if(ev.dataTransfer.files.length)readFiles(ev.dataTransfer.files);});
-file.addEventListener('change',ev=>{if(ev.target.files.length)readFiles(ev.target.files);});
+RetailUI.wireDropZone(drop, file, {
+  activeClass: 'over',
+  groupedEvents: true,
+  multiple: true,
+  bindClick: false,
+  onFile: readFiles
+});
 function readFiles(list){ const files=[...list]; let pend=files.length; POOL=[];
   files.forEach(f=>{ const rd=new FileReader(); rd.onload=e=>{ try{ const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
     wb.SheetNames.forEach(sn=>{ const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,blankrows:false,defval:''}); if(aoa.length)POOL.push({label:(files.length>1?f.name+' · ':'')+sn,aoa}); }); }catch(err){console.error(err);}
