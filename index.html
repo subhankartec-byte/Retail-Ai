@@ -377,7 +377,10 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 .dp-section-title:first-child{margin-top:0}
 .dp-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.6rem}
 .dp-list li{display:flex;align-items:center;justify-content:space-between;gap:1rem;
-  background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:.7rem 1rem}
+  background:var(--surface-2);border:1px solid var(--border);border-left:3px solid var(--border);border-radius:10px;padding:.7rem 1rem}
+.dp-list li.sev-high{border-left-color:var(--red)}
+.dp-list li.sev-medium{border-left-color:var(--gold)}
+.dp-list li.sev-low{border-left-color:var(--text-low)}
 .dp-list .who{font-weight:600;color:var(--text-hi)}
 .dp-list .why{font-size:.85rem;color:var(--text-mid)}
 .dp-list .gap{font-family:var(--font-mono);font-size:.85rem;color:var(--red);white-space:nowrap}
@@ -1783,6 +1786,15 @@ $('#year').textContent = new Date().getFullYear();
 
    const CONFIDENCE_LABEL = { high: "High confidence", medium: "Medium confidence", low: "Low confidence", none: "" };
 
+   /* Fixed display order and section title per category. A category
+      simply doesn't render a section while its array is empty —
+      no per-category branching needed beyond this lookup. */
+   const CATEGORY_ORDER = ["attention", "coaching", "atRisk", "reorders", "transfers"];
+   const CATEGORY_TITLE = {
+     attention: "Needs Attention", coaching: "Staff Coaching", atRisk: "Inventory At Risk",
+     reorders: "Reorder Suggestions", transfers: "Transfer Suggestions"
+   };
+
    function renderSignals(perTool) {
      return RetailDecision.TOOL_KEYS.map(k => {
        const p = perTool[k];
@@ -1794,19 +1806,18 @@ $('#year').textContent = new Date().getFullYear();
      }).join('');
    }
 
-   function renderList(items, kind) {
-     return '<ul class="dp-list">' + items.map(it => {
-       if (kind === "coaching") {
-         return '<li><div><div class="who">' + escHtml(it.staffName) + '</div>' +
-           '<div class="why">' + it.metric + ' is ' + escHtml(it.gapPct) + '% below store average — consider coaching.</div></div>' +
-           '<div class="gap">₹' + Math.round(it.value).toLocaleString('en-IN') + ' vs ₹' + Math.round(it.storeAvg).toLocaleString('en-IN') + '</div></li>';
-       }
-       // atRisk
-       const where = [it.store, it.brand].filter(Boolean).join(' · ');
-       return '<li><div><div class="who">' + escHtml(it.style) + (where ? ' <span class="why">(' + escHtml(where) + ')</span>' : '') + '</div>' +
-         '<div class="why">' + escHtml(it.reasons.join('; ')) + '</div></div>' +
-         '<div class="gap">₹' + Math.round(it.value).toLocaleString('en-IN') + ' · ' + it.qty + ' pcs</div></li>';
-     }).join('') + '</ul>';
+   /* Single renderer for every Recommendation Card, regardless of
+      category — every card carries the same {title, context,
+      reason, metricValue, severity, evidence} shape. */
+   function renderCard(c) {
+     return '<li class="sev-' + c.severity + '"><div><div class="who">' + escHtml(c.title) +
+       (c.context ? ' <span class="why">(' + escHtml(c.context) + ')</span>' : '') + '</div>' +
+       '<div class="why">' + escHtml(c.reason) + '</div></div>' +
+       '<div class="gap">' + escHtml(c.metricValue) + '</div></li>';
+   }
+
+   function renderCategory(cards) {
+     return '<ul class="dp-list">' + cards.map(renderCard).join('') + '</ul>';
    }
 
    function renderDecisionPanel() {
@@ -1834,13 +1845,9 @@ $('#year').textContent = new Date().getFullYear();
      conf.className = "dp-confidence conf-" + confidence.level;
      conf.title = confidence.reason;
 
-     const sections = [];
-     if (recommendations.coaching.length) {
-       sections.push('<div class="dp-section-title">Staff Coaching</div>' + renderList(recommendations.coaching, "coaching"));
-     }
-     if (recommendations.atRisk.length) {
-       sections.push('<div class="dp-section-title">Inventory At Risk</div>' + renderList(recommendations.atRisk, "atRisk"));
-     }
+     const sections = CATEGORY_ORDER
+       .filter(cat => recommendations[cat] && recommendations[cat].length)
+       .map(cat => '<div class="dp-section-title">' + CATEGORY_TITLE[cat] + '</div>' + renderCategory(recommendations[cat]));
 
      if (!sections.length) {
        body.innerHTML = '<p class="dp-empty">Nothing needs attention right now based on ' + coverage.available.map(k => TOOL_LABEL[k]).join(", ") + ".</p>";

@@ -922,9 +922,33 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
       var sug = {}; recon.forEach(function (r) { if (!r.identified) sug[r.barcode] = RC.suggest(r.barcode, knownSet, masterFull); });
       STATE = { recon: recon, S: S, cls: cls, sug: sug };
       render();
+      saveDecisionSummary(cls);
       setStatus('', false); $('results').hidden = false; $('upload-card').classList.add('collapsed');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) { setStatus('Error: ' + (err && err.message || err), false, true); }
+  }
+
+  /* ---- Decision Engine summary: already-aggregated numbers only
+     (the reconciliation summary totals, plus the 20 highest-value
+     Shortage/Excess lines) — nothing row-level. Wrapped defensively
+     so a failure here can never affect this tool's own report. ---- */
+  function saveDecisionSummary(cls){
+    try {
+      if (typeof RetailDecision === 'undefined') return;
+      function topN(list, valueKey) {
+        return list.slice().sort(function (a, b) { return b[valueKey] - a[valueKey]; })
+          .slice(0, 20)
+          .map(function (x) {
+            return { barcode: x.barcode, style: x.style, desc: x.desc, brand: x.brand_n,
+              qty: x.units, value: Math.round(x[valueKey]) };
+          });
+      }
+      RetailDecision.saveSummary('inventoryAudit', {
+        summary: cls.summary,
+        topShortage: topN(cls.shortage, 'lossValue'),
+        topExcess: topN(cls.excess, 'gainValue')
+      });
+    } catch (e) { /* never let this break the tool's own report */ }
   }
 
   /* ---------- render ---------- */
@@ -1124,6 +1148,7 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
 
 </script>
 <script src="retail-ui.js"></script>
+<script src="retail-decision.js"></script>
 <script type="module" src="auth-guard.js"></script>
 </body>
 </html>

@@ -179,6 +179,7 @@ tfoot td.n{text-align:right}
 </div>
 
 <script src="retail-ui.js"></script>
+<script src="retail-decision.js"></script>
 <script>
 "use strict";
 /* ===== helpers ===== */
@@ -255,7 +256,27 @@ function build(sr,pr){ const res=computeDiff(sr,pr);
   if(!res.inList.length && !res.outList.length && res.commonCount===0){ alert('No barcodes found — check the Barcode and Qty columns.'); return; }
   RES=res; document.getElementById('rep').classList.add('show'); document.getElementById('xlsxBtn').disabled=false; document.getElementById('printBtn').disabled=false;
   renderChips(); renderIn(); renderOut();
-  document.getElementById('rep').scrollIntoView({behavior:'smooth',block:'start'}); }
+  document.getElementById('rep').scrollIntoView({behavior:'smooth',block:'start'});
+  saveDecisionSummary(res); }
+
+/* ---- Decision Engine summary: already-aggregated numbers only
+   (totals plus the 20 highest-value IN/OUT lines) — nothing
+   row-level. Wrapped defensively so a failure here can never
+   affect this tool's own report. ---- */
+function saveDecisionSummary(res){
+  try{
+    if(typeof RetailDecision==='undefined')return;
+    const top=list=>list.slice(0,20).map(r=>({barcode:r.barcode,style:r.style,desc:r.desc,qty:r.qty,value:Math.round(r.amount)}));
+    RetailDecision.saveSummary('stockAdjustment',{
+      totals:{
+        inCount:res.inList.length, inQty:res.inList.reduce((a,r)=>a+r.qty,0), inValue:Math.round(res.inList.reduce((a,r)=>a+r.amount,0)),
+        outCount:res.outList.length, outQty:res.outList.reduce((a,r)=>a+r.qty,0), outValue:Math.round(res.outList.reduce((a,r)=>a+r.amount,0)),
+        commonCount:res.commonCount
+      },
+      topOut:top(res.outList), topIn:top(res.inList)
+    });
+  }catch(e){ /* never let this break the tool's own report */ }
+}
 
 function renderChips(){ const inP=RES.inList.reduce((a,r)=>a+r.qty,0), inV=RES.inList.reduce((a,r)=>a+r.amount,0);
   const outP=RES.outList.reduce((a,r)=>a+r.qty,0), outV=RES.outList.reduce((a,r)=>a+r.amount,0);
