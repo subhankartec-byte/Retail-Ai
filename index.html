@@ -355,6 +355,21 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 }
 .section-head p{font-size:1.03rem}
 
+/* ── 07b. DECISION ENGINE PANEL ─────────────────────────────── */
+.decision-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:1.6rem 1.8rem;margin:0 0 2.4rem}
+.decision-panel .dp-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:.9rem}
+.decision-panel .dp-title{font-size:1.15rem;font-weight:700;color:var(--text-hi)}
+.decision-panel .dp-coverage{font-family:var(--font-mono);font-size:.72rem;color:var(--text-low)}
+.decision-panel .dp-empty{color:var(--text-mid);font-size:.95rem}
+.decision-panel .dp-empty a{color:var(--gold)}
+.dp-coaching{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.6rem}
+.dp-coaching li{display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:.7rem 1rem}
+.dp-coaching .who{font-weight:600;color:var(--text-hi)}
+.dp-coaching .why{font-size:.85rem;color:var(--text-mid)}
+.dp-coaching .gap{font-family:var(--font-mono);font-size:.85rem;color:var(--red);white-space:nowrap}
+
 /* ── 08. TOOLS GRID ─────────────────────────────────────────── */
 .tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:1.3rem}
 .tool-card{
@@ -848,6 +863,21 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 
   </div>
 </section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     DECISION ENGINE — recommendations from your own reports
+     (Phase 6 pilot: Store Review only. Hidden for signed-out
+     visitors and while no tool has saved any data yet.)
+═══════════════════════════════════════════════════════════════ -->
+<div class="container">
+  <div class="decision-panel hidden" id="decisionPanel">
+    <div class="dp-head">
+      <span class="dp-title">Your Recommendations</span>
+      <span class="dp-coverage" id="dpCoverage"></span>
+    </div>
+    <div id="dpBody"><p class="dp-empty">Loading…</p></div>
+  </div>
+</div>
 
 <!-- ═══════════════════════════════════════════════════════════
      TRUST MARQUEE — who Retail AI is built for
@@ -1719,6 +1749,64 @@ $('#year').textContent = new Date().getFullYear();
        }
      });
    })();
+   </script>
+
+   <script src="retail-decision.js"></script>
+   <script type="module">
+   /* ---------- Decision Engine panel (Phase 6 pilot) ----------
+      Reads whatever tools have saved a summary via
+      RetailDecision.saveSummary() and renders recommendations.
+      Signed-out visitors never see this — only signed-in
+      managers, and only once at least one tool has real data. */
+   import { auth } from "./firebase.js";
+   import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+
+   const TOOL_LABEL = {
+     storeReview: "Store Review", inventoryValidity: "Inventory Validity Console",
+     inventoryAudit: "Inventory Audit Tool", stockAdjustment: "Stock IN/OUT Adjustment",
+     sohImageLinks: "SOH Image Link Builder", blueDart: "BlueDart Waybill Builder"
+   };
+   const escHtml = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+
+   function renderDecisionPanel() {
+     const panel = document.getElementById("decisionPanel");
+     if (!panel || typeof RetailDecision === "undefined") return;
+
+     const summaries = RetailDecision.loadSummaries();
+     const { coverage, recommendations } = RetailDecision.evaluate(summaries);
+     const body = document.getElementById("dpBody");
+     const cov = document.getElementById("dpCoverage");
+
+     if (!coverage.available.length) {
+       panel.classList.remove("hidden");
+       cov.textContent = "";
+       body.innerHTML = '<p class="dp-empty">No reports yet — run <a href="Store_Review a1.html">Store Review</a> to start seeing recommendations here.</p>';
+       return;
+     }
+
+     panel.classList.remove("hidden");
+     cov.textContent = coverage.available.length + " of " + RetailDecision.TOOL_KEYS.length + " signals available"
+       + (coverage.stalest ? " · " + TOOL_LABEL[coverage.stalest.tool] + " data is " + Math.round(coverage.stalest.ageDays) + "d old" : "");
+
+     const coaching = recommendations.coaching;
+     if (!coaching.length) {
+       body.innerHTML = '<p class="dp-empty">Nothing needs attention right now based on ' + coverage.available.map(k => TOOL_LABEL[k]).join(", ") + ".</p>";
+       return;
+     }
+     body.innerHTML = '<ul class="dp-coaching">' + coaching.map(c =>
+       '<li><div><div class="who">' + escHtml(c.staffName) + '</div>' +
+       '<div class="why">' + c.metric + ' is ' + escHtml(c.gapPct) + '% below store average — consider coaching.</div></div>' +
+       '<div class="gap">₹' + Math.round(c.value).toLocaleString('en-IN') + ' vs ₹' + Math.round(c.storeAvg).toLocaleString('en-IN') + '</div></li>'
+     ).join('') + '</ul>';
+   }
+
+   onAuthStateChanged(auth, user => {
+     if (!user) return;              // stays hidden for signed-out visitors
+     renderDecisionPanel();
+   });
+   window.addEventListener("storage", e => {
+     if (e.key && e.key.indexOf(RetailDecision.LS_PREFIX) === 0 && auth.currentUser) renderDecisionPanel();
+   });
    </script>
 
    <script type="module" src="auth-guard.js"></script>
