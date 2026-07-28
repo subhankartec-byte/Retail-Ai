@@ -1544,6 +1544,27 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     $("#dlLabel").textContent = m.hasOffer ? "Download Excel (8 sheets)" : "Download Excel (5 sheets)";
     renderKPIs();
     renderActive();
+    saveDecisionSummary(m);
+  }
+
+  /* ---- Decision Engine summary: already-aggregated numbers only
+     (totals, per-brand/store group rollups, and the highest-value
+     Cut Piece styles) — nothing row-level. Wrapped defensively so
+     a failure here can never affect this tool's own report. ---- */
+  function saveDecisionSummary(m){
+    try{
+      if(typeof RetailDecision==='undefined')return;
+      var topCutPiece=m.units.filter(function(u){return u.category==='cut';})
+        .sort(function(a,b){return b.totalValue-a.totalValue;})
+        .slice(0,20)
+        .map(function(u){return {store:u.store,style:u.style,brand:u.brand,dept:u.dept,
+          qty:u.totalQty,value:Math.round(u.totalValue),sizeCount:u.sizeCount};});
+      var groups=m.summary.map(function(g){return {key:g.key,styles:g.styles,valid:g.valid,cut:g.cut,free:g.free,
+        qtyTotal:g.qtyTotal,qtyCut:g.qtyCut,valTotal:Math.round(g.valTotal),valCut:Math.round(g.valCut)};});
+      RetailDecision.saveSummary('inventoryValidity',{
+        totals:m.totals, groups:groups, topCutPiece:topCutPiece, multiStore:m.multiStore
+      });
+    }catch(e){ /* never let this break the tool's own report */ }
   }
 
   /* ---------- KPIs ---------- */
@@ -1939,6 +1960,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 <script src="retail-import.js"></script>
 <script src="retail-profiles.js"></script>
 <script src="retail-mapping.js"></script>
+<script src="retail-decision.js"></script>
 <script type="module" src="auth-guard.js"></script>
 </body>
 </html>
