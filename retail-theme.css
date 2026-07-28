@@ -1,0 +1,11 @@
+/* =========================================================
+   retail-theme.css — Retail AI · shared base styles
+   ---------------------------------------------------------
+   Contains ONLY rules verified byte-identical across more
+   than one tool page. Per-tool color tokens, card/header/
+   badge/status styling stay in each page's own <style>
+   block — those differ in exact values tool to tool and
+   must not be centralized without a separate, explicit pass.
+   ========================================================= */
+*{box-sizing:border-box}
+@keyframes sp{to{transform:rotate(360deg)}}
