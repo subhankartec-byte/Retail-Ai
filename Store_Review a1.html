@@ -145,8 +145,6 @@ td.b{font-weight:600}
 .ai-head b{font-size:14px;letter-spacing:.1em;text-transform:uppercase}
 .ai-head .x{margin-left:auto;background:rgba(255,255,255,.14);border:none;color:#fff;width:28px;height:28px;
   border-radius:6px;font-size:17px;cursor:pointer;line-height:1}
-.ai-head .gear{background:rgba(255,255,255,.14);border:none;color:#fff;padding:5px 9px;border-radius:6px;
-  font-size:11px;cursor:pointer;font-weight:600}
 .ai-sub{padding:7px 14px;font-size:11px;color:var(--mute);background:#f6f8fa;border-bottom:1px solid var(--line)}
 .ai-chat{flex:1;overflow-y:auto;padding:12px 14px;min-height:180px;background:#fbfcfd}
 .ai-msg{margin-bottom:10px;display:flex}
@@ -163,14 +161,6 @@ td.b{font-weight:600}
 .ai-input input{flex:1;min-width:0;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13px}
 .ai-input button{background:var(--plum);color:#fff;border:none;border-radius:8px;padding:0 16px;font-weight:700;cursor:pointer;font-size:13px}
 .ai-input button:disabled{opacity:.5;cursor:default}
-.ai-settings{padding:12px 14px;background:var(--yellow2);border-bottom:1px solid var(--gold-line)}
-.ai-settings.hidden{display:none!important}
-.ai-settings label{display:block;font-size:11px;font-weight:700;color:#6d5410;margin:6px 0 3px;letter-spacing:.04em}
-.ai-settings input{width:100%;padding:7px 9px;border:1px solid var(--gold-line);border-radius:6px;font-size:12px;font-family:inherit}
-.ai-settings .row{display:flex;gap:8px;align-items:flex-end}
-.ai-settings .row input{flex:1}
-.ai-settings button{background:var(--navy);color:#fff;border:none;border-radius:6px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:12px;white-space:nowrap}
-.ai-settings .note{font-size:10.5px;color:#7a6320;line-height:1.45;margin-top:7px}
 .ai-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--gold);animation:blink 1s infinite}
 @keyframes blink{0%,100%{opacity:.3}50%{opacity:1}}
 @media print{
@@ -268,18 +258,7 @@ td.b{font-weight:600}
   <div class="ai-panel">
     <div class="ai-head">
       <b>Ask AI</b>
-      <button class="gear" id="aiGear" title="API key & model">⚙ Key</button>
       <button class="x" id="aiClose" title="Close">×</button>
-    </div>
-    <div class="ai-settings hidden" id="aiSettings">
-      <label>Anthropic API key</label>
-      <div class="row">
-        <input type="password" id="aiKey" placeholder="sk-ant-...">
-        <button id="aiKeySave">Save</button>
-      </div>
-      <label>Model</label>
-      <input type="text" id="aiModel" placeholder="claude-sonnet-5">
-      <div class="note">Get a key at console.anthropic.com. It is stored only in this browser and is sent only to Anthropic when you ask a question — never anywhere else. If the model name errors, try <b>claude-sonnet-4-6</b> or <b>claude-haiku-4-5</b> (cheaper). Without a key, the built-in analysis answers.</div>
     </div>
     <div class="ai-sub" id="aiSub"></div>
     <div class="ai-chat" id="aiChat"></div>
@@ -316,6 +295,7 @@ var o=((a=s[17])==null?void 0:a[0])?Ob(e,e[_b(s[17][0].data)][0]):[];var l=vb(s[
 var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.s.r;c<=n.e.r;++c){i=Ta(c);for(f=n.s.c;f<=n.e.c;++f){r=s[f]+i;t=l?(e[c]||[])[f]:e[r];a="";if(t===undefined)continue;else if(t.F!=null){r=t.F;if(!t.f)continue;a=t.f;if(r.indexOf(":")==-1)r=r+":"+r}if(t.f!=null)a=t.f;else if(t.t=="z")continue;else if(t.t=="n"&&t.v!=null)a=""+t.v;else if(t.t=="b")a=t.v?"TRUE":"FALSE";else if(t.w!==undefined)a="'"+t.w;else if(t.v===undefined)continue;else if(t.t=="s")a="'"+t.v;else a=""+t.v;o[o.length]=r+"="+a}}return o}function xw(e,r,t){var a=t||{};var n=+!a.skipHeader;var i=e||{};var s=0,f=0;if(i&&a.origin!=null){if(typeof a.origin=="number")s=a.origin;else{var o=typeof a.origin=="string"?Oa(a.origin):a.origin;s=o.r;f=o.c}}var l;var c={s:{c:0,r:0},e:{c:f,r:s+r.length-1+n}};if(i["!ref"]){var h=Da(i["!ref"]);c.e.c=Math.max(c.e.c,h.e.c);c.e.r=Math.max(c.e.r,h.e.r);if(s==-1){s=h.e.r+1;c.e.r=s+r.length-1+n}}else{if(s==-1){s=0;c.e.r=r.length-1+n}}var u=a.header||[],d=0;r.forEach(function(e,r){rr(e).forEach(function(t){if((d=u.indexOf(t))==-1)u[d=u.length]=t;var o=e[t];var c="z";var h="";var v=Ra({c:f+d,r:s+r+n});l=Rw(i,v);if(o&&typeof o==="object"&&!(o instanceof Date)){i[v]=o}else{if(typeof o=="number")c="n";else if(typeof o=="boolean")c="b";else if(typeof o=="string")c="s";else if(o instanceof Date){c="d";if(!a.cellDates){c="n";o=fr(o)}h=a.dateNF||X[14]}else if(o===null&&a.nullError){c="e";o=0}if(!l)i[v]=l={t:c,v:o};else{l.t=c;l.v=o;delete l.w;delete l.R;if(h)l.z=h}if(h)l.z=h}})});c.e.c=Math.max(c.e.c,f+u.length-1);var v=Ta(s);if(n)for(d=0;d<u.length;++d)i[ya(d+f)+v]={t:"s",v:u[d]};i["!ref"]=Na(c);return i}function Ow(e,r){return xw(null,e,r)}function Rw(e,r,t){if(typeof r=="string"){if(Array.isArray(e)){var a=Oa(r);if(!e[a.r])e[a.r]=[];return e[a.r][a.c]||(e[a.r][a.c]={t:"z"})}return e[r]||(e[r]={t:"z"})}if(typeof r!="number")return Rw(e,Ra(r));return Rw(e,Ra({r:r,c:t||0}))}function Iw(e,r){if(typeof r=="number"){if(r>=0&&e.SheetNames.length>r)return r;throw new Error("Cannot find sheet # "+r)}else if(typeof r=="string"){var t=e.SheetNames.indexOf(r);if(t>-1)return t;throw new Error("Cannot find sheet name |"+r+"|")}else throw new Error("Cannot find sheet |"+r+"|")}function Nw(){return{SheetNames:[],Sheets:{}}}function Dw(e,r,t,a){var n=1;if(!t)for(;n<=65535;++n,t=undefined)if(e.SheetNames.indexOf(t="Sheet"+n)==-1)break;if(!t||e.SheetNames.length>=65535)throw new Error("Too many worksheets");if(a&&e.SheetNames.indexOf(t)>=0){var i=t.match(/(^.*?)(\d+)$/);n=i&&+i[2]||0;var s=i&&i[1]||t;for(++n;n<=65535;++n)if(e.SheetNames.indexOf(t=s+n)==-1)break}Jp(t);if(e.SheetNames.indexOf(t)>=0)throw new Error("Worksheet with name |"+t+"| already exists!");e.SheetNames.push(t);e.Sheets[t]=r;return t}function Fw(e,r,t){if(!e.Workbook)e.Workbook={};if(!e.Workbook.Sheets)e.Workbook.Sheets=[];var a=Iw(e,r);if(!e.Workbook.Sheets[a])e.Workbook.Sheets[a]={};switch(t){case 0:;case 1:;case 2:break;default:throw new Error("Bad sheet visibility setting "+t);}e.Workbook.Sheets[a].Hidden=t}function Pw(e,r){e.z=r;return e}function Lw(e,r,t){if(!r){delete e.l}else{e.l={Target:r};if(t)e.l.Tooltip=t}return e}function Mw(e,r,t){return Lw(e,"#"+r,t)}function Uw(e,r,t){if(!e.c)e.c=[];e.c.push({t:r,a:t||"SheetJS"})}function Bw(e,r,t,a){var n=typeof r!="string"?r:Da(r);var i=typeof r=="string"?r:Na(r);for(var s=n.s.r;s<=n.e.r;++s)for(var f=n.s.c;f<=n.e.c;++f){var o=Rw(e,s,f);o.t="n";o.F=i;delete o.v;if(s==n.s.r&&f==n.s.c){o.f=t;if(a)o.D=true}}return e}var Ww={encode_col:ya,encode_row:Ta,encode_cell:Ra,encode_range:Na,decode_col:Ca,decode_row:ka,split_cell:xa,decode_cell:Oa,decode_range:Ia,format_cell:Pa,sheet_add_aoa:Ma,sheet_add_json:xw,sheet_add_dom:Gm,aoa_to_sheet:Ua,json_to_sheet:Ow,table_to_sheet:jm,table_to_book:Xm,sheet_to_csv:yw,sheet_to_txt:Sw,sheet_to_json:Aw,sheet_to_html:Vm,sheet_to_formulae:_w,sheet_to_row_object_array:Aw,sheet_get_cell:Rw,book_new:Nw,book_append_sheet:Dw,book_set_sheet_visibility:Fw,cell_set_number_format:Pw,cell_set_hyperlink:Lw,cell_set_internal_link:Mw,cell_add_comment:Uw,sheet_set_array_formula:Bw,consts:{SHEET_VISIBLE:0,SHEET_HIDDEN:1,SHEET_VERY_HIDDEN:2}};var Hw;function zw(e){Hw=e}function Vw(e,r){var t=Hw();var a=r==null?{}:r;if(e==null||e["!ref"]==null){t.push(null);return t}var n=Da(e["!ref"]);var i=a.FS!==undefined?a.FS:",",s=i.charCodeAt(0);var f=a.RS!==undefined?a.RS:"\n",o=f.charCodeAt(0);var l=new RegExp((i=="|"?"\\|":i)+"+$");var c="",h=[];a.dense=Array.isArray(e);var u=a.skipHidden&&e["!cols"]||[];var d=a.skipHidden&&e["!rows"]||[];for(var v=n.s.c;v<=n.e.c;++v)if(!(u[v]||{}).hidden)h[v]=ya(v);var p=n.s.r;var g=false,m=0;t._read=function(){if(!g){g=true;return t.push("\ufeff")}while(p<=n.e.r){++p;if((d[p-1]||{}).hidden)continue;c=Cw(e,n,p-1,h,s,o,i,a);if(c!=null){if(a.strip)c=c.replace(l,"");if(c||a.blankrows!==false)return t.push((m++?f:"")+c)}}return t.push(null)};return t}function Gw(e,r){var t=Hw();var a=r||{};var n=a.header!=null?a.header:Bm;var i=a.footer!=null?a.footer:Wm;t.push(n);var s=Ia(e["!ref"]);a.dense=Array.isArray(e);t.push(zm(e,s,a));var f=s.s.r;var o=false;t._read=function(){if(f>s.e.r){if(!o){o=true;t.push("</table>"+i)}return t.push(null)}while(f<=s.e.r){t.push(Um(e,s,f,a));++f;break}};return t}function jw(e,r){var t=Hw({objectMode:true});if(e==null||e["!ref"]==null){t.push(null);return t}var a={t:"n",v:0},n=0,i=1,s=[],f=0,o="";var l={s:{r:0,c:0},e:{r:0,c:0}};var c=r||{};var h=c.range!=null?c.range:e["!ref"];if(c.header===1)n=1;else if(c.header==="A")n=2;else if(Array.isArray(c.header))n=3;switch(typeof h){case"string":l=Da(h);break;case"number":l=Da(e["!ref"]);l.s.r=h;break;default:l=h;}if(n>0)i=0;var u=Ta(l.s.r);var d=[];var v=0;var p=Array.isArray(e);var g=l.s.r,m=0;var b={};if(p&&!e[g])e[g]=[];var w=c.skipHidden&&e["!cols"]||[];var k=c.skipHidden&&e["!rows"]||[];for(m=l.s.c;m<=l.e.c;++m){if((w[m]||{}).hidden)continue;d[m]=ya(m);a=p?e[g][m]:e[d[m]+u];switch(n){case 1:s[m]=m-l.s.c;break;case 2:s[m]=d[m];break;case 3:s[m]=c.header[m-l.s.c];break;default:if(a==null)a={w:"__EMPTY",t:"s"};o=f=Pa(a,null,c);v=b[f]||0;if(!v)b[f]=1;else{do{o=f+"_"+v++}while(b[o]);b[f]=v;b[o]=1}s[m]=o;}}g=l.s.r+i;t._read=function(){while(g<=l.e.r){if((k[g-1]||{}).hidden)continue;var r=Tw(e,l,g,d,n,s,p,c);++g;if(r.isempty===false||(n===1?c.blankrows!==false:!!c.blankrows)){t.push(r.row);return}}return t.push(null)};return t}var Xw={to_json:jw,to_html:Gw,to_csv:Vw,set_readable:zw};if(typeof vm!=="undefined")e.parse_xlscfb=vm;e.parse_zip=Xb;e.read=iw;e.readFile=sw;e.readFileSync=sw;e.write=gw;e.writeFile=bw;e.writeFileSync=bw;e.writeFileAsync=kw;e.utils=Ww;e.writeXLSX=pw;e.writeFileXLSX=ww;e.SSF=Ve;if(typeof Xw!=="undefined")e.stream=Xw;if(typeof Ke!=="undefined")e.CFB=Ke;if(typeof require!=="undefined"){var $w=undefined;if(($w||{}).Readable)zw($w.Readable)}}if(typeof exports!=="undefined")make_xlsx_lib(exports);else if(typeof module!=="undefined"&&module.exports)make_xlsx_lib(module.exports);else if(typeof define==="function"&&define.amd)define("xlsx",function(){if(!XLSX.version)make_xlsx_lib(XLSX);return XLSX});else make_xlsx_lib(XLSX);if(typeof window!=="undefined"&&!window.XLSX)try{window.XLSX=XLSX}catch(e){}
 </script>
 <script src="retail-decision.js"></script>
+<script src="retail-intelligence.js"></script>
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
@@ -401,6 +381,7 @@ const seasonRank=s=>{const m=styKey(s).match(/^(SS|MF|AU|FE)\s*(\d{4})$/); if(!m
 
 /* ---------- state ---------- */
 let ROWS=[], LOOKUP=null, LOOKUP_STY=null, LOOKUP_SRC='', DMIN=null, DMAX=null, FIT=false;
+let SALES_RI_CONFIRMED=false, SALES_RI_RESULT=null;
 let AI_CONTEXT=null, AI_BUSY=false;
 const meta=r=>{ if(!LOOKUP)return null;
   return LOOKUP[r.barcode] || (LOOKUP_STY?LOOKUP_STY[styKey(r.style)]:null) || null; };
@@ -453,6 +434,21 @@ $('f1').addEventListener('change',ev=>{
     if(!raw.length){ setStatus('s1','That sheet is empty.','err'); prog('p1',null); return; }
     if(!has(raw[0],['BillNo','Bill No'])){
       setStatus('s1','No BillNo column — is this the Bill Wise Item List?','err'); prog('p1',null); return; }
+    /* Universal Intelligence (Phase 7 Step B) confirms the BillNo check
+       above, never overrides it — same "confirm, don't override"
+       pattern proven safe in BlueDart_Etail_Waybill_Builder1.html and
+       Inventory_Validity_Console.html. The has(raw[0],...) check above
+       is always what actually gates this file; this only records
+       whether RetailIntelligence agreed. */
+    SALES_RI_CONFIRMED=false; SALES_RI_RESULT=null;
+    try{
+      if(typeof RetailIntelligence!=='undefined'){
+        const aoa=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:true,blankrows:false});
+        const ri=RetailIntelligence.classifyFileType([{name:wb.SheetNames[0], rows:aoa}]);
+        SALES_RI_RESULT=ri;
+        if(ri.level==='high' && ri.fileType==='sales') SALES_RI_CONFIRMED=true;
+      }
+    }catch(e){ /* Universal Intelligence must never block the existing detector */ }
     ROWS=raw.map(r=>({
       date:toDate(pick(r,['BillDate','Bill Date','Date'])),
       type:String(pick(r,['TransType','Trans Type'])||'').trim(),
@@ -837,6 +833,10 @@ function render(){
   };
   if(typeof RetailDecision!=='undefined')RetailDecision.saveSummary('storeReview',AI_CONTEXT);
   renderAiSummaryStale();
+  /* report changed — old chat turns would otherwise stay in RetailChat's
+     server-side conversation context and could blend into a new answer */
+  if(typeof RetailChat!=='undefined'){ try{RetailChat.clearHistory();}catch(e){} }
+  if(typeof AI_CHAT!=='undefined') AI_CHAT=[];
   $('report').innerHTML=H.join('');
 
   const retB=new Set(RA.filter(r=>r.qty<0).map(r=>r.bill));
@@ -873,11 +873,12 @@ function renderAiSummaryStale(){
   $('aiSummaryBody').innerHTML='';
 }
 const AI_FAIL_MSG={
-  signed_out:'Sign in to use AI Summary.',
-  rate_limited:'AI Summary limit reached for now — try again later.',
-  unavailable:'AI Summary is temporarily unavailable. Try again in a moment.',
+  signed_out:'Sign in to use this feature.',
+  rate_limited:'Limit reached for now — try again later.',
+  unavailable:'This is temporarily unavailable. Try again in a moment.',
   network:'Could not reach the AI service. Check your connection and try again.',
-  bad_response:'AI Summary returned something unexpected. Try again.'
+  bad_response:'Got something unexpected back. Try again.',
+  invalid_question:'Type a question first.'
 };
 $('btnSummary').addEventListener('click',async()=>{
   if(AI_BUSY)return;
@@ -1023,51 +1024,49 @@ $('btnXls').addEventListener('click',()=>{
     'Store_Review_'+key(A[0])+'_to_'+key(A[1])+'.xls');
 });
 
-/* ============================================================ Ask AI */
-const LS_KEY='ra_api_key', LS_MODEL='ra_model';
-const getKey  =()=>{ try{return localStorage.getItem(LS_KEY)||'';}catch(e){return '';} };
-const getModel=()=>{ try{return localStorage.getItem(LS_MODEL)||'claude-sonnet-5';}catch(e){return 'claude-sonnet-5';} };
+/* ============================================================ Ask AI
+   Backed by retail-chat.js -> api/chat.js (Firebase-gated, server-side
+   Gemini) — the AI Intelligence Core's Phase 7 Step E chat assistant.
+   AI_CHAT below is only renderChat()'s view-layer buffer; the actual
+   multi-turn context sent to the model lives inside RetailChat's own
+   internal history (see clearHistory() calls tied to render()). */
 let AI_CHAT=[];
 
-/* context = exactly the numbers currently on screen, as JSON the model can read */
-function buildAIContext(){
-  const A=periodA(), B=periodB();
-  const ctx={ store:$('storeTag').textContent,
-    period: A?`${dmy(A[0])} to ${dmy(A[1])} (${nDays(A[0],A[1])} days)`:'—',
-    compare_period: B?`${dmy(B[0])} to ${dmy(B[1])} (${nDays(B[0],B[1])} days)`:'none',
-    bill_rule: $('billRule').options[$('billRule').selectedIndex].textContent,
-    blocks:{} };
-  document.querySelectorAll('#report .blk').forEach(bk=>{
-    const h3=bk.querySelector('h3');
-    const title=(h3.childNodes[0]?h3.childNodes[0].textContent:h3.textContent).trim();
-    const src=bk.querySelector('table'); if(!src)return;
-    ctx.blocks[title]=[...src.rows].map(r=>[...r.cells].map(c=>{
-      const cp=c.cloneNode(true); cp.querySelectorAll('.bar').forEach(x=>x.remove());
-      return cp.textContent.replace(/\s+/g,' ').trim();
-    }));
-  });
-  return ctx;
+/* flat, scalar-only summary of what's on screen right now, for
+   RetailChat.buildToolContext() — must stay flat (no nested arrays),
+   see buildToolContext()'s own contract in retail-chat.js */
+function buildStoreReviewToolContext(){
+  if(!AI_CONTEXT) return null;
+  const c=AI_CONTEXT;
+  const labels={
+    period:c.period?c.period.label:'—',
+    periodDays:c.period?c.period.days:0,
+    comparePeriod:c.comparePeriod?c.comparePeriod.label:'none',
+    billRule:c.billRule,
+    saleValue:c.totals.value, bills:c.totals.bills, qty:c.totals.qty,
+    atv:c.totals.atv, upt:c.totals.upt, asp:c.totals.asp
+  };
+  if(c.compareTotals){
+    labels.compareSaleValue=c.compareTotals.value;
+    labels.compareBills=c.compareTotals.bills;
+    labels.compareAtv=c.compareTotals.atv;
+  }
+  if(c.discountPctOnMrp!=null) labels.discountPctOnMrp=c.discountPctOnMrp;
+  if(c.offerMix){ labels.onOfferValue=c.offerMix.onOfferValue; labels.fullPriceValue=c.offerMix.fullPriceValue; }
+  if(c.weekend){ labels.weekendValue=c.weekend.value; labels.weekendSharePct=c.weekend.shareOfPeriod; }
+  return labels;
 }
 
-/* built-in answer when there is no key — light keyword routing over the on-screen numbers */
-function offlineAnswer(q){
-  const ctx=buildAIContext(); const ql=q.toLowerCase();
-  const find=t=>ctx.blocks[Object.keys(ctx.blocks).find(k=>k.toLowerCase().includes(t))||'']||null;
-  const top=(rows,n)=>rows?rows.slice(1,1+(n||3)).map(r=>r[0]+' — '+(r[2]||r[1])).join('\n'):'no data';
-  let body;
-  if(/staff|salesman|coach|abv|abs/.test(ql)) body='Salesman standings this period:\n'+top(find('salesman'),6);
-  else if(/depart|category|skd|top/.test(ql)) body='Departments by value:\n'+top(find('department'),6);
-  else if(/season|fresh|old/.test(ql)) body='Season contribution:\n'+top(find('season'),6);
-  else if(/brand/.test(ql)) body='Brand split:\n'+top(find('brand'),6);
-  else if(/story/.test(ql)) body='Top stories:\n'+top(find('story'),8);
-  else if(/size/.test(ql)) body='Size selling:\n'+top(find('size'),8);
-  else if(/festive/.test(ql)) body='Festive vs non-festive:\n'+top(find('festive'),4);
-  else if(/atv|upt|asp|kpi|conversion|walk/.test(ql)){ const k=find('kpi');
-    body=k?k.slice(1).map(r=>r.join('  ·  ')).join('\n'):'no KPI data'; }
-  else { const s=find('sale summary');
-    body='Sale summary:\n'+(s?s.slice(1).map(r=>r.join('  ·  ')).join('\n'):'load a report first')+
-    '\n\nTry asking about ATV, staff, departments, season, brand, festive mix or sizes.'; }
-  return '(Built-in analysis — add your API key with the \u2699 button for full AI answers)\n\n'+body;
+/* read-only Decision Engine snapshot — Store Review's first-ever READ
+   from RetailDecision (it otherwise only WRITEs via saveSummary above);
+   pure/localStorage-only, never throws, never blocks the chat request */
+function buildStoreReviewDecisionContext(){
+  try{
+    if(typeof RetailDecision==='undefined'||typeof RetailChat==='undefined') return null;
+    const summaries=RetailDecision.loadSummaries();
+    const evalResult=RetailDecision.evaluate(summaries);
+    return RetailChat.buildDecisionEngineContext(evalResult);
+  }catch(e){ return null; }
 }
 
 function renderChat(){
@@ -1085,42 +1084,26 @@ async function askAI(){
   if(!ROWS.length){alert('Load the Bill Wise Item List first.');return;}
   const inp=$('aiInput'); const q=(inp.value||'').trim(); if(!q)return;
   inp.value=''; AI_CHAT.push({role:'user',text:q});
-  const key=getKey();
-  if(!key){ AI_CHAT.push({role:'assistant',text:offlineAnswer(q)}); renderChat(); return; }
+  if(typeof RetailChat==='undefined'||!RetailChat){
+    AI_CHAT.push({role:'assistant',text:AI_FAIL_MSG.unavailable}); renderChat(); return;
+  }
   AI_CHAT.push({role:'assistant',text:'',pending:true}); renderChat();
   $('aiSend').disabled=true;
+  let toolContext=null, decisionEngine=null, retailIntelligence=null;
   try{
-    const ctx=buildAIContext();
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{
-        'content-type':'application/json',
-        'x-api-key':key,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
-      },
-      body:JSON.stringify({
-        model:getModel(),
-        max_tokens:1000,
-        system:"You are a retail business analyst for an Indian apparel store. Answer the manager's question using ONLY the JSON data provided \u2014 never invent numbers. Currency is INR (use the rupee sign and Indian digit grouping). Be concise and practical, like advice from a good Area Manager. When a compare period exists, ground growth statements in it. If the data cannot answer the question, say exactly what data is missing.",
-        messages:[{role:'user',content:'DATA:\n'+JSON.stringify(ctx)+'\n\nQUESTION: '+q}]
-      })
-    });
-    const data=await res.json();
-    let text='';
-    if(data&&Array.isArray(data.content)) text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('\n');
-    if(!text) text='API error: '+(data&&data.error?(data.error.message||JSON.stringify(data.error)):'empty response \u2014 check your key, model name and credit');
-    AI_CHAT[AI_CHAT.length-1]={role:'assistant',text};
-  }catch(e){
-    AI_CHAT[AI_CHAT.length-1]={role:'assistant',text:'Could not reach the AI service: '+e.message+'. Check your internet and the API key (\u2699 button).'};
-  }
+    toolContext=RetailChat.buildToolContext('storeReview', buildStoreReviewToolContext());
+    decisionEngine=buildStoreReviewDecisionContext();
+    retailIntelligence=RetailChat.buildRetailIntelligenceContext(SALES_RI_RESULT, null);
+  }catch(e){ /* context-building must never block the question */ }
+  const res=await RetailChat.ask(q,{decisionEngine:decisionEngine,toolContext:toolContext,retailIntelligence:retailIntelligence});
+  if(res&&res.ok){ AI_CHAT[AI_CHAT.length-1]={role:'assistant',text:res.answer}; }
+  else{ AI_CHAT[AI_CHAT.length-1]={role:'assistant',text:AI_FAIL_MSG[res&&res.reason]||AI_FAIL_MSG.unavailable}; }
   $('aiSend').disabled=false; renderChat();
 }
 
 function aiSubText(){
   const A=periodA();
-  return (getKey()?'Full AI answers':'Built-in analysis \u2014 add a key with \u2699 for full AI')+
-    (A?' \u00b7 '+dmy(A[0])+' \u2192 '+dmy(A[1]):'');
+  return A?('Ask about '+dmy(A[0])+' → '+dmy(A[1])):'Ask about this period’s business';
 }
 function openAI(){
   if(!ROWS.length){alert('Load the Bill Wise Item List first, then Ask AI about it.');return;}
@@ -1128,25 +1111,19 @@ function openAI(){
   const chips=['Why did ATV change?','Which staff should I coach?','Which department is pulling business?',"What should be tomorrow's focus?"];
   $('aiChips').innerHTML=chips.map(c=>`<span class="ai-chip">${esc(c)}</span>`).join('');
   $('aiChips').querySelectorAll('.ai-chip').forEach(c=>c.onclick=()=>{$('aiInput').value=c.textContent;askAI();});
-  $('aiKey').value=getKey(); $('aiModel').value=getModel();
   renderChat();
   $('aiOverlay').classList.remove('hidden'); $('aiInput').focus();
 }
 $('btnAI').addEventListener('click',openAI);
 $('aiClose').addEventListener('click',()=>$('aiOverlay').classList.add('hidden'));
 $('aiOverlay').addEventListener('click',e=>{if(e.target===$('aiOverlay'))$('aiOverlay').classList.add('hidden');});
-$('aiGear').addEventListener('click',()=>$('aiSettings').classList.toggle('hidden'));
-$('aiKeySave').addEventListener('click',()=>{
-  try{ localStorage.setItem(LS_KEY,$('aiKey').value.trim());
-    localStorage.setItem(LS_MODEL,($('aiModel').value.trim()||'claude-sonnet-5')); }catch(e){}
-  $('aiSettings').classList.add('hidden'); $('aiSub').textContent=aiSubText();
-});
 $('aiSend').addEventListener('click',askAI);
 $('aiInput').addEventListener('keydown',e=>{if(e.key==='Enter')askAI();});
 
 render();
 </script>
 <script type="module" src="retail-insights.js"></script>
+<script type="module" src="retail-chat.js"></script>
 <script type="module" src="auth-guard.js"></script>
 </body>
 </html>

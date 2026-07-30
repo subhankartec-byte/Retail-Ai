@@ -196,10 +196,69 @@ import { auth } from "./firebase.js";
     }
   }
 
+  /* classifyFile(headers, samples, meta) -> { fileType, confidence, source:'ai' } | null
+     Phase 7 (AI Intelligence Core) Step C — the AI fallback tier for
+     retail-intelligence.js's rule-tier classifyFileType(). Same
+     privacy contract as suggest(): headers + already-masked value
+     shapes only (masking happens in the CALLER via maskValue()/
+     buildSamples() below, same as every other function here — this
+     function never masks anything itself, it only ships what it's
+     given). Never throws, never blocks; caller decides whether to
+     call this at all (only when the rule tier isn't already
+     high-confidence) and how to merge the result. */
+  async function classifyFile (headers, samples, meta) {
+    try {
+      var token = await idToken();
+      if (!token) return null;
+
+      var body = {
+        task: 'classify',
+        headers: (headers || []).map(function (h) { return String(h == null ? '' : h).slice(0, 100); }),
+        samples: samples || [],
+        filename: (meta && meta.filename) || '',
+        sheetName: (meta && meta.sheetName) || ''
+      };
+      var json = JSON.stringify(body);
+      if (json.length > MAX_BODY) return null;   // headers+samples too big — give up, rule tier's guess stands
+
+      var ctrl = new AbortController();
+      var timer = setTimeout(function () { ctrl.abort(); }, TIMEOUT_MS);
+      var res;
+      try {
+        res = await fetch(ENDPOINT, {
+          method: 'POST',
+          signal: ctrl.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: json
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+      if (!res.ok) return null;
+
+      var data = await res.json();
+      if (!data || typeof data.fileType !== 'string') return null;
+      if (typeof data.confidence === 'number' && data.confidence < MIN_CONF) return null;
+
+      return {
+        fileType: data.fileType,
+        confidence: typeof data.confidence === 'number' ? data.confidence : 0.5,
+        source: 'ai'
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
   window.RetailAssist = {
     suggest: suggest,
     suggestBrands: suggestBrands,
+    classifyFile: classifyFile,
     maskValue: maskValue,
+    buildSamples: buildSamples,         /* exposed for reuse by retail-knowledge.js (Phase 7 Step C) */
     _buildBody: buildBody               /* exposed for tests only */
   };
 }());

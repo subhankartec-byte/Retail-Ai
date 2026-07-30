@@ -1034,6 +1034,19 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         }
       }
       var hi = RetailImport.detectHouse(rows2D, hdr.idx, mapped.fields);
+      /* Universal Intelligence (Phase 7 Step B) confirms RetailImport's
+         result, never overrides it — same "confirm, don't override"
+         pattern proven safe in BlueDart_Etail_Waybill_Builder1.html.
+         hi.house (computed above) is always what actually gets used
+         below; this only records whether RetailIntelligence agreed. */
+      window.HOUSE_RI_CONFIRMED = false; window.HOUSE_RI_RESULT = null;
+      try{
+        if(window.RetailIntelligence){
+          var ri = RetailIntelligence.detectRetailer([{name:'Sheet', rows:rows2D}]);
+          window.HOUSE_RI_RESULT = ri;
+          if(ri.level==='high' && ri.retailer===hi.house) window.HOUSE_RI_CONFIRMED = true;
+        }
+      }catch(e){ /* Universal Intelligence must never block the existing detector */ }
       if (hi.house !== 'unknown') {
         window.HOUSE_PREFIX = RetailProfiles.get(hi.house).reportPrefix || "";
         return;
@@ -1961,6 +1974,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 <script src="retail-profiles.js"></script>
 <script src="retail-mapping.js"></script>
 <script src="retail-decision.js"></script>
+<script src="retail-intelligence.js"></script>
 <script type="module" src="auth-guard.js"></script>
 </body>
 </html>

@@ -590,6 +590,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 });
 </script>
 <script src="retail-ui.js"></script>
+<script src="retail-decision.js"></script>
+<script src="retail-intelligence.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const INR = n => '₹' + Math.round(n).toLocaleString('en-IN');
@@ -613,6 +615,29 @@ function sheetsFromBuffer(buf){
   }
   const wb = XLSX.read(u8, {type:'array', raw:true});
   return wb.SheetNames.map(n=>({name:n, rows: XLSX.utils.sheet_to_json(wb.Sheets[n], {header:1, raw:true, blankrows:false, defval:''})}));
+}
+
+/* ---------- file-type classification: WB.classify() stays the sole
+   authority (existing detector, unchanged behaviour); retail-
+   intelligence.js (Phase 7 Step B, AI Intelligence Core) is called
+   alongside it purely to CONFIRM the same result — never to override
+   it. Its scoring rules are the same regexes at the same scan depths
+   as WB.classify() (verified before wiring this in), so on any real,
+   single-relevant-sheet upload the two are mathematically guaranteed
+   to agree when RetailIntelligence is confident; this function still
+   never lets it change what actually gets returned, so existing
+   detection accuracy cannot regress even in an untested edge case. */
+const RI_TO_WB_TYPE = {waybillTemplate:'template', storeMaster:'master', mb51:'mb51', grn:'grn', ist:'ist'};
+function classifyFile(sheets){
+  const cls = WB.classify(sheets);
+  let riResult=null, riConfirmed=false;
+  try{
+    if(typeof RetailIntelligence!=='undefined'){
+      riResult = RetailIntelligence.classifyFileType(sheets);
+      if(riResult.level==='high' && RI_TO_WB_TYPE[riResult.fileType]===cls) riConfirmed=true;
+    }
+  }catch(e){ /* Universal Intelligence must never block the existing detector */ }
+  return {cls, riResult, riConfirmed};
 }
 
 const ui = {
@@ -649,10 +674,11 @@ const ui = {
       await new Promise(r=>setTimeout(r,30));
       try{
         const sheets = sheetsFromBuffer(await f.arrayBuffer());
-        const cls = WB.classify(sheets);
+        const det = classifyFile(sheets);
+        const cls = det.cls;
         if(cls==='mb51'||cls==='grn'||cls==='master'||cls==='ist'){
           if(cls==='ist') state.istSel=null;
-          state.files[cls]={sheets, name:f.name};
+          state.files[cls]={sheets, name:f.name, riConfirmed:det.riConfirmed, riResult:det.riResult};
           $('st_'+cls).textContent='✓'; $('slot_'+cls).classList.add('ok'); $('fn_'+cls).textContent=f.name;
         } else if(cls==='template'){
           msg.className='msg ok'; msg.textContent='ℹ '+f.name+' is the Blue Dart template itself — already built into this tool, no need to upload it.';
@@ -776,6 +802,7 @@ const ui = {
     const iss=sel.filter(r=>!r.dest||!r.address||!/^\d{6}$/.test(String(r.pin))).length;
     $('tIss').textContent=iss; $('tileIssues').classList.toggle('hidden',!iss);
     $('btnGen').disabled = !sel.length;
+    saveDecisionSummary();
   },
   tick(arr,i,v){ state[arr][i].sel=v; this.tiles(); },
   edit(arr,i,k,v){ state[arr][i][k]=v.trim(); if(k==='address'||k==='pin'){ this.render(); } else this.tiles(); },
@@ -812,6 +839,29 @@ const ui = {
     }catch(e){ g.className='msg err'; g.textContent='✗ Generation failed: '+e.message; }
   }
 };
+
+/* ---------- Decision Engine summary (auxiliary tool — see PROJECT_STATUS.md §7, Phase 6.5) ---------- */
+function saveDecisionSummary(){
+  try{
+    if(typeof RetailDecision==="undefined") return;
+    const all=[...state.rows,...state.unmatched];
+    const sel=all.filter(r=>r.sel);
+    const declaredValue=sel.reduce((a,r)=>a+(state.valueMode==='cost'?r.cost:r.mrp),0);
+    const issues=sel.filter(r=>!r.dest||!r.address||!/^\d{6}$/.test(String(r.pin))).length;
+    const istMismatches=all.filter(r=>r.note && r.note.indexOf('IST list says')>=0).length;
+    RetailDecision.saveSummary("blueDart",{
+      totals:{
+        waybills: sel.length,
+        pieces: Math.round(sel.reduce((a,r)=>a+r.pieces,0)*100)/100,
+        declaredValue: Math.round(declaredValue),
+        issues: issues,
+        istMismatches: istMismatches,
+        pendingStyles: state.istActive ? state.pending.length : 0
+      }
+    });
+  }catch(e){ /* never let this break the tool's own report */ }
+}
+
 ui.init();
 </script>
 <script type="module" src="auth-guard.js"></script>

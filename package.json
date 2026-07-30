@@ -1,0 +1,9 @@
+{
+  "name": "retail-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Retail AI — browser-only retail tools with four Vercel serverless AI endpoints (api/*.js). No build step; the api/ functions have zero npm dependencies (Node built-ins only: crypto, global fetch).",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

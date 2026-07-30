@@ -1,0 +1,13 @@
+# Real production-shaped business data used only for local manual testing —
+# must never be uploaded to any deployment. See PROJECT_STATUS.md.
+_test_data/
+
+# Session-specific local tooling config, irrelevant to deployment.
+.claude/
+
+# Disposable test copies created during manual verification sessions
+# (auth-guard bypass copies etc.) — should never exist at deploy time,
+# excluded defensively in case one is ever present.
+*_TEST*.html
+*_TEST_DISPOSABLE.html
+auth-guard.*.js

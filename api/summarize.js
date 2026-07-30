@@ -347,6 +347,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'method_not_allowed' });
   }
   if (!process.env.GEMINI_API_KEY) {
+    console.error('[api/summarize] GEMINI_API_KEY is not set in this environment — AI requests cannot be served.');
     return res.status(503).json({ error: 'ai_not_configured' });
   }
 

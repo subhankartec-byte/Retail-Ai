@@ -78,10 +78,18 @@ function assertMasked(samples) {
 }
 
 function validateBody(body) {
-  const allowed = ['headers', 'samples', 'filename', 'sheetName', 'fingerprint'];
+  /* 'task' added for Phase 7 (AI Intelligence Core) Step C: task:'classify'
+     reuses this exact same headers+samples egress guard unchanged — it is
+     a file-TYPE classification request, same Tier 1 shape (masked headers
+     + value shapes) as the default column-mapping request, just a
+     different prompt/response downstream. Omitting task keeps every
+     existing caller (retail-assist.js's suggest()) byte-for-byte
+     unaffected. */
+  const allowed = ['headers', 'samples', 'filename', 'sheetName', 'fingerprint', 'task'];
   for (const k of Object.keys(body || {})) {
     if (!allowed.includes(k)) throw new Error('unexpected field: ' + k);
   }
+  if (body.task !== undefined && body.task !== 'classify') throw new Error('unexpected task');
   const headers = body.headers;
   if (!Array.isArray(headers) || headers.length === 0) throw new Error('headers required');
   if (headers.length > MAX_HEADERS) throw new Error('too many headers');
@@ -94,7 +102,8 @@ function validateBody(body) {
     headers,
     samples: body.samples || [],
     filename: typeof body.filename === 'string' ? body.filename.slice(0, 120) : '',
-    sheetName: typeof body.sheetName === 'string' ? body.sheetName.slice(0, 60) : ''
+    sheetName: typeof body.sheetName === 'string' ? body.sheetName.slice(0, 60) : '',
+    task: body.task === 'classify' ? 'classify' : 'map'
   };
 }
 
@@ -215,18 +224,74 @@ function buildPrompt(input) {
     'Sheet: ' + (input.sheetName || '(unknown)'),
     '',
     'Columns (index | header | masked shapes):',
-    input.headers.map((h, i) => {
-      const shapes = input.samples
-        .map(s => s[String(i)])
-        .filter(Boolean)
-        .slice(0, 3)
-        .join(' , ');
-      return '  ' + i + ' | ' + (h || '(blank)') + ' | ' + (shapes || '(empty)');
-    }).join('\n'),
+    columnDump(input),
     '',
     'Respond with JSON only, no markdown, no commentary:',
     '{"house":"w|aurelia|jaypore|unknown","fields":{"qty":7,"mrp":5},"confidence":0.0}'
   ].join('\n');
+}
+
+function columnDump(input) {
+  return input.headers.map((h, i) => {
+    const shapes = input.samples
+      .map(s => s[String(i)])
+      .filter(Boolean)
+      .slice(0, 3)
+      .join(' , ');
+    return '  ' + i + ' | ' + (h || '(blank)') + ' | ' + (shapes || '(empty)');
+  }).join('\n');
+}
+
+/* =========================================================
+   4b. Gemini — task:'classify' (Phase 7 Step C, file-TYPE only)
+   ---------------------------------------------------------
+   Same Tier 1 input as buildPrompt() above (masked headers +
+   value shapes) — only the prompt/response shape differs. This
+   is the file-shape counterpart to retail-intelligence.js's
+   rule-tier classifyFileType(): called only as a fallback when
+   that deterministic tier can't reach high confidence.
+   ========================================================= */
+const FILE_TYPE_VALUES = ['soh', 'sales', 'mb51', 'grn', 'ist', 'storeMaster', 'waybillTemplate', 'unknown'];
+
+function buildClassifyPrompt(input) {
+  return [
+    'You classify the TYPE of a retail data file (SAP / SOH / POS exports from an',
+    'Indian fashion-retail operation) from its column layout alone.',
+    '',
+    'You are given ONLY column names and masked value shapes.',
+    'In the shapes: # = a digit, A = an uppercase letter, a = a lowercase letter.',
+    'You will never see real data.',
+    '',
+    'Classify into exactly one fileType:',
+    '  soh             - stock-on-hand / inventory export (style, size, qty, MRP, brand)',
+    '  sales           - POS bill-wise sales export (bill number, salesman, quantity, value)',
+    '  mb51            - SAP MB51 goods-movement export (supplying plant, movement type, reference)',
+    '  grn             - goods-receipt-note report (PO number, from/to location)',
+    '  ist             - inter-store-transfer list (donor store, receiver store, style)',
+    '  storeMaster     - store directory / master (store code, address, pincode)',
+    '  waybillTemplate - a courier waybill template, not a data export at all',
+    '  unknown         - none of the above fit confidently; do not force a guess',
+    '',
+    'File: ' + (input.filename || '(unknown)'),
+    'Sheet: ' + (input.sheetName || '(unknown)'),
+    '',
+    'Columns (index | header | masked shapes):',
+    columnDump(input),
+    '',
+    'Respond with JSON only, no markdown, no commentary:',
+    '{"fileType":"soh|sales|mb51|grn|ist|storeMaster|waybillTemplate|unknown","confidence":0.0}'
+  ].join('\n');
+}
+
+function sanitiseClassify(ai) {
+  let fileType = String((ai && ai.fileType) || 'unknown');
+  if (!FILE_TYPE_VALUES.includes(fileType)) {
+    const hit = FILE_TYPE_VALUES.find(v => v.toLowerCase() === fileType.toLowerCase());
+    fileType = hit || 'unknown';
+  }
+  let confidence = Number(ai && ai.confidence);
+  if (!isFinite(confidence) || confidence < 0 || confidence > 1) confidence = 0.5;
+  return { fileType, confidence };
 }
 
 async function callGeminiCascade(prompt) {
@@ -318,6 +383,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'method_not_allowed' });
   }
   if (!process.env.GEMINI_API_KEY) {
+    console.error('[api/map-schema] GEMINI_API_KEY is not set in this environment — AI requests cannot be served.');
     return res.status(503).json({ error: 'ai_not_configured' });
   }
 
@@ -405,19 +471,18 @@ module.exports = async function handler(req, res) {
   }
 
   /* ai */
+  const isClassify = input.task === 'classify';
   try {
-    const got = await callGeminiCascade(buildPrompt(input));
-    const clean = sanitise(got.ai, input.headers.length);
-    console.log(JSON.stringify({
-      evt: 'map', ok: true, model: got.model,
-      cols: input.headers.length,
-      mapped: Object.keys(clean.fields).length,
-      conf: clean.confidence
-    }));
+    const got = await callGeminiCascade(isClassify ? buildClassifyPrompt(input) : buildPrompt(input));
+    const clean = isClassify ? sanitiseClassify(got.ai) : sanitise(got.ai, input.headers.length);
+    console.log(JSON.stringify(isClassify
+      ? { evt: 'classify', ok: true, model: got.model, cols: input.headers.length, fileType: clean.fileType, conf: clean.confidence }
+      : { evt: 'map', ok: true, model: got.model, cols: input.headers.length, mapped: Object.keys(clean.fields).length, conf: clean.confidence }
+    ));
     return res.status(200).json({ ...clean, model: got.model, source: 'ai' });
   } catch (e) {
     console.log(JSON.stringify({
-      evt: 'map', ok: false, code: e.message,
+      evt: isClassify ? 'classify' : 'map', ok: false, code: e.message,
       detail: String(e.detail || '').slice(0, 180)
     }));
     /* code/detail are Google's public error text — never the key */

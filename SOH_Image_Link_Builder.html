@@ -83,6 +83,7 @@ a.plink:hover{color:var(--gold);border-bottom-color:var(--navy)}
         <div class="big">Drop your SOH export here</div>
         <div class="sub">.xlsx · .xls · .csv — layouts with junk rows above the header are handled</div>
         <button type="button" class="btn btn-gold" id="browseBtn" style="margin-top:12px;touch-action:manipulation">+ Add file</button>
+        <button type="button" class="btn btn-ghost" id="sampleBtn" style="margin-top:12px;margin-left:8px;touch-action:manipulation">&#9655; Try with sample data</button>
       </div>
       <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.xlsm">
       <div id="fileInfo" class="note hidden"></div>
@@ -228,6 +229,8 @@ const $=id=>document.getElementById(id);
 const drop=$("drop"), fi=$("fileInput");
 const bb=$("browseBtn");
 if(bb) bb.addEventListener("click",e=>{ e.stopPropagation(); fi.click(); });
+const sb=$("sampleBtn");
+if(sb) sb.addEventListener("click",e=>{ e.stopPropagation(); loadSampleData(); });
 drop.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();fi.click();} });
 RetailUI.wireDropZone(drop, fi, {
   activeClass: "over",
@@ -274,6 +277,43 @@ function loadSheet(idx){
     (d.styleCol>=0 ? "Style column: <b>"+esc(header[d.styleCol])+"</b>. " : "<b>Style column not found — pick it above.</b> ") +
     (d.brandCol>=0 ? "Brand column: <b>"+esc(header[d.brandCol])+"</b>." : "<b>Brand column not found — pick it above.</b>");
   rebuild();
+}
+
+/* ---------- sample data (first-time trial, no file needed) ----------
+   Skips file parsing entirely and feeds the same rebuild() pipeline
+   real uploads use — mirrors Stock_IN_OUT_Adjustment.html's SAMPLE
+   pattern. Realistic, illustrative style/brand codes only. */
+const SAMPLE_SHEET_ROWS = [
+  ["Style Code","Brand Code"],
+  ["W-KUR-2201","W"],
+  ["W-DRS-4410","W"],
+  ["AU-TOP-3312","AU"],
+  ["AU-SUT-8801","AURELIA"],
+  ["FS-TUN-1180","FS"],
+  ["WI-SKT-6650","WI"]
+];
+function loadSampleData(){
+  wb = null;
+  $("fileInfo").classList.remove("hidden");
+  $("fileInfo").innerHTML = "Loaded <b>sample data</b> · 1 sheet";
+  const sel=$("sheetSel"); sel.innerHTML="";
+  const o=document.createElement("option"); o.value=0; o.textContent="Sample Data"; sel.appendChild(o);
+  sel.value=0;
+  // same post-parse steps as loadSheet(), sourced from the hardcoded
+  // rows above instead of wb.Sheets[...] (loadSheet() itself untouched)
+  sheetRows = SAMPLE_SHEET_ROWS;
+  const d = detect(sheetRows);
+  headerRow = d.row>=0 ? d.row : 0;
+  header = (sheetRows[headerRow]||[]).map((h,i)=>cellToText(h)||("Column "+colName(i)));
+  fillColSelect($("styleSel"), d.styleCol);
+  fillColSelect($("brandSel"), d.brandCol);
+  unknownRoute={}; aiTriedKey=""; noteAI("");
+  $("detectNote").innerHTML =
+    "Header detected on row <b>"+(headerRow+1)+"</b>. " +
+    (d.styleCol>=0 ? "Style column: <b>"+esc(header[d.styleCol])+"</b>. " : "<b>Style column not found — pick it above.</b> ") +
+    (d.brandCol>=0 ? "Brand column: <b>"+esc(header[d.brandCol])+"</b>." : "<b>Brand column not found — pick it above.</b>");
+  rebuild();
+  $("mapCard").classList.remove("hidden");
 }
 function colName(i){ let s=""; i++; while(i>0){ s=String.fromCharCode(65+(i-1)%26)+s; i=Math.floor((i-1)/26);} return s; }
 function fillColSelect(sel, chosen){
@@ -354,6 +394,21 @@ function rebuild(){
   applyFilter();
   $("resultCard").classList.remove("hidden");
   resolveUnknowns();
+  saveDecisionSummary();
+}
+
+/* ---------- Decision Engine summary (auxiliary/enrichment tool — see PROJECT_STATUS.md §16) ---------- */
+function saveDecisionSummary(){
+  try{
+    if(typeof RetailDecision==="undefined") return;
+    const linked=records.filter(x=>x.url).length;
+    const mix={w:0,au:0,jp:0,un:0};
+    records.forEach(x=>{ mix[x.fam]=(mix[x.fam]||0)+1; });
+    RetailDecision.saveSummary("sohImageLinks",{
+      totals:{ styles:records.length, linked:linked, noLink:records.length-linked },
+      brandMix:mix
+    });
+  }catch(e){ /* never let this break the tool's own report */ }
 }
 
 $("search").addEventListener("input",applyFilter);
@@ -460,6 +515,7 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("sho
 })();
 </script>
 <script src="retail-profiles.js"></script>
+<script src="retail-decision.js"></script>
 <script type="module" src="auth-guard.js"></script>
 </body>
 </html>
