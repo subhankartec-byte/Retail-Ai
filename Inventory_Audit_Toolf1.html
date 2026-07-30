@@ -166,6 +166,13 @@ table.grid tbody tr:hover{background:#eaf0f9}
   .twocol{grid-template-columns:1fr}
   .search{flex-basis:200px}
 }
+.printbtn{background:var(--navy,#1B2A4A);color:#fff;border:1px solid var(--navy,#1B2A4A);border-radius:5px;padding:6px 11px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap;font-family:inherit}
+.printbtn:hover{filter:brightness(1.15)}
+.printbtn:disabled{opacity:.55;cursor:default}
+@media print{
+  .app-head,#upload-card,.dl-row{display:none!important}
+  body{background:#fff}
+}
 </style>
 </head>
 <body>
@@ -227,8 +234,11 @@ table.grid tbody tr:hover{background:#eaf0f9}
     </div>
 
     <div class="dl-row" id="ai-row">
-      <div class="dl-txt"><b>AI Business Analysis</b> — a short, evidence-grounded read of this reconciliation from the Universal AI Pipeline.</div>
-      <button class="btn gold" id="ai-btn">Generate AI Analysis</button>
+      <div class="dl-txt"><b>Universal AI Assistant</b> — a short, evidence-grounded read of this reconciliation, and follow-up questions answered live.</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+        <button class="printbtn" id="printBtn" type="button" onclick="window.print()">🖶 Print / PDF</button>
+        <div id="aiToolbarSlot"></div>
+      </div>
     </div>
     <div id="ai-panel" hidden style="margin:0 0 16px"></div>
 
@@ -967,34 +977,57 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
      other tool on the pipeline uses. Purely additive UI (new
      button + panel); nothing existing is touched or re-rendered. */
   var AI_BUSY = false;
-  var aiBtn = $('ai-btn');
-  if (aiBtn) aiBtn.addEventListener('click', function () {
-    if (AI_BUSY) return;
-    if (!window.__lastAggregateContext) { alert('Run a reconciliation first.'); return; }
-    if (typeof AIPipeline === 'undefined' || !AIPipeline) {
-      $('ai-panel').hidden = false;
-      if (typeof AIReportUI !== 'undefined') AIReportUI.renderError('ai-panel', 'AI Analysis could not load. Refresh the page and try again.');
-      return;
-    }
-    AI_BUSY = true;
-    var prevLabel = aiBtn.textContent;
-    aiBtn.textContent = 'Thinking…'; aiBtn.disabled = true;
-    $('ai-panel').hidden = false;
-    if (typeof AIReportUI !== 'undefined') AIReportUI.renderBusy('ai-panel', 'Generating analysis from this reconciliation…');
-    var ctx = window.__lastAggregateContext;
-    AIPipeline.run({ sheets: [], aggregateContext: ctx, toolName: 'Inventory Audit Tool' }).then(function (result) {
-      aiBtn.textContent = prevLabel; aiBtn.disabled = false; AI_BUSY = false;
-      if (ctx !== window.__lastAggregateContext) return;   // a new run happened while we waited — discard
-      if (!result || !result.report) {
-        if (typeof AIReportUI !== 'undefined') AIReportUI.renderError('ai-panel', 'Could not generate an analysis. Try again.');
+  var __aiButtons = (typeof AIToolbar !== 'undefined') ? AIToolbar.mount('#aiToolbarSlot', {
+    summaryLabel: 'Generate AI Analysis',
+    onAISummary: function () {
+      if (AI_BUSY) return;
+      if (!window.__lastAggregateContext) { alert('Run a reconciliation first.'); return; }
+      var aiBtn = __aiButtons.summary;
+      if (typeof AIPipeline === 'undefined' || !AIPipeline) {
+        $('ai-panel').hidden = false;
+        if (typeof AIReportUI !== 'undefined') AIReportUI.renderError('ai-panel', 'AI Analysis could not load. Refresh the page and try again.');
         return;
       }
-      if (typeof AIReportUI !== 'undefined') AIReportUI.renderReport('ai-panel', result.report);
-    }).catch(function () {
-      aiBtn.textContent = prevLabel; aiBtn.disabled = false; AI_BUSY = false;
-      if (typeof AIReportUI !== 'undefined') AIReportUI.renderError('ai-panel', 'Could not generate an analysis. Try again.');
+      AI_BUSY = true;
+      var prevLabel = aiBtn.textContent;
+      aiBtn.textContent = 'Thinking…'; aiBtn.disabled = true;
+      $('ai-panel').hidden = false;
+      if (typeof AIReportUI !== 'undefined') AIReportUI.renderBusy('ai-panel', 'Generating analysis from this reconciliation…');
+      var ctx = window.__lastAggregateContext;
+      AIPipeline.run({ sheets: [], aggregateContext: ctx, toolName: 'Inventory Audit Tool' }).then(function (result) {
+        aiBtn.textContent = prevLabel; aiBtn.disabled = false; AI_BUSY = false;
+        if (ctx !== window.__lastAggregateContext) return;   // a new run happened while we waited — discard
+        if (!result || !result.report) {
+          if (typeof AIReportUI !== 'undefined') AIReportUI.renderError('ai-panel', 'Could not generate an analysis. Try again.');
+          return;
+        }
+        if (typeof AIReportUI !== 'undefined') AIReportUI.renderReport('ai-panel', result.report);
+      }).catch(function () {
+        aiBtn.textContent = prevLabel; aiBtn.disabled = false; AI_BUSY = false;
+        if (typeof AIReportUI !== 'undefined') AIReportUI.renderError('ai-panel', 'Could not generate an analysis. Try again.');
+      });
+    },
+    onAskAI: function () { if (typeof AIChatUI !== 'undefined') AIChatUI.open(); }
+  }) : null;
+
+  /* Universal AI Assistant — shared chat panel. */
+  if (typeof AIChatUI !== 'undefined') {
+    AIChatUI.mount({
+      toolKey: 'inventoryAudit',
+      suggestedQuestions: ['Explain this report.', 'What is the biggest issue?', 'Which products require action?', 'Explain trends.', 'Find hidden risks.', 'Suggest business actions.'],
+      subtitle: function () { return 'Ask about this reconciliation'; },
+      isReady: function () { return !!window.__lastAggregateContext; },
+      notReadyMessage: 'Run a reconciliation first.',
+      buildContext: function () {
+        var labels = {};
+        if (window.__lastAggregateContext && window.__lastAggregateContext.summary) {
+          var s = window.__lastAggregateContext.summary;
+          Object.keys(s).forEach(function (k) { labels[k] = s[k]; });
+        }
+        return { toolContext: (typeof RetailChat !== 'undefined') ? RetailChat.buildToolContext('inventoryAudit', labels) : { toolName: 'inventoryAudit', labels: labels } };
+      }
     });
-  });
+  }
 
   /* ---------- render ---------- */
   var TYPE_BADGE = { 'Size': 'b-size', 'Colour': 'b-col', 'Size + Colour': 'b-sc', 'Same-Value': 'b-val', 'Variant': 'b-var' };
@@ -1195,7 +1228,10 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
 <script src="retail-ui.js"></script>
 <script src="retail-decision.js"></script>
 <script src="ai-report-ui.js"></script>
+<script src="ai-toolbar-ui.js"></script>
+<script src="ai-chat-ui.js"></script>
 <script type="module" src="retail-knowledge.js"></script>
+<script type="module" src="retail-chat.js"></script>
 <script type="module" src="ai-pipeline.js"></script>
 <script type="module" src="auth-guard.js"></script>
 </body>

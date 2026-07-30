@@ -90,6 +90,13 @@ details.pend{margin-top:14px;border:1px dashed var(--line);border-radius:10px;pa
 details.pend summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--navy)}
 .chip{display:inline-block;background:#eef1f8;border:1px solid var(--line);border-radius:7px;padding:3px 9px;font-size:11.5px;margin:4px 5px 0 0;font-weight:600;color:var(--navy)}
 @media(max-width:700px){.hd h1{font-size:16px}.tile .v{font-size:18px}}
+.printbtn{background:var(--navy,#0d1b3e);color:#fff;border:1px solid var(--navy,#0d1b3e);border-radius:5px;padding:6px 11px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap;font-family:inherit}
+.printbtn:hover{filter:brightness(1.15)}
+.printbtn:disabled{opacity:.55;cursor:default}
+@media print{
+  header,#sandboxWarn,#cardProfile,.card:not(#cardResults),#aiToolbarSlot,.ctrls{display:none!important}
+  body{background:#fff}
+}
 </style>
 </head>
 <body>
@@ -146,7 +153,10 @@ details.pend summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(-
         <div class="tile t3"><div class="v" id="tVal">₹0</div><div class="l">Declared value</div></div>
         <div class="tile t4 hidden" id="tileIssues"><div class="v" id="tIss">0</div><div class="l">Rows need attention</div></div>
       </div>
-      <div style="margin:10px 0"><button class="btn gold" id="aiBtn" onclick="ui.generateAiAnalysis()">Generate AI Analysis</button></div>
+      <div style="margin:10px 0;display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+        <button class="printbtn" id="printBtn" type="button" onclick="window.print()">🖶 Print / PDF</button>
+        <div id="aiToolbarSlot"></div>
+      </div>
       <div id="aiPanel" hidden></div>
       <div class="ctrls">
         <div><label class="f">Pickup date</label><input type="date" id="oDate" style="width:160px"></div>
@@ -595,7 +605,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 <script src="retail-decision.js"></script>
 <script src="retail-intelligence.js"></script>
 <script src="ai-report-ui.js"></script>
+<script src="ai-toolbar-ui.js"></script>
+<script src="ai-chat-ui.js"></script>
 <script type="module" src="retail-knowledge.js"></script>
+<script type="module" src="retail-chat.js"></script>
 <script type="module" src="ai-pipeline.js"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -878,8 +891,8 @@ let AI_BUSY=false;
 ui.generateAiAnalysis=async function(){
   if(AI_BUSY)return;
   if(!window.__lastAggregateContext){ alert('Select shipments and generate a review first.'); return; }
-  const btn=$('aiBtn'), panel=$('aiPanel');
-  if(typeof AIPipeline==='undefined'||!AIPipeline){
+  const btn=__aiButtons&&__aiButtons.summary, panel=$('aiPanel');
+  if(!btn||typeof AIPipeline==='undefined'||!AIPipeline){
     panel.hidden=false;
     if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','AI Analysis could not load. Refresh the page and try again.');
     return;
@@ -904,6 +917,30 @@ ui.generateAiAnalysis=async function(){
     if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','Could not generate an analysis. Try again.');
   }
 };
+
+const __aiButtons=(typeof AIToolbar!=='undefined') ? AIToolbar.mount('#aiToolbarSlot', {
+  summaryLabel:'Generate AI Analysis',
+  onAISummary:()=>ui.generateAiAnalysis(),
+  onAskAI:()=>{ if(typeof AIChatUI!=='undefined') AIChatUI.open(); }
+}) : null;
+
+/* Universal AI Assistant — shared chat panel. */
+if(typeof AIChatUI!=='undefined'){
+  AIChatUI.mount({
+    toolKey:'blueDart',
+    suggestedQuestions:['Explain this report.','What is the biggest issue?','Which shipments need attention?','Suggest business actions.'],
+    subtitle:()=>'Ask about this shipment batch',
+    isReady:()=>!!window.__lastAggregateContext,
+    notReadyMessage:'Select shipments and generate a review first.',
+    buildContext:()=>{
+      const labels={};
+      if(window.__lastAggregateContext && window.__lastAggregateContext.totals){
+        Object.assign(labels, window.__lastAggregateContext.totals);
+      }
+      return { toolContext:(typeof RetailChat!=='undefined') ? RetailChat.buildToolContext('blueDart', labels) : { toolName:'blueDart', labels } };
+    }
+  });
+}
 
 ui.init();
 </script>

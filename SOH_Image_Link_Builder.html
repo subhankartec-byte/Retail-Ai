@@ -66,6 +66,13 @@ a.plink:hover{color:var(--gold);border-bottom-color:var(--navy)}
 #toast.show{opacity:1}
 @media (max-width:640px){ header{padding:20px 16px} .field{min-width:130px} thead th,tbody td{padding:7px 8px} }
 @media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+.printbtn{background:var(--navy,#0e2144);color:#fff;border:1px solid var(--navy,#0e2144);border-radius:5px;padding:6px 11px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap;font-family:inherit}
+.printbtn:hover{filter:brightness(1.15)}
+.printbtn:disabled{opacity:.55;cursor:default}
+@media print{
+  header,.card:not(#resultCard),.toolbar,#aiToolbarSlot{display:none!important}
+  body{background:#fff}
+}
 </style>
 </head>
 <body>
@@ -111,8 +118,11 @@ a.plink:hover{color:var(--gold);border-bottom-color:var(--navy)}
       <button class="btn btn-gold" id="exportXlsx">Export Excel</button>
       <button class="btn btn-ghost" id="exportCsv">Export CSV</button>
       <button class="btn btn-navy" id="copyLinks">Copy all links</button>
+      <button class="printbtn" id="printBtn" type="button" onclick="window.print()">🖶 Print / PDF</button>
+      <div id="aiToolbarSlot"></div>
     </div>
     <div class="chips" id="chips" style="padding:0 16px 12px"></div>
+    <div id="aiPanel" hidden style="margin:0 16px 12px"></div>
     <div class="tblwrap">
       <table>
         <thead><tr><th style="width:60px">#</th><th>Style code</th><th style="width:110px">Brand</th><th>Product link</th></tr></thead>
@@ -431,15 +441,74 @@ function rebuild(){
 /* ---------- Decision Engine summary (auxiliary/enrichment tool — see PROJECT_STATUS.md §16) ---------- */
 function saveDecisionSummary(){
   try{
-    if(typeof RetailDecision==="undefined") return;
     const linked=records.filter(x=>x.url).length;
     const mix={w:0,au:0,jp:0,un:0};
     records.forEach(x=>{ mix[x.fam]=(mix[x.fam]||0)+1; });
-    RetailDecision.saveSummary("sohImageLinks",{
+    const payload={
       totals:{ styles:records.length, linked:linked, noLink:records.length-linked },
       brandMix:mix
-    });
+    };
+    window.__lastAggregateContext=payload;   /* Universal AI Pipeline, see AIToolbar.mount() below */
+    if(typeof RetailDecision==="undefined") return;
+    RetailDecision.saveSummary("sohImageLinks",payload);
   }catch(e){ /* never let this break the tool's own report */ }
+}
+
+/* ---------- Universal AI Assistant (AI Summary + Ask AI) ----------
+   Reuses the exact aggregate above — no new business logic, same
+   shared /api/chat reasoning and report shape every other tool on
+   the pipeline uses. This tool is auxiliary/enrichment (link
+   generation, not deep analysis) so the AI's job here is modest —
+   mainly "how many styles got linked, what's the brand mix, and
+   what to do about the unlinked ones" — but it still gets the
+   same universal experience as every other tool. */
+let AI_BUSY=false;
+const __aiButtons=(typeof AIToolbar!=="undefined") ? AIToolbar.mount("#aiToolbarSlot", {
+  summaryLabel:"AI Summary",
+  onAISummary:()=>{
+    if(AI_BUSY)return;
+    if(!window.__lastAggregateContext){ alert("Load a file first."); return; }
+    const btn=__aiButtons.summary, panel=document.getElementById("aiPanel");
+    if(typeof AIPipeline==="undefined"||!AIPipeline){
+      panel.hidden=false;
+      if(typeof AIReportUI!=="undefined") AIReportUI.renderError("aiPanel","AI Summary could not load. Refresh the page and try again.");
+      return;
+    }
+    AI_BUSY=true;
+    const prevLabel=btn.textContent;
+    btn.textContent="Thinking…"; btn.disabled=true;
+    panel.hidden=false;
+    if(typeof AIReportUI!=="undefined") AIReportUI.renderBusy("aiPanel","Generating summary from these results…");
+    const ctx=window.__lastAggregateContext;
+    AIPipeline.run({sheets:[], aggregateContext:ctx, toolName:"SOH Image Link Builder"}).then(result=>{
+      btn.textContent=prevLabel; btn.disabled=false; AI_BUSY=false;
+      if(ctx!==window.__lastAggregateContext)return;
+      if(!result||!result.report){
+        if(typeof AIReportUI!=="undefined") AIReportUI.renderError("aiPanel","Could not generate a summary. Try again.");
+        return;
+      }
+      if(typeof AIReportUI!=="undefined") AIReportUI.renderReport("aiPanel", result.report);
+    }).catch(()=>{
+      btn.textContent=prevLabel; btn.disabled=false; AI_BUSY=false;
+      if(typeof AIReportUI!=="undefined") AIReportUI.renderError("aiPanel","Could not generate a summary. Try again.");
+    });
+  },
+  onAskAI:()=>{ if(typeof AIChatUI!=="undefined") AIChatUI.open(); }
+}) : null;
+
+if(typeof AIChatUI!=="undefined"){
+  AIChatUI.mount({
+    toolKey:"sohImageLinks",
+    suggestedQuestions:["Explain this report.","Which brands have the most unlinked styles?","Suggest business actions."],
+    subtitle:()=>"Ask about these generated links",
+    isReady:()=>!!window.__lastAggregateContext,
+    notReadyMessage:"Load a file first.",
+    buildContext:()=>{
+      const labels={};
+      if(window.__lastAggregateContext && window.__lastAggregateContext.totals) Object.assign(labels, window.__lastAggregateContext.totals);
+      return { toolContext:(typeof RetailChat!=="undefined") ? RetailChat.buildToolContext("sohImageLinks", labels) : { toolName:"sohImageLinks", labels } };
+    }
+  });
 }
 
 $("search").addEventListener("input",applyFilter);
@@ -549,6 +618,12 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("sho
 <script src="retail-profiles.js"></script>
 <script src="retail-decision.js"></script>
 <script src="retail-intelligence.js"></script>
+<script src="ai-report-ui.js"></script>
+<script src="ai-toolbar-ui.js"></script>
+<script src="ai-chat-ui.js"></script>
+<script type="module" src="retail-knowledge.js"></script>
+<script type="module" src="retail-chat.js"></script>
+<script type="module" src="ai-pipeline.js"></script>
 <script type="module" src="auth-guard.js"></script>
 </body>
 </html>

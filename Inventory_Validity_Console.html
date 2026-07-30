@@ -236,6 +236,13 @@ tr.totalrow td.red{color:var(--red)}
   .kpi .num{font-size:20px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
+.printbtn{background:var(--navy,#0F2A4E);color:#fff;border:1px solid var(--navy,#0F2A4E);border-radius:5px;padding:6px 11px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap;font-family:inherit}
+.printbtn:hover{filter:brightness(1.15)}
+.printbtn:disabled{opacity:.55;cursor:default}
+@media print{
+  header.topbar,#setup,.rulesbar,#aiToolbarSlot,#aiPanel{display:none!important}
+  body{background:#fff}
+}
 </style>
 </head>
 <body>
@@ -324,9 +331,10 @@ tr.totalrow td.red{color:var(--red)}
     <div class="kpis" id="kpis"></div>
 
     <div style="margin:0 0 14px">
-      <button class="dlbtn" id="aiBtn" type="button">
-        <span id="aiBtnLabel">Generate AI Analysis</span>
-      </button>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+        <button class="printbtn" id="printBtn" type="button" onclick="window.print()">🖶 Print / PDF</button>
+        <div id="aiToolbarSlot"></div>
+      </div>
       <div id="aiPanel" hidden style="margin-top:10px"></div>
     </div>
 
@@ -1685,35 +1693,60 @@ https://github.com/nodeca/pako/blob/main/LICENSE
      reasoning and report shape every other tool on the pipeline
      uses. Purely additive; nothing existing is touched. ---------- */
   var AI_REPORT_BUSY=false;
-  var aiBtn=document.getElementById("aiBtn");
-  if(aiBtn) aiBtn.addEventListener("click", function(){
-    if(AI_REPORT_BUSY)return;
-    if(!window.__lastAggregateContext){ alert('Upload and process a file first.'); return; }
-    var panel=document.getElementById("aiPanel"), label=document.getElementById("aiBtnLabel");
-    if(typeof AIPipeline==='undefined'||!AIPipeline){
-      panel.hidden=false;
-      if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','AI Analysis could not load. Refresh the page and try again.');
-      return;
-    }
-    AI_REPORT_BUSY=true;
-    var prevLabel=label.textContent;
-    label.textContent='Thinking…'; aiBtn.disabled=true;
-    panel.hidden=false;
-    if(typeof AIReportUI!=='undefined') AIReportUI.renderBusy('aiPanel','Generating analysis from this inventory validity report…');
-    var ctx=window.__lastAggregateContext;
-    AIPipeline.run({ sheets: window.__lastSheets||[], aggregateContext: ctx, toolName: 'Inventory Validity Console' }).then(function(result){
-      label.textContent=prevLabel; aiBtn.disabled=false; AI_REPORT_BUSY=false;
-      if(ctx!==window.__lastAggregateContext)return;
-      if(!result||!result.report){
-        if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','Could not generate an analysis. Try again.');
+  var __aiButtons=(typeof AIToolbar!=='undefined') ? AIToolbar.mount('#aiToolbarSlot', {
+    summaryLabel:'Generate AI Analysis',
+    onAISummary:function(){
+      if(AI_REPORT_BUSY)return;
+      if(!window.__lastAggregateContext){ alert('Upload and process a file first.'); return; }
+      var aiBtn=__aiButtons.summary, panel=document.getElementById("aiPanel");
+      if(typeof AIPipeline==='undefined'||!AIPipeline){
+        panel.hidden=false;
+        if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','AI Analysis could not load. Refresh the page and try again.');
         return;
       }
-      if(typeof AIReportUI!=='undefined') AIReportUI.renderReport('aiPanel', result.report);
-    }).catch(function(){
-      label.textContent=prevLabel; aiBtn.disabled=false; AI_REPORT_BUSY=false;
-      if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','Could not generate an analysis. Try again.');
+      AI_REPORT_BUSY=true;
+      var prevLabel=aiBtn.textContent;
+      aiBtn.textContent='Thinking…'; aiBtn.disabled=true;
+      panel.hidden=false;
+      if(typeof AIReportUI!=='undefined') AIReportUI.renderBusy('aiPanel','Generating analysis from this inventory validity report…');
+      var ctx=window.__lastAggregateContext;
+      AIPipeline.run({ sheets: window.__lastSheets||[], aggregateContext: ctx, toolName: 'Inventory Validity Console' }).then(function(result){
+        aiBtn.textContent=prevLabel; aiBtn.disabled=false; AI_REPORT_BUSY=false;
+        if(ctx!==window.__lastAggregateContext)return;
+        if(!result||!result.report){
+          if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','Could not generate an analysis. Try again.');
+          return;
+        }
+        if(typeof AIReportUI!=='undefined') AIReportUI.renderReport('aiPanel', result.report);
+      }).catch(function(){
+        aiBtn.textContent=prevLabel; aiBtn.disabled=false; AI_REPORT_BUSY=false;
+        if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','Could not generate an analysis. Try again.');
+      });
+    },
+    onAskAI:function(){ if(typeof AIChatUI!=='undefined') AIChatUI.open(); }
+  }) : null;
+
+  /* Universal AI Assistant — shared chat panel. */
+  if(typeof AIChatUI!=='undefined'){
+    AIChatUI.mount({
+      toolKey:'inventoryValidity',
+      suggestedQuestions:['Explain this report.','What is the biggest issue?','Which styles require action?','Which stores should receive stock?','Suggest business actions.','Find hidden risks.'],
+      subtitle:function(){ return 'Ask about this inventory validity report'; },
+      isReady:function(){ return !!window.__lastAggregateContext; },
+      notReadyMessage:'Upload and process a file first.',
+      buildContext:function(){
+        var labels={};
+        if(window.__lastAggregateContext && window.__lastAggregateContext.totals){
+          var t=window.__lastAggregateContext.totals;
+          Object.keys(t).forEach(function(k){ labels[k]=t[k]; });
+        }
+        return {
+          toolContext:(typeof RetailChat!=='undefined') ? RetailChat.buildToolContext('inventoryValidity', labels) : { toolName:'inventoryValidity', labels:labels },
+          retailIntelligence:(typeof RetailChat!=='undefined' && window.HOUSE_RI_RESULT) ? RetailChat.buildRetailIntelligenceContext(null, window.HOUSE_RI_RESULT) : null
+        };
+      }
     });
-  });
+  }
 
   /* ---------- KPIs ---------- */
   function renderKPIs(){
@@ -2112,7 +2145,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 <script src="retail-intelligence.js"></script>
 <script src="ai-learning-store.js"></script>
 <script src="ai-report-ui.js"></script>
+<script src="ai-toolbar-ui.js"></script>
+<script src="ai-chat-ui.js"></script>
 <script type="module" src="retail-knowledge.js"></script>
+<script type="module" src="retail-chat.js"></script>
 <script type="module" src="ai-pipeline.js"></script>
 <script type="module" src="auth-guard.js"></script>
 </body>

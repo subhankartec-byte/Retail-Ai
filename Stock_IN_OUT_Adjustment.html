@@ -173,7 +173,7 @@ tfoot td.n{text-align:right}
   <!-- REPORT -->
   <div id="rep">
     <div class="chips" id="chips"></div>
-    <div style="margin:12px 0"><button class="btn green" id="aiBtn">Generate AI Analysis</button></div>
+    <div style="margin:12px 0"><div id="aiToolbarSlot"></div></div>
     <div id="aiPanel" hidden></div>
     <div id="inSec"></div>
     <div id="outSec"></div>
@@ -183,7 +183,10 @@ tfoot td.n{text-align:right}
 <script src="retail-ui.js"></script>
 <script src="retail-decision.js"></script>
 <script src="ai-report-ui.js"></script>
+<script src="ai-toolbar-ui.js"></script>
+<script src="ai-chat-ui.js"></script>
 <script type="module" src="retail-knowledge.js"></script>
+<script type="module" src="retail-chat.js"></script>
 <script type="module" src="ai-pipeline.js"></script>
 <script>
 "use strict";
@@ -292,34 +295,56 @@ function saveDecisionSummary(res){
    same shared /api/chat reasoning and same report shape every
    other tool on the pipeline uses. Purely additive UI. */
 let AI_BUSY=false;
-const aiBtn=document.getElementById('aiBtn');
-if(aiBtn) aiBtn.addEventListener('click',()=>{
-  if(AI_BUSY)return;
-  if(!window.__lastAggregateContext){ alert('Generate an IN/OUT report first.'); return; }
-  if(typeof AIPipeline==='undefined'||!AIPipeline){
-    document.getElementById('aiPanel').hidden=false;
-    if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','AI Analysis could not load. Refresh the page and try again.');
-    return;
-  }
-  AI_BUSY=true;
-  const prevLabel=aiBtn.textContent;
-  aiBtn.textContent='Thinking…'; aiBtn.disabled=true;
-  document.getElementById('aiPanel').hidden=false;
-  if(typeof AIReportUI!=='undefined') AIReportUI.renderBusy('aiPanel','Generating analysis from this IN/OUT report…');
-  const ctx=window.__lastAggregateContext;
-  AIPipeline.run({sheets:[], aggregateContext:ctx, toolName:'Stock IN/OUT Adjustment'}).then(result=>{
-    aiBtn.textContent=prevLabel; aiBtn.disabled=false; AI_BUSY=false;
-    if(ctx!==window.__lastAggregateContext)return;
-    if(!result||!result.report){
-      if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','Could not generate an analysis. Try again.');
+const __aiButtons=(typeof AIToolbar!=='undefined') ? AIToolbar.mount('#aiToolbarSlot', {
+  summaryLabel:'Generate AI Analysis',
+  onAISummary:()=>{
+    if(AI_BUSY)return;
+    if(!window.__lastAggregateContext){ alert('Generate an IN/OUT report first.'); return; }
+    const aiBtn=__aiButtons.summary;
+    if(typeof AIPipeline==='undefined'||!AIPipeline){
+      document.getElementById('aiPanel').hidden=false;
+      if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','AI Analysis could not load. Refresh the page and try again.');
       return;
     }
-    if(typeof AIReportUI!=='undefined') AIReportUI.renderReport('aiPanel', result.report);
-  }).catch(()=>{
-    aiBtn.textContent=prevLabel; aiBtn.disabled=false; AI_BUSY=false;
-    if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','Could not generate an analysis. Try again.');
+    AI_BUSY=true;
+    const prevLabel=aiBtn.textContent;
+    aiBtn.textContent='Thinking…'; aiBtn.disabled=true;
+    document.getElementById('aiPanel').hidden=false;
+    if(typeof AIReportUI!=='undefined') AIReportUI.renderBusy('aiPanel','Generating analysis from this IN/OUT report…');
+    const ctx=window.__lastAggregateContext;
+    AIPipeline.run({sheets:[], aggregateContext:ctx, toolName:'Stock IN/OUT Adjustment'}).then(result=>{
+      aiBtn.textContent=prevLabel; aiBtn.disabled=false; AI_BUSY=false;
+      if(ctx!==window.__lastAggregateContext)return;
+      if(!result||!result.report){
+        if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','Could not generate an analysis. Try again.');
+        return;
+      }
+      if(typeof AIReportUI!=='undefined') AIReportUI.renderReport('aiPanel', result.report);
+    }).catch(()=>{
+      aiBtn.textContent=prevLabel; aiBtn.disabled=false; AI_BUSY=false;
+      if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','Could not generate an analysis. Try again.');
+    });
+  },
+  onAskAI:()=>{ if(typeof AIChatUI!=='undefined') AIChatUI.open(); }
+}) : null;
+
+/* Universal AI Assistant — shared chat panel. */
+if(typeof AIChatUI!=='undefined'){
+  AIChatUI.mount({
+    toolKey:'stockAdjustment',
+    suggestedQuestions:['Explain this report.','Which products should be transferred?','What is the biggest issue?','Suggest business actions.','Find hidden risks.'],
+    subtitle:()=>'Ask about this IN/OUT report',
+    isReady:()=>!!window.__lastAggregateContext,
+    notReadyMessage:'Generate an IN/OUT report first.',
+    buildContext:()=>{
+      const labels={};
+      if(window.__lastAggregateContext && window.__lastAggregateContext.totals){
+        Object.assign(labels, window.__lastAggregateContext.totals);
+      }
+      return { toolContext:(typeof RetailChat!=='undefined') ? RetailChat.buildToolContext('stockAdjustment', labels) : { toolName:'stockAdjustment', labels } };
+    }
   });
-});
+}
 
 function renderChips(){ const inP=RES.inList.reduce((a,r)=>a+r.qty,0), inV=RES.inList.reduce((a,r)=>a+r.amount,0);
   const outP=RES.outList.reduce((a,r)=>a+r.qty,0), outV=RES.outList.reduce((a,r)=>a+r.amount,0);
