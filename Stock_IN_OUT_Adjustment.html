@@ -173,6 +173,8 @@ tfoot td.n{text-align:right}
   <!-- REPORT -->
   <div id="rep">
     <div class="chips" id="chips"></div>
+    <div style="margin:12px 0"><button class="btn green" id="aiBtn">Generate AI Analysis</button></div>
+    <div id="aiPanel" hidden></div>
     <div id="inSec"></div>
     <div id="outSec"></div>
   </div>
@@ -180,6 +182,9 @@ tfoot td.n{text-align:right}
 
 <script src="retail-ui.js"></script>
 <script src="retail-decision.js"></script>
+<script src="ai-report-ui.js"></script>
+<script type="module" src="retail-knowledge.js"></script>
+<script type="module" src="ai-pipeline.js"></script>
 <script>
 "use strict";
 /* ===== helpers ===== */
@@ -267,16 +272,54 @@ function saveDecisionSummary(res){
   try{
     if(typeof RetailDecision==='undefined')return;
     const top=list=>list.slice(0,20).map(r=>({barcode:r.barcode,style:r.style,desc:r.desc,qty:r.qty,value:Math.round(r.amount)}));
-    RetailDecision.saveSummary('stockAdjustment',{
+    const payload={
       totals:{
         inCount:res.inList.length, inQty:res.inList.reduce((a,r)=>a+r.qty,0), inValue:Math.round(res.inList.reduce((a,r)=>a+r.amount,0)),
         outCount:res.outList.length, outQty:res.outList.reduce((a,r)=>a+r.qty,0), outValue:Math.round(res.outList.reduce((a,r)=>a+r.amount,0)),
         commonCount:res.commonCount
       },
       topOut:top(res.outList), topIn:top(res.inList)
-    });
+    };
+    RetailDecision.saveSummary('stockAdjustment',payload);
+    window.__lastAggregateContext=payload;   /* Universal AI Pipeline, see aiBtn below */
   }catch(e){ /* never let this break the tool's own report */ }
 }
+
+/* ---------- AI Business Analysis (Universal AI Pipeline, Stage 5-9) ----------
+   Reuses the exact aggregate this tool already builds for
+   RetailDecision.saveSummary() above — no new business logic, no
+   duplicated AI call path, no duplicated report generation: the
+   same shared /api/chat reasoning and same report shape every
+   other tool on the pipeline uses. Purely additive UI. */
+let AI_BUSY=false;
+const aiBtn=document.getElementById('aiBtn');
+if(aiBtn) aiBtn.addEventListener('click',()=>{
+  if(AI_BUSY)return;
+  if(!window.__lastAggregateContext){ alert('Generate an IN/OUT report first.'); return; }
+  if(typeof AIPipeline==='undefined'||!AIPipeline){
+    document.getElementById('aiPanel').hidden=false;
+    if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','AI Analysis could not load. Refresh the page and try again.');
+    return;
+  }
+  AI_BUSY=true;
+  const prevLabel=aiBtn.textContent;
+  aiBtn.textContent='Thinking…'; aiBtn.disabled=true;
+  document.getElementById('aiPanel').hidden=false;
+  if(typeof AIReportUI!=='undefined') AIReportUI.renderBusy('aiPanel','Generating analysis from this IN/OUT report…');
+  const ctx=window.__lastAggregateContext;
+  AIPipeline.run({sheets:[], aggregateContext:ctx, toolName:'Stock IN/OUT Adjustment'}).then(result=>{
+    aiBtn.textContent=prevLabel; aiBtn.disabled=false; AI_BUSY=false;
+    if(ctx!==window.__lastAggregateContext)return;
+    if(!result||!result.report){
+      if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','Could not generate an analysis. Try again.');
+      return;
+    }
+    if(typeof AIReportUI!=='undefined') AIReportUI.renderReport('aiPanel', result.report);
+  }).catch(()=>{
+    aiBtn.textContent=prevLabel; aiBtn.disabled=false; AI_BUSY=false;
+    if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','Could not generate an analysis. Try again.');
+  });
+});
 
 function renderChips(){ const inP=RES.inList.reduce((a,r)=>a+r.qty,0), inV=RES.inList.reduce((a,r)=>a+r.amount,0);
   const outP=RES.outList.reduce((a,r)=>a+r.qty,0), outV=RES.outList.reduce((a,r)=>a+r.amount,0);

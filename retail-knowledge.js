@@ -133,10 +133,79 @@ import { auth } from "./firebase.js";
     var samples = (typeof RetailAssist !== 'undefined' && RetailAssist.buildSamples)
       ? RetailAssist.buildSamples(rows, headerIdx, headers.length, 3)
       : [];
-    return { headers: headers, samples: samples };
+    return { headers: headers, samples: samples, headerIdx: headerIdx };
   }
 
-  async function callDetectRetailerAI (sheet, candidates, ruleHint) {
+  /* Content labels for the AI tier's Layer 3 (Universal AI Pipeline:
+     description/category/department/division reasoning folded into
+     the AI call rather than a hand-authored keyword list — see
+     retail-intelligence.js's header comment). Pulls distinct values
+     from whichever of world/dept/desc/category-ish fields
+     RetailImport already mapped; already-categorical short labels
+     only, never a full row or price. Best-effort: returns [] when
+     RetailImport isn't loaded or nothing usable is found. */
+  function contentLabelsOf (sheet, headerIdx) {
+    if (typeof RetailImport === 'undefined' || !RetailImport.mapColumns) return [];
+    try {
+      var rows = sheet.rows || [];
+      var fields = RetailImport.mapColumns(rows, headerIdx).fields;
+      var cols = ['world', 'dept', 'group', 'klass', 'subclass'].map(function (f) { return fields[f] ? fields[f].index : -1; }).filter(function (i) { return i >= 0; });
+      if (!cols.length) return [];
+      var seen = {}, out = [];
+      var scanEnd = Math.min(rows.length, headerIdx + 1 + 500);
+      for (var r = headerIdx + 1; r < scanEnd && out.length < 20; r++) {
+        for (var c = 0; c < cols.length && out.length < 20; c++) {
+          var v = String((rows[r] || [])[cols[c]] == null ? '' : (rows[r] || [])[cols[c]]).trim().slice(0, 40);
+          if (!v || /[0-9]{4,}/.test(v) || seen[v]) continue;
+          seen[v] = 1; out.push(v);
+        }
+      }
+      return out;
+    } catch (e) { return []; }
+  }
+
+  /* Optional dependency, same graceful-degradation convention as
+     RetailProfiles/RetailImport elsewhere in this file: if
+     ai-learning-store.js isn't loaded on the page, Layer 1 simply
+     contributes nothing and learning writes are silently skipped —
+     detection still works via Layers 2-4. */
+  function learnedStyleSignatures () {
+    if (typeof AILearningStore === 'undefined' || !AILearningStore.list) return [];
+    try { return AILearningStore.list('retailerSignature'); } catch (e) { return []; }
+  }
+
+  /* learnFrom(sheets, retailerKey, source) — call once a retailer
+     has been confidently identified (deterministic Layer 2/3 match,
+     or an AI suggestion a human accepted via the manual-confirm UI)
+     to derive and persist a style-code shape signature for Layer 1.
+     Never called with an unvalidated AI guess — see
+     ai-learning-store.js's own "never trust a single AI guess"
+     contract. Best-effort, never throws. */
+  function learnFrom (sheets, retailerKey, opts) {
+    if (typeof AILearningStore === 'undefined' || typeof RetailIntelligence === 'undefined' || !RetailIntelligence.deriveStyleSignature) return;
+    if (!retailerKey || retailerKey === 'unknown') return;
+    try {
+      var sheet = bestHeaderSheet(sheets || []);
+      var rows = sheet.rows || [];
+      if (typeof RetailImport === 'undefined' || !RetailImport.mapColumns) return;
+      var headerIdx = RetailImport.findHeaderRow ? RetailImport.findHeaderRow(rows).idx : 0;
+      var fields = RetailImport.mapColumns(rows, headerIdx).fields;
+      var styleColIdx = fields.style ? fields.style.index : (fields.variant ? fields.variant.index : -1);
+      if (styleColIdx < 0) return;
+      var values = [];
+      var scanEnd = Math.min(rows.length, headerIdx + 1 + 2000);
+      for (var r = headerIdx + 1; r < scanEnd; r++) values.push((rows[r] || [])[styleColIdx]);
+      var sig = RetailIntelligence.deriveStyleSignature(values);
+      if (!sig || sig.sampleSize < 5 || sig.dominance < 0.6) return;   // too little/too mixed evidence to trust
+      AILearningStore.recordIfBetter('retailerSignature', retailerKey, { shape: sig.shape, prefix: sig.prefix }, {
+        confidence: sig.dominance,
+        source: (opts && opts.source) || 'brand-column',
+        validated: true
+      });
+    } catch (e) { /* learning is best-effort, never blocks detection */ }
+  }
+
+  async function callDetectRetailerAI (sheet, headerIdx, candidates, ruleHint) {
     try {
       var token = await idToken();
       if (!token) return null;
@@ -151,7 +220,8 @@ import { auth } from "./firebase.js";
           ? { retailer: ruleHint.retailer, confidence: ruleHint.confidence }
           : null,
         filename: '',
-        sheetName: sheet.name || ''
+        sheetName: sheet.name || '',
+        contentLabels: contentLabelsOf(sheet, headerIdx)
       };
 
       var ctrl = new AbortController();
@@ -171,7 +241,13 @@ import { auth } from "./firebase.js";
 
       var data = await res.json();
       if (!data || typeof data.confidence !== 'number') return null;
-      return { retailer: data.retailer || 'unknown', confidence: data.confidence, source: 'ai' };
+      return {
+        retailer: data.retailer || null,
+        suggestedName: data.suggestedName || null,
+        confidence: data.confidence,
+        registered: !!data.registered,
+        source: 'ai'
+      };
     } catch (e) {
       return null;
     }
@@ -180,31 +256,76 @@ import { auth } from "./firebase.js";
   /**
    * detectRetailer(sheets) — always resolves, never throws.
    * @param {Array<{name:string, rows:Array<Array>}>} sheets
-   * @returns {Promise<{retailer:string, confidence:number, level:string, mode:string, via:string, source:string}>}
+   * @returns {Promise<{retailer:string, confidence:number, level:string, mode:string, via:string, source:string, suggestedName:?string}>}
    *   mode is 'auto' | 'confirm' | 'universal' — the confidence-gated
-   *   UX decision a future wiring phase should act on. retailer is
-   *   'unknown' when neither tier found a confident answer.
+   *   UX decision the caller acts on. retailer is 'unknown' when no
+   *   tier found a confident, REGISTERED answer. suggestedName is
+   *   set only when the AI tier recognised a real retailer that
+   *   isn't registered yet (Layer 4, open-vocabulary) — it is never
+   *   auto-applied; surface it to the user via the existing manual-
+   *   confirm UI as an "add this retailer?" prompt, and only call
+   *   learnFrom() once they accept it.
    */
   async function detectRetailer (sheets) {
     sheets = sheets || [];
-    var rule = (typeof RetailIntelligence !== 'undefined')
-      ? RetailIntelligence.detectRetailer(sheets)
-      : { retailer: 'unknown', confidence: 0, level: 'low', via: 'RetailIntelligence not loaded', source: 'rules' };
+    var rule;
+    try {
+      rule = (typeof RetailIntelligence !== 'undefined')
+        ? RetailIntelligence.detectRetailer(sheets, { learnedStyleSignatures: learnedStyleSignatures() })
+        : { retailer: 'unknown', confidence: 0, level: 'low', via: 'RetailIntelligence not loaded', source: 'rules' };
+    } catch (e) {
+      /* detectRetailer() must always resolve, never throw (see JSDoc
+         below) — a malformed sheet must degrade to 'unknown', not
+         propagate and break every caller's "never throws" contract
+         (e.g. AIPipeline.run()). */
+      rule = { retailer: 'unknown', confidence: 0, level: 'low', via: 'rule tier threw: ' + (e && e.message), source: 'rules' };
+    }
 
     if (rule.level === 'high') {
-      return { retailer: rule.retailer, confidence: rule.confidence, level: rule.level, mode: 'auto', via: rule.via, source: rule.source };
+      learnFrom(sheets, rule.retailer, { source: rule.source === 'rules' ? 'brand-column' : rule.source });
+      return { retailer: rule.retailer, confidence: rule.confidence, level: rule.level, mode: 'auto', via: rule.via, source: rule.source, suggestedName: null };
     }
 
     var candidates = knownCandidates();
     var sheet = bestHeaderSheet(sheets);
-    var ai = await callDetectRetailerAI(sheet, candidates, rule.retailer !== 'unknown' ? rule : null);
+    var hs = headerAndSamplesOf(sheet);
+    var ai = await callDetectRetailerAI(sheet, hs.headerIdx, candidates, rule.retailer !== 'unknown' ? rule : null);
 
-    var final = rule;
-    if (ai && ai.retailer !== 'unknown' && ai.confidence > rule.confidence) {
+    var final = rule, suggestedName = null;
+    if (ai && ai.registered && ai.retailer && ai.confidence > rule.confidence) {
       final = { retailer: ai.retailer, confidence: ai.confidence, via: 'AI classification (Gemini)', source: 'ai' };
+    } else if (ai && !ai.registered && ai.suggestedName) {
+      suggestedName = ai.suggestedName;   // never promoted into `final` — see JSDoc above
     }
     var level = levelOf(final.confidence);
-    return { retailer: final.retailer, confidence: final.confidence, level: level, mode: modeFor(level), via: final.via, source: final.source };
+    /* Deliberately does NOT call learnFrom() here even at high AI
+       confidence. This line used to, which directly contradicted
+       this function's own JSDoc ("only call learnFrom() once they
+       accept it [via manual-confirm]") and learnFrom()'s own
+       "never called with an unvalidated AI guess" contract — found
+       in production-readiness review: learnFrom() always writes
+       validated:true (retail-knowledge.js's recordIfBetter call),
+       so a single unconfirmed Gemini answer could get persisted as
+       a trusted signature and then deterministically applied,
+       silently and without any confirm dialog, to a LATER, actually
+       different file that happened to share a similar style-code
+       shape (Layer 1 in retail-intelligence.js only trusts
+       validated:true entries). Learning now only happens from
+       genuinely deterministic evidence (the rule-tier branch above)
+       or an explicit human confirmation (confirmRetailer(), called
+       by every tool's manual-confirm UI once a person accepts a
+       detection or suggestion) — never from AI output alone. */
+    return { retailer: final.retailer, confidence: final.confidence, level: level, mode: modeFor(level), via: final.via, source: final.source, suggestedName: suggestedName };
+  }
+
+  /* confirmRetailer(sheets, retailerKey) — call from the manual-
+     confirm UI once a human accepts a detection (including an
+     open-vocabulary suggestedName being registered as a brand-new
+     retailer key elsewhere). This is the explicit, human-gated
+     write path Stage 8 requires: a single AI guess never becomes
+     trusted on its own. */
+  function confirmRetailer (sheets, retailerKey) {
+    learnFrom(sheets, retailerKey, { source: 'manual-confirm' });
   }
 
   /**
@@ -396,5 +517,5 @@ import { auth } from "./firebase.js";
     });
   }
 
-  window.RetailKnowledge = { detectRetailer: detectRetailer, classifyFile: classifyFile, enrichItems: enrichItems };
+  window.RetailKnowledge = { detectRetailer: detectRetailer, classifyFile: classifyFile, enrichItems: enrichItems, confirmRetailer: confirmRetailer };
 }());

@@ -78,11 +78,22 @@ import { auth } from "./firebase.js";
 
   /* ---------- context builders (Decision 2 / requirement 3's four data sources) ---------- */
 
-  var DIGIT_RUN_RE = /\d{4,}/;
+  /* Global flag is required — without it, String.replace() only
+     strips the FIRST digit run in a value. A value carrying two
+     separate runs (e.g. a composite style code, or a barcode plus
+     a season code in the same field) previously kept its second
+     run intact, which api/chat.js's own (correctly stricter) guard
+     then rejected with a 500 — a real, currently-live bug found in
+     production-readiness review, not something this migration
+     introduced but squarely in the same endpoint it touches.
+     Replacing with '####' rather than '' also avoids turning an
+     all-digit value (e.g. a Jaypore style code, which IS digits)
+     into an empty, identity-less label. */
+  var DIGIT_RUN_RE = /\d{4,}/g;
   function capLabel (v, max) {
     if (v == null) return null;
     var s = String(v).trim().slice(0, max || 60);
-    return s.replace(DIGIT_RUN_RE, '');   // defensive — these fields originate from retailer data, not user-authored text
+    return s.replace(DIGIT_RUN_RE, '####');   // defensive — these fields originate from retailer data, not user-authored text
   }
   function capNum01 (v) {
     return (typeof v === 'number' && isFinite(v)) ? Math.max(0, Math.min(1, v)) : null;

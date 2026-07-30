@@ -146,6 +146,8 @@ details.pend summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(-
         <div class="tile t3"><div class="v" id="tVal">₹0</div><div class="l">Declared value</div></div>
         <div class="tile t4 hidden" id="tileIssues"><div class="v" id="tIss">0</div><div class="l">Rows need attention</div></div>
       </div>
+      <div style="margin:10px 0"><button class="btn gold" id="aiBtn" onclick="ui.generateAiAnalysis()">Generate AI Analysis</button></div>
+      <div id="aiPanel" hidden></div>
       <div class="ctrls">
         <div><label class="f">Pickup date</label><input type="date" id="oDate" style="width:160px"></div>
         <div><label class="f">Declared value</label><div class="seg"><button id="segMrp" class="on" onclick="ui.setVal('mrp')">MRP (inc. VAT)</button><button id="segCost" onclick="ui.setVal('cost')">Cost value</button></div></div>
@@ -592,6 +594,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 <script src="retail-ui.js"></script>
 <script src="retail-decision.js"></script>
 <script src="retail-intelligence.js"></script>
+<script src="ai-report-ui.js"></script>
+<script type="module" src="retail-knowledge.js"></script>
+<script type="module" src="ai-pipeline.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const INR = n => '₹' + Math.round(n).toLocaleString('en-IN');
@@ -849,7 +854,7 @@ function saveDecisionSummary(){
     const declaredValue=sel.reduce((a,r)=>a+(state.valueMode==='cost'?r.cost:r.mrp),0);
     const issues=sel.filter(r=>!r.dest||!r.address||!/^\d{6}$/.test(String(r.pin))).length;
     const istMismatches=all.filter(r=>r.note && r.note.indexOf('IST list says')>=0).length;
-    RetailDecision.saveSummary("blueDart",{
+    const payload={
       totals:{
         waybills: sel.length,
         pieces: Math.round(sel.reduce((a,r)=>a+r.pieces,0)*100)/100,
@@ -858,9 +863,47 @@ function saveDecisionSummary(){
         istMismatches: istMismatches,
         pendingStyles: state.istActive ? state.pending.length : 0
       }
-    });
+    };
+    RetailDecision.saveSummary("blueDart",payload);
+    window.__lastAggregateContext=payload;   /* Universal AI Pipeline, see ui.generateAiAnalysis() */
   }catch(e){ /* never let this break the tool's own report */ }
 }
+
+/* ---------- AI Business Analysis (Universal AI Pipeline, Stage 5-9) ----------
+   Reuses the exact aggregate this tool already builds for
+   RetailDecision.saveSummary() above — same shared /api/chat
+   reasoning and report shape every other tool on the pipeline
+   uses. Purely additive; nothing existing is touched. ---------- */
+let AI_BUSY=false;
+ui.generateAiAnalysis=async function(){
+  if(AI_BUSY)return;
+  if(!window.__lastAggregateContext){ alert('Select shipments and generate a review first.'); return; }
+  const btn=$('aiBtn'), panel=$('aiPanel');
+  if(typeof AIPipeline==='undefined'||!AIPipeline){
+    panel.hidden=false;
+    if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','AI Analysis could not load. Refresh the page and try again.');
+    return;
+  }
+  AI_BUSY=true;
+  const prevLabel=btn.textContent;
+  btn.textContent='Thinking…'; btn.disabled=true;
+  panel.hidden=false;
+  if(typeof AIReportUI!=='undefined') AIReportUI.renderBusy('aiPanel','Generating analysis from this shipment batch…');
+  const ctx=window.__lastAggregateContext;
+  try{
+    const result=await AIPipeline.run({sheets:[], aggregateContext:ctx, toolName:'BlueDart Waybill Builder'});
+    btn.textContent=prevLabel; btn.disabled=false; AI_BUSY=false;
+    if(ctx!==window.__lastAggregateContext)return;
+    if(!result||!result.report){
+      if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','Could not generate an analysis. Try again.');
+      return;
+    }
+    if(typeof AIReportUI!=='undefined') AIReportUI.renderReport('aiPanel', result.report);
+  }catch(e){
+    btn.textContent=prevLabel; btn.disabled=false; AI_BUSY=false;
+    if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','Could not generate an analysis. Try again.');
+  }
+};
 
 ui.init();
 </script>

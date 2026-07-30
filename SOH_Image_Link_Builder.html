@@ -350,11 +350,42 @@ async function aiBrandRoutes(tokens){
 function resolveUnknowns(){
   const toks=[...new Set(records.filter(x=>x.fam==="un").map(x=>tokenOf(x.brand)).filter(t=>t && !(t in unknownRoute)))];
   if(!toks.length) return;
-  // 1) single-brand file: unknown codes follow the file's own brand
+  // 1) single-brand file: unknown codes follow the file's own brand —
+  //    now corroborated against the shared Brand Detection Engine
+  //    (RetailIntelligence, Universal AI Pipeline Stage 3) rather than
+  //    trusting the dominant-share heuristic alone. This tightens a
+  //    known risk: a genuinely new brand sharing a file with mostly-
+  //    known-brand rows could previously be silently misattributed to
+  //    the dominant family; now it only auto-resolves when the
+  //    independent, better-calibrated shared engine also agrees at a
+  //    real majority (see the 0.5 threshold below) — two signals,
+  //    not one.
   const fc={}; let known=0;
   records.forEach(x=>{ if(x.fam!=="un"){ fc[x.fam]=(fc[x.fam]||0)+1; known++; } });
   let top=null; for(const f in fc){ if(!top||fc[f]>fc[top]) top=f; }
-  if(top && known>=5 && fc[top]/known>=0.7){
+  let engineAgrees=true;
+  try{
+    if(typeof RetailIntelligence!=="undefined" && sheetRows.length){
+      const ri=RetailIntelligence.detectRetailer([{name:"Sheet", rows:sheetRows}]);
+      /* Compares against 0.5 confidence, not RetailIntelligence's
+         stricter 'high' band (>=0.75). The two ratios use different
+         denominators by design — fc[top]/known counts only
+         recognised-brand rows, ri.confidence counts all non-blank
+         rows including the very unrecognised ones this corroboration
+         exists to be cautious about — so requiring BOTH to
+         independently clear 0.75 blocked the exact case this check
+         was written for (found in production-readiness review: a
+         70%-recognised-brand file with 30% genuinely new codes
+         scored 1.0 locally but only 0.70 on the shared engine, so
+         corroboration always failed and every such file fell through
+         to a Gemini call on every rebuild instead of resolving
+         deterministically). 0.5 is the same real-majority bar used
+         for Inventory Validity Console's equivalent decision. */
+      engineAgrees = ri.confidence>=0.5 && (typeof RetailProfiles!=="undefined") &&
+        ri.retailer && RetailProfiles.get(ri.retailer).fam === top;
+    }
+  }catch(e){ engineAgrees=true; /* detection must never block this tool's existing behaviour */ }
+  if(top && known>=5 && fc[top]/known>=0.7 && engineAgrees){
     toks.forEach(t=>{ unknownRoute[t]=top; });
     noteAI(toks.length+" brand code(s) matched to this file automatically.");
     rebuild(); return;
@@ -514,8 +545,10 @@ function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("sho
 
 })();
 </script>
+<script src="retail-import.js"></script>
 <script src="retail-profiles.js"></script>
 <script src="retail-decision.js"></script>
+<script src="retail-intelligence.js"></script>
 <script type="module" src="auth-guard.js"></script>
 </body>
 </html>

@@ -226,6 +226,12 @@ table.grid tbody tr:hover{background:#eaf0f9}
       <button class="btn gold" id="dl-btn">&#11015; Download Excel Report</button>
     </div>
 
+    <div class="dl-row" id="ai-row">
+      <div class="dl-txt"><b>AI Business Analysis</b> — a short, evidence-grounded read of this reconciliation from the Universal AI Pipeline.</div>
+      <button class="btn gold" id="ai-btn">Generate AI Analysis</button>
+    </div>
+    <div id="ai-panel" hidden style="margin:0 0 16px"></div>
+
     <div class="kpis" id="kpis" style="margin-top:16px"></div>
 
     <div class="tabnav" id="tabnav">
@@ -943,13 +949,52 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
               qty: x.units, value: Math.round(x[valueKey]) };
           });
       }
-      RetailDecision.saveSummary('inventoryAudit', {
+      var payload = {
         summary: cls.summary,
         topShortage: topN(cls.shortage, 'lossValue'),
         topExcess: topN(cls.excess, 'gainValue')
-      });
+      };
+      RetailDecision.saveSummary('inventoryAudit', payload);
+      window.__lastAggregateContext = payload;   /* Universal AI Pipeline, see #ai-btn below */
     } catch (e) { /* never let this break the tool's own report */ }
   }
+
+  /* ---------- AI Business Analysis (Universal AI Pipeline, Stage 5-9) ----------
+     Reuses the exact aggregate this tool already builds for
+     RetailDecision.saveSummary() above — no new business logic, no
+     new AI call path, no duplicated report generation: this is the
+     same shared /api/chat reasoning and same report shape every
+     other tool on the pipeline uses. Purely additive UI (new
+     button + panel); nothing existing is touched or re-rendered. */
+  var AI_BUSY = false;
+  var aiBtn = $('ai-btn');
+  if (aiBtn) aiBtn.addEventListener('click', function () {
+    if (AI_BUSY) return;
+    if (!window.__lastAggregateContext) { alert('Run a reconciliation first.'); return; }
+    if (typeof AIPipeline === 'undefined' || !AIPipeline) {
+      $('ai-panel').hidden = false;
+      if (typeof AIReportUI !== 'undefined') AIReportUI.renderError('ai-panel', 'AI Analysis could not load. Refresh the page and try again.');
+      return;
+    }
+    AI_BUSY = true;
+    var prevLabel = aiBtn.textContent;
+    aiBtn.textContent = 'Thinking…'; aiBtn.disabled = true;
+    $('ai-panel').hidden = false;
+    if (typeof AIReportUI !== 'undefined') AIReportUI.renderBusy('ai-panel', 'Generating analysis from this reconciliation…');
+    var ctx = window.__lastAggregateContext;
+    AIPipeline.run({ sheets: [], aggregateContext: ctx, toolName: 'Inventory Audit Tool' }).then(function (result) {
+      aiBtn.textContent = prevLabel; aiBtn.disabled = false; AI_BUSY = false;
+      if (ctx !== window.__lastAggregateContext) return;   // a new run happened while we waited — discard
+      if (!result || !result.report) {
+        if (typeof AIReportUI !== 'undefined') AIReportUI.renderError('ai-panel', 'Could not generate an analysis. Try again.');
+        return;
+      }
+      if (typeof AIReportUI !== 'undefined') AIReportUI.renderReport('ai-panel', result.report);
+    }).catch(function () {
+      aiBtn.textContent = prevLabel; aiBtn.disabled = false; AI_BUSY = false;
+      if (typeof AIReportUI !== 'undefined') AIReportUI.renderError('ai-panel', 'Could not generate an analysis. Try again.');
+    });
+  });
 
   /* ---------- render ---------- */
   var TYPE_BADGE = { 'Size': 'b-size', 'Colour': 'b-col', 'Size + Colour': 'b-sc', 'Same-Value': 'b-val', 'Variant': 'b-var' };
@@ -1149,6 +1194,9 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
 </script>
 <script src="retail-ui.js"></script>
 <script src="retail-decision.js"></script>
+<script src="ai-report-ui.js"></script>
+<script type="module" src="retail-knowledge.js"></script>
+<script type="module" src="ai-pipeline.js"></script>
 <script type="module" src="auth-guard.js"></script>
 </body>
 </html>

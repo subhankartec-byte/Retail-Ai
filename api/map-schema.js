@@ -1,9 +1,18 @@
 /* =========================================================
    api/map-schema.js — Retail AI · AI column-mapping endpoint
    ---------------------------------------------------------
-   Vercel serverless function. ZERO npm dependencies.
-   Runs only when retail-import.js cannot confidently read a
-   file. Falls back to the manual mapping modal on ANY failure.
+   Vercel serverless function. Runs only when retail-import.js
+   cannot confidently read a file. Falls back to the manual
+   mapping modal on ANY failure.
+
+   Auth, rate limiting, and the Gemini call itself now live in
+   ./_lib/ai-core.js (Universal AI Pipeline core, shared by every
+   AI endpoint) — this file keeps only what's genuinely specific
+   to column mapping: its request shape, its egress guard, its
+   three prompts (map / classify / brands), and its response
+   sanitisers. Request/response shapes, status codes, rate
+   limits and env vars are all unchanged from before this
+   refactor.
 
    WHAT THIS SENDS TO GOOGLE:
      - column header names        ("Retail Price", "SOH Qty")
@@ -20,19 +29,7 @@
    ========================================================= */
 'use strict';
 
-const crypto = require('crypto');
-
-/* Model cascade: try each until one answers. Google renames models
-   often; the -latest aliases track the newest, dated ids are backup. */
-const MODEL_CANDIDATES = [
-  process.env.GEMINI_MODEL,
-  'gemini-flash-lite-latest',
-  'gemini-2.5-flash-lite',
-  'gemini-flash-latest',
-  'gemini-2.5-flash'
-].filter(Boolean);
-const PROJECT_ID = process.env.FIREBASE_PROJECT || 'retail-ai-2c674';
-const CERT_URL   = 'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com';
+const core = require('./_lib/ai-core');
 
 /* Fields retail-import.js knows how to use. Must stay in sync. */
 const TARGET_FIELDS = [
@@ -41,25 +38,19 @@ const TARGET_FIELDS = [
 ];
 const HOUSES = ['w', 'aurelia', 'jaypore', 'unknown'];
 
-/* ---------- limits ---------- */
+/* ---------- limits (unchanged) ---------- */
 const MAX_HEADERS      = 200;
 const MAX_HEADER_LEN   = 100;
 const MAX_SAMPLES      = 5;
-const MAX_BODY_BYTES   = 8 * 1024;      // 8KB cannot hold a 50k-row file
-const PER_USER_HOUR    = 20;
-const PER_USER_DAY     = 100;
+const MAX_BODY_BYTES   = 8 * 1024;
 const GEMINI_TIMEOUT   = 10000;
+const rateLimited = core.makeRateLimiter(20, 100);   // PER_USER_HOUR, PER_USER_DAY — unchanged
 
 /* =========================================================
    1. Egress guard — the privacy promise, as code
    ---------------------------------------------------------
    After masking: digits -> #, A-Z -> A, a-z -> a.
-   So a real value ("8901234567890", "Navy Blue", "W417")
-   CANNOT pass this test. If it does throw, masking regressed
-   and we must fail loudly rather than leak.
    ========================================================= */
-const MASKED_RE = /^[#Aa\s.,\-\/()&+_:*'"|\[\]]*$/;
-
 function assertMasked(samples) {
   if (!Array.isArray(samples)) throw new Error('samples must be an array');
   if (samples.length > MAX_SAMPLES) throw new Error('too many samples');
@@ -71,20 +62,12 @@ function assertMasked(samples) {
       const v = row[k];
       if (typeof v !== 'string') throw new Error('sample value must be a string');
       if (v.length > 40)         throw new Error('sample value too long');
-      if (/[0-9]/.test(v))       throw new Error('EGRESS GUARD: unmasked digit in sample');
-      if (!MASKED_RE.test(v))    throw new Error('EGRESS GUARD: unmasked characters in sample');
+      core.assertMaskedValue(v, 'sample.' + k);
     }
   }
 }
 
 function validateBody(body) {
-  /* 'task' added for Phase 7 (AI Intelligence Core) Step C: task:'classify'
-     reuses this exact same headers+samples egress guard unchanged — it is
-     a file-TYPE classification request, same Tier 1 shape (masked headers
-     + value shapes) as the default column-mapping request, just a
-     different prompt/response downstream. Omitting task keeps every
-     existing caller (retail-assist.js's suggest()) byte-for-byte
-     unaffected. */
   const allowed = ['headers', 'samples', 'filename', 'sheetName', 'fingerprint', 'task'];
   for (const k of Object.keys(body || {})) {
     if (!allowed.includes(k)) throw new Error('unexpected field: ' + k);
@@ -108,84 +91,7 @@ function validateBody(body) {
 }
 
 /* =========================================================
-   2. Firebase ID token verification — no firebase-admin
-   ---------------------------------------------------------
-   Verifies the RS256 signature against Google's public certs.
-   Needs only the PUBLIC project id. No service-account secret.
-   ========================================================= */
-let certCache = { keys: null, expires: 0 };
-
-async function googleCerts() {
-  const now = Date.now();
-  if (certCache.keys && now < certCache.expires) return certCache.keys;
-  const res = await fetch(CERT_URL);
-  if (!res.ok) throw new Error('cert fetch failed');
-  const keys = await res.json();
-  const cc = res.headers.get('cache-control') || '';
-  const m = cc.match(/max-age=(\d+)/);
-  certCache = { keys, expires: now + (m ? +m[1] * 1000 : 3600000) };
-  return keys;
-}
-
-function b64urlToBuf(s) {
-  return Buffer.from(s.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
-}
-
-async function verifyIdToken(token) {
-  const parts = String(token || '').split('.');
-  if (parts.length !== 3) throw new Error('malformed token');
-
-  const header  = JSON.parse(b64urlToBuf(parts[0]).toString('utf8'));
-  const payload = JSON.parse(b64urlToBuf(parts[1]).toString('utf8'));
-
-  if (header.alg !== 'RS256') throw new Error('bad alg');
-  if (!header.kid)            throw new Error('no kid');
-
-  const certs = await googleCerts();
-  const pem = certs[header.kid];
-  if (!pem) throw new Error('unknown kid');
-
-  const pubKey = new crypto.X509Certificate(pem).publicKey;
-  const ok = crypto.createVerify('RSA-SHA256')
-    .update(parts[0] + '.' + parts[1])
-    .verify(pubKey, b64urlToBuf(parts[2]));
-  if (!ok) throw new Error('bad signature');
-
-  const now = Math.floor(Date.now() / 1000);
-  if (payload.aud !== PROJECT_ID) throw new Error('bad aud');
-  if (payload.iss !== 'https://securetoken.google.com/' + PROJECT_ID) throw new Error('bad iss');
-  if (!payload.sub) throw new Error('no sub');
-  if (payload.exp <= now) throw new Error('expired');
-  if (payload.iat > now + 300) throw new Error('issued in future');
-
-  return payload.sub;
-}
-
-/* =========================================================
-   3. Rate limit
-   ---------------------------------------------------------
-   In-memory, per warm instance. Not perfect across instances,
-   but it stops the real risk: a retry loop in a client build.
-   The hard ceiling is Gemini's own free-tier quota, which
-   cannot generate a bill. Fallback is always the manual modal.
-   ========================================================= */
-const hits = new Map();
-
-function rateLimited(uid) {
-  const now = Date.now();
-  const rec = hits.get(uid) || [];
-  const fresh = rec.filter(t => now - t < 86400000);
-  const lastHour = fresh.filter(t => now - t < 3600000);
-  if (lastHour.length >= PER_USER_HOUR) return 'hour';
-  if (fresh.length >= PER_USER_DAY)     return 'day';
-  fresh.push(now);
-  hits.set(uid, fresh);
-  if (hits.size > 5000) hits.clear();          // crude memory bound
-  return null;
-}
-
-/* =========================================================
-   4. Gemini
+   2. Gemini — task: map (default)
    ========================================================= */
 function buildPrompt(input) {
   return [
@@ -243,13 +149,7 @@ function columnDump(input) {
 }
 
 /* =========================================================
-   4b. Gemini — task:'classify' (Phase 7 Step C, file-TYPE only)
-   ---------------------------------------------------------
-   Same Tier 1 input as buildPrompt() above (masked headers +
-   value shapes) — only the prompt/response shape differs. This
-   is the file-shape counterpart to retail-intelligence.js's
-   rule-tier classifyFileType(): called only as a fallback when
-   that deterministic tier can't reach high confidence.
+   2b. Gemini — task: classify (Phase 7 Step C, file-TYPE only)
    ========================================================= */
 const FILE_TYPE_VALUES = ['soh', 'sales', 'mb51', 'grn', 'ist', 'storeMaster', 'waybillTemplate', 'unknown'];
 
@@ -294,62 +194,6 @@ function sanitiseClassify(ai) {
   return { fileType, confidence };
 }
 
-async function callGeminiCascade(prompt) {
-  let lastErr;
-  for (const m of MODEL_CANDIDATES) {
-    try {
-      return { ai: await callGemini(prompt, m), model: m };
-    } catch (e) {
-      lastErr = e;
-      if (e.status !== 404) throw e;   /* only model-not-found falls through */
-    }
-  }
-  throw lastErr;
-}
-
-async function callGemini(prompt, model) {
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
-              encodeURIComponent(model) + ':generateContent';
-
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), GEMINI_TIMEOUT);
-
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      signal: ctrl.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': process.env.GEMINI_API_KEY
-      },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0,
-          maxOutputTokens: 900,
-          responseMimeType: 'application/json'
-        }
-      })
-    });
-
-    const text = await res.text();
-    if (!res.ok) {
-      const err = new Error('gemini_' + res.status);
-      err.status = res.status;
-      err.quota = res.status === 429;
-      err.detail = String(text || '').slice(0, 180);
-      throw err;
-    }
-    const data = JSON.parse(text);
-    const out = (((data.candidates || [])[0] || {}).content || {}).parts || [];
-    const raw = out.map(p => p.text || '').join('').trim();
-    if (!raw) throw new Error('empty_response');
-    return JSON.parse(raw.replace(/^```json\s*|\s*```$/g, ''));
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 /* Never trust the model's output shape. */
 function sanitise(ai, headerCount) {
   const fields = {};
@@ -373,7 +217,7 @@ function sanitise(ai, headerCount) {
 }
 
 /* =========================================================
-   5. Handler
+   3. Handler
    ========================================================= */
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -383,24 +227,19 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'method_not_allowed' });
   }
   if (!process.env.GEMINI_API_KEY) {
-    console.error('[api/map-schema] GEMINI_API_KEY is not set in this environment — AI requests cannot be served.');
-    return res.status(503).json({ error: 'ai_not_configured' });
+    return core.notConfigured(res, 'api/map-schema');
   }
 
-  /* auth */
   let uid;
   try {
-    const h = req.headers.authorization || '';
-    if (!h.startsWith('Bearer ')) throw new Error('no bearer');
-    uid = await verifyIdToken(h.slice(7));
+    uid = await core.requireAuth(req);
   } catch (e) {
-    return res.status(401).json({ error: 'unauthorized' });
+    return core.unauthorized(res);
   }
 
-  /* rate limit */
   const limited = rateLimited(uid);
   if (limited) {
-    return res.status(429).json({ error: 'rate_limited', window: limited });
+    return core.rateLimitedResponse(res, limited);
   }
 
   /* ---- task: brands ------------------------------------------------
@@ -434,7 +273,7 @@ module.exports = async function handler(req, res) {
           'Use "none" when a code does not clearly belong to any family. "#" stands for a digit.\n' +
           'Reply ONLY with JSON {"routes":{"<code>":"w|aurelia|jaypore|none"}} covering every code.\n' +
           'Codes: ' + JSON.stringify(toks);
-        const got = await callGeminiCascade(prompt);
+        const got = await core.callGeminiCascade(prompt, { temperature: 0, maxOutputTokens: 900, timeout: GEMINI_TIMEOUT });
         const okv = { w: 1, aurelia: 1, jaypore: 1, none: 1 };
         const raw = (got.ai && got.ai.routes) ? got.ai.routes : (got.ai || {});
         const routes = {};
@@ -467,13 +306,16 @@ module.exports = async function handler(req, res) {
       console.error('EGRESS GUARD TRIPPED — masking regression. Blocked.');
       return res.status(500).json({ error: 'egress_guard' });
     }
-    return res.status(400).json({ error: 'bad_request', detail: e.message });
+    return core.badRequest(res, e.message);
   }
 
   /* ai */
   const isClassify = input.task === 'classify';
   try {
-    const got = await callGeminiCascade(isClassify ? buildClassifyPrompt(input) : buildPrompt(input));
+    const got = await core.callGeminiCascade(
+      isClassify ? buildClassifyPrompt(input) : buildPrompt(input),
+      { temperature: 0, maxOutputTokens: 900, timeout: GEMINI_TIMEOUT }
+    );
     const clean = isClassify ? sanitiseClassify(got.ai) : sanitise(got.ai, input.headers.length);
     console.log(JSON.stringify(isClassify
       ? { evt: 'classify', ok: true, model: got.model, cols: input.headers.length, fileType: clean.fileType, conf: clean.confidence }
@@ -485,11 +327,6 @@ module.exports = async function handler(req, res) {
       evt: isClassify ? 'classify' : 'map', ok: false, code: e.message,
       detail: String(e.detail || '').slice(0, 180)
     }));
-    /* code/detail are Google's public error text — never the key */
-    return res.status(503).json({
-      error: e.quota ? 'ai_quota' : 'ai_unavailable',
-      code: String(e.message || '').slice(0, 60),
-      detail: String(e.detail || '').slice(0, 180)
-    });
+    return core.geminiFailure(res, e);
   }
 };

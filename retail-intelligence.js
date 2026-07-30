@@ -343,16 +343,139 @@ function fallbackFindBrandColumn(rows) {
   return { headerIdx: 0, brandColIdx: -1 };
 }
 
+/* ============================================================
+   2b. Layer 1 — Style/Variant Code pattern (Universal AI
+   Pipeline, Brand Detection Engine)
+   ------------------------------------------------------------
+   Deliberately NOT a hand-authored regex/prefix list per
+   retailer — at "hundreds of retailers" scale that's the same
+   maintenance burden the closed registry already had, just moved
+   here. Instead this matches against LEARNED shape signatures
+   (see ai-learning-store.js): once some other signal (brand
+   column, header fingerprint, manual confirm, or AI + human
+   accept) has confidently identified a retailer for a file that
+   also has a style/variant code column, the caller derives a
+   generic shape signature from those codes and persists it. This
+   function only ever CONSUMES that learned data — it stays pure
+   and I/O-free (this file's own standing design rule): callers
+   pass `learnedSignatures` in, no localStorage/network access
+   happens here.
+
+   shapeOf() reuses the exact masking convention already
+   established elsewhere in this app (retail-assist.js's
+   maskValue(): digit -> #, upper -> A, lower -> a) so a learned
+   signature is a shape, never a real code. */
+function shapeOf(v) {
+  return String(v == null ? '' : v).trim().slice(0, 24)
+    .replace(/[0-9]/g, '#').replace(/[A-Z]/g, 'A').replace(/[a-z]/g, 'a');
+}
+/* The leading alphabetic token plus at most one following
+   delimiter — e.g. "W-KUR-2201" -> "W-", "AU2201" -> "AU",
+   "WI-SKT-6650" -> "WI-". Deliberately stops at the FIRST
+   delimiter/digit, not the last letter before the digit run: the
+   original `/^[^0-9]*[A-Za-z]/` greedily consumed everything up to
+   the last letter before any digit (e.g. "W-KUR-2201" -> "W-KUR"),
+   which meant every distinct category segment in a retailer's own
+   style codes (KUR/DRS/TOP/...) produced a DIFFERENT prefix, so no
+   single (shape, prefix) pair could ever reach deriveStyleSignature's
+   0.6 dominance threshold and Layer 1 learning never actually fired
+   — found in production-readiness review. A signature with too
+   short/generic a prefix (e.g. just "A-") is common across many
+   retailers and shouldn't be trusted alone; MIN_PREFIX_LEN below
+   gates that. */
+function literalPrefixOf(v) {
+  var m = String(v == null ? '' : v).trim().match(/^[A-Za-z]+[-_/ ]?/);
+  return m ? m[0] : '';
+}
+var MIN_PREFIX_LEN = 2;
+
+/* deriveStyleSignature(values) -> {shape, prefix, sampleSize} | null
+   Pure aggregation: given a column of style/variant code strings,
+   find the single dominant (shape, prefix) pair. Used by callers
+   (ai-pipeline.js / retail-knowledge.js) to LEARN a signature once
+   they already trust a retailer identification by some other
+   means — never called by detectRetailer() itself. */
+function deriveStyleSignature(values) {
+  var pairs = {}, counts = {}, total = 0;
+  (values || []).forEach(function (v) {
+    var s = String(v == null ? '' : v).trim();
+    if (!s) return;
+    total++;
+    var shape = shapeOf(s), prefix = literalPrefixOf(s);
+    var key = shape + '::' + prefix;   // '::' never appears inside a masked shape or a literal prefix
+    counts[key] = (counts[key] || 0) + 1;
+    pairs[key] = { shape: shape, prefix: prefix };
+  });
+  if (!total) return null;
+  var bestKey = null, bestCount = 0;
+  for (var k in counts) { if (counts[k] > bestCount) { bestKey = k; bestCount = counts[k]; } }
+  if (!bestKey) return null;
+  var best = pairs[bestKey];
+  return { shape: best.shape, prefix: best.prefix, sampleSize: total, dominance: clamp01(bestCount / total) };
+}
+
+/* detectFromLearnedStyleShape(rows, headerIdx, styleColIdx, learnedSignatures)
+   learnedSignatures: [{ key, value:{shape,prefix}, confidence, validated }, ...]
+   (the exact shape AILearningStore.list('retailerSignature') returns).
+   Only VALIDATED entries are ever trusted here — an unconfirmed AI
+   guess must never silently become a deterministic Layer 1 match. */
+function detectFromLearnedStyleShape(rows, headerIdx, styleColIdx, learnedSignatures) {
+  var validated = (learnedSignatures || []).filter(function (s) {
+    return s && s.validated && s.value && s.value.prefix && s.value.prefix.length >= MIN_PREFIX_LEN;
+  });
+  if (!validated.length || styleColIdx < 0) return null;
+
+  var scanEnd = Math.min(rows.length, headerIdx + 1 + 8000);
+  var counts = {}, total = 0;
+  for (var r = headerIdx + 1; r < scanEnd; r++) {
+    var v = String((rows[r] || [])[styleColIdx] == null ? '' : (rows[r] || [])[styleColIdx]).trim();
+    if (!v) continue;
+    total++;
+    for (var i = 0; i < validated.length; i++) {
+      var sig = validated[i].value;
+      if (v.indexOf(sig.prefix) === 0 && shapeOf(v) === sig.shape) {
+        counts[validated[i].key] = (counts[validated[i].key] || 0) + 1;
+      }
+    }
+  }
+  if (!total) return null;
+
+  var bestKey = null, bestCount = 0, matchingSignatures = 0;
+  for (var k in counts) {
+    if (counts[k] > 0) matchingSignatures++;
+    if (counts[k] > bestCount) { bestKey = k; bestCount = counts[k]; }
+  }
+  if (!bestKey || bestCount <= 0) return null;
+
+  /* A shape shared by multiple different learned retailers is not
+     distinctive — discount confidence proportionally rather than
+     report a false-confident single winner. */
+  var raw = bestCount / total;
+  var discounted = matchingSignatures > 1 ? raw / matchingSignatures : raw;
+  return {
+    retailer: bestKey,
+    confidence: clamp01(discounted),
+    via: 'learned style-code pattern (' + bestCount + ' of ' + total + ' rows' + (matchingSignatures > 1 ? ', ambiguous with ' + (matchingSignatures - 1) + ' other learned signature(s)' : '') + ')'
+  };
+}
+
 /**
  * detectRetailer — deterministic, rule-tier only retailer guess.
  * @param {Array<{name:string, rows:Array<Array>}>} sheets
+ * @param {Object} [opts]
+ * @param {Array} [opts.learnedStyleSignatures]  Layer 1 input — the
+ *   exact shape AILearningStore.list('retailerSignature') returns.
+ *   Optional and additive: omitting it (every existing call site
+ *   does, and keeps working unchanged) simply skips Layer 1, so
+ *   this is 100% backward compatible.
  * @returns {{retailer:string, confidence:number, level:string, via:string, source:'rules'}}
- *   retailer is 'unknown' when neither signal matches — the caller
+ *   retailer is 'unknown' when no signal matches — the caller
  *   (a later phase) decides what that means for the UI (Universal
  *   Retail Mode et al.), this module just reports its best guess.
  */
-function detectRetailer(sheets) {
+function detectRetailer(sheets, opts) {
   sheets = sheets || [];
+  var learnedStyleSignatures = (opts && opts.learnedStyleSignatures) || [];
   var signatures = retailerSignatures();
   var best = null;
 
@@ -360,21 +483,33 @@ function detectRetailer(sheets) {
     var rows = sheets[i].rows || [];
     if (!rows.length) continue;
 
-    var headerIdx, fields, brandColIdx;
+    var headerIdx, fields, brandColIdx, styleColIdx;
     if (typeof RetailImport !== 'undefined' && RetailImport.findHeaderRow && RetailImport.mapColumns) {
       headerIdx = RetailImport.findHeaderRow(rows).idx;
       fields = RetailImport.mapColumns(rows, headerIdx).fields;
       brandColIdx = fields.brand ? fields.brand.index : -1;
+      styleColIdx = fields.style ? fields.style.index : (fields.variant ? fields.variant.index : -1);
     } else {
       var found = fallbackFindBrandColumn(rows);
       headerIdx = found.headerIdx;
       brandColIdx = found.brandColIdx;
+      styleColIdx = -1;
       fields = {};   // header-fingerprint detection needs RetailImport's field map; skipped in fallback mode
     }
 
+    /* Layer 1 (highest priority): learned style/variant-code shape.
+       Checked first so a strong, previously-confirmed signature can
+       win even when this file happens to lack (or misdetect) a
+       brand column. */
+    var byStyleShape = detectFromLearnedStyleShape(rows, headerIdx, styleColIdx, learnedStyleSignatures);
+    if (byStyleShape && (!best || byStyleShape.confidence > best.confidence)) best = byStyleShape;
+
+    /* Layer 3: header fingerprint (structural — column presence,
+       e.g. Jaypore's World+LOB+Division). */
     var byFingerprint = fields ? detectFromHeaderFingerprint(fields) : null;
     if (byFingerprint && (!best || byFingerprint.confidence > best.confidence)) best = byFingerprint;
 
+    /* Layer 2: brand column majority vote. */
     var byBrand = detectFromBrandColumn(rows, headerIdx, brandColIdx, signatures);
     if (byBrand && (!best || byBrand.confidence > best.confidence)) best = byBrand;
   }
@@ -387,6 +522,13 @@ return {
   classifyFileType: classifyFileType,
   detectRetailer: detectRetailer,
   confidenceLevel: confidenceLevel,
-  FILE_TYPES: FILE_TYPES
+  FILE_TYPES: FILE_TYPES,
+  /* Brand Detection Engine, Layer 1 helpers — exposed so callers
+     (ai-pipeline.js / retail-knowledge.js) can LEARN a signature
+     once they trust a detection by some other means. Kept out of
+     detectRetailer() itself, which only ever reads learned data
+     via opts.learnedStyleSignatures and stays I/O-free. */
+  deriveStyleSignature: deriveStyleSignature,
+  shapeOf: shapeOf
 };
 }));

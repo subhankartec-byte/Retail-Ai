@@ -1,108 +1,93 @@
 /* =========================================================
    api/retail-knowledge.js — Retail AI · Retail Knowledge
-   Intelligence endpoint (Phase 7, AI Intelligence Core)
+   Intelligence endpoint (Universal AI Pipeline, Stage 3/4 —
+   Retail Intelligence)
    ---------------------------------------------------------
-   Vercel serverless function. ZERO npm dependencies. Same
-   security skeleton as api/map-schema.js / api/summarize.js
-   (Firebase ID token verification, no firebase-admin, per-user
-   in-memory rate limit, Gemini model cascade, fail-closed egress
-   guard) — copied and adapted deliberately, not re-invented, so
-   this endpoint is auditable against already-reviewed code.
+   Vercel serverless function. Auth, rate limiting and the
+   Gemini call itself now live in ./_lib/ai-core.js (shared by
+   every AI endpoint) — this file keeps only what's genuinely
+   specific to its two tasks: request shape, egress guards,
+   prompts, and response sanitisers.
 
-   Step C (LOCKED, 2026-07-29) implements task:'detect-retailer' —
-   the AI fallback tier of Decision 1 (AI-Assisted Retailer
-   Detection), called by retail-knowledge.js (client) only when
-   retail-intelligence.js's deterministic rule tier can't reach
-   high confidence on its own. Its request/prompt/sanitise
-   functions below are unmodified since Step C — Step D only adds
-   new, separate functions alongside them, never edits them.
+   task:'detect-retailer' implements the AI fallback tier of
+   the Brand Detection Engine (Layers 1-2 are deterministic —
+   retail-intelligence.js — and only reach this endpoint when
+   they're not already high-confidence). Candidate retailer keys
+   come from the REQUEST (ultimately RetailProfiles.PROFILES
+   client-side), never hardcoded here — adding a future retailer
+   needs no change to this file.
 
-   Step D (this addition) implements task:'enrich-items' — Retail
-   Knowledge Intelligence's item-level reasoning (Decision 2):
-   given a deduplicated batch of distinct items, infer brand /
-   category / gender / product family / pricing tier by reasoning
-   JOINTLY over every available field at once (style-code shape +
-   real product description + masked price shape + already-known
-   colour/size/brand), never one field in isolation. Every field
-   is independently confidence-gated; below threshold it's omitted
-   entirely, never a forced guess — same discipline as Step C's
-   retailer detection.
+   OPEN-VOCABULARY DETECTION (Universal AI Pipeline requirement):
+   the model is no longer hard-blocked from ever naming a brand
+   outside the candidate list. When it recognises a retailer that
+   ISN'T already registered, that comes back as a distinctly
+   typed, capped-confidence `suggestedName` — never silently
+   promoted to `retailer` (which stays reserved for an exact,
+   already-registered candidate match). Callers must never treat
+   an unregistered suggestion as a confirmed identification; it
+   exists to surface "add this retailer" opportunities to a
+   human via the existing manual-confirm UI, not to auto-apply
+   branding/behaviour for a retailer nobody has vetted.
 
-   AI DATA POLICY (PROJECT_STATUS.md §3.7) — TWO tiers on this one
-   endpoint, one per task:
+   task:'enrich-items' implements item-level reasoning (brand /
+   category / gender / product family / pricing tier), unchanged
+   from before this refactor.
+
+   AI DATA POLICY — TWO tiers on this one endpoint, one per task:
      task:'detect-retailer' — Tier 1 (structural metadata) only:
-       column HEADER NAMES, masked value SHAPES ("####.##", "A###"),
-       a short list of CANDIDATE retailer keys, an optional
-       ruleHint. Never a row, barcode, price, or per-style sample.
-     task:'enrich-items' — Tier 2 (deduplicated, capped item
-       subset), the first use of this tier in the app:
-         - a masked STYLE-CODE SHAPE (never the real code)
-         - the item's real PRODUCT DESCRIPTION, sent as text, NOT
-           shape-masked — deliberately, see the design note in
-           validateEnrichItemsBody() below for why, and what
-           safety net replaces masking for this one field
-         - a masked PRICE SHAPE (never the real price)
-         - already-known colour/size/brand as short plain labels
-           (same sensitivity as a department or staff name, which
-           api/summarize.js already sends unmasked today)
-       Deduplicated to one entry per distinct style (never a full
-       row list), hard-capped batch size, never a barcode/EAN,
-       never anything tied to an individual transaction or
-       customer.
-   Masking happens in the browser (retail-assist.js's maskValue(),
-   reused via buildSamples() for task:'detect-retailer'; a
-   dedicated helper in retail-knowledge.js for task:'enrich-items').
-   The guards below re-check server-side and fail closed for both.
+       column HEADER NAMES, masked value SHAPES, a short list of
+       CANDIDATE retailer keys, an optional ruleHint, and now
+       optional CONTENT LABELS — short, already-categorical
+       values (e.g. distinct Department/Category/Division/World
+       column values actually seen in the file, deduplicated and
+       capped) sent as plain labels, the same sensitivity class
+       api/summarize.js already sends unmasked today (a
+       department name, not a row). Still never a row, barcode,
+       price, per-style sample, or free-text product description.
+     task:'enrich-items' — Tier 2, unchanged: deduplicated item
+       subset, real product descriptions (not shape-masked, see
+       the design note below), masked style/price shapes.
+   Masking happens in the BROWSER. The guards below re-check
+   server-side and fail closed for both.
 
-   ENV VARS (identical to the other two AI endpoints):
+   ENV VARS (identical to the other three AI endpoints):
      GEMINI_API_KEY   required
      GEMINI_MODEL     optional, default gemini-2.5-flash-lite
      FIREBASE_PROJECT optional, default retail-ai-2c674
    ========================================================= */
 'use strict';
 
-const crypto = require('crypto');
+const core = require('./_lib/ai-core');
 
-const MODEL_CANDIDATES = [
-  process.env.GEMINI_MODEL,
-  'gemini-flash-lite-latest',
-  'gemini-2.5-flash-lite',
-  'gemini-flash-latest',
-  'gemini-2.5-flash'
-].filter(Boolean);
-const PROJECT_ID = process.env.FIREBASE_PROJECT || 'retail-ai-2c674';
-const CERT_URL   = 'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com';
-
-/* ---------- limits ---------- */
+/* ---------- limits (unchanged) ---------- */
 const MAX_HEADERS       = 200;
 const MAX_HEADER_LEN    = 100;
 const MAX_SAMPLES       = 5;
 const MAX_CANDIDATES    = 20;
 const MAX_CANDIDATE_LEN = 40;
-const MAX_BODY_BYTES    = 8 * 1024;      // task:'detect-retailer' ceiling — same as api/map-schema.js, Tier 1 only
-const PER_USER_HOUR     = 20;
-const PER_USER_DAY      = 100;
+const MAX_BODY_BYTES    = 8 * 1024;
 const GEMINI_TIMEOUT    = 10000;
 
-/* task:'enrich-items' (Phase D) limits. A larger body ceiling than
-   Tier 1's — Tier 2 legitimately carries real description text,
-   not just header shapes — but still tightly bounded by both a
-   per-item count cap and a hard byte ceiling together. */
 const MAX_ITEMS           = 40;
 const MAX_ITEM_KEY_LEN    = 40;
-const MAX_ITEM_CODE_LEN   = 40;   // styleCode / priceShape (masked shapes)
-const MAX_ITEM_DESC_LEN   = 80;   // real description text
-const MAX_ITEM_LABEL_LEN  = 30;   // colour / size / knownBrand
+const MAX_ITEM_CODE_LEN   = 40;
+const MAX_ITEM_DESC_LEN   = 80;
+const MAX_ITEM_LABEL_LEN  = 30;
 const MAX_ENRICH_BODY_BYTES = 16 * 1024;
-const DIGIT_RUN_RE = /\d{4,}/;    // same long-digit-run heuristic api/summarize.js already uses for Tier 0 labels
+
+/* Content labels — new for the Universal AI Pipeline's Stage 3
+   "content signals" (description/category/department/division),
+   folded into the AI tier rather than a separate hand-authored
+   keyword layer (see retail-intelligence.js's header comment for
+   why). These are already-categorical values, not free text. */
+const MAX_CONTENT_LABELS     = 20;
+const MAX_CONTENT_LABEL_LEN  = 40;
+
+const rateLimited = core.makeRateLimiter(20, 100);   // unchanged, one bucket for this endpoint (both tasks)
 
 /* =========================================================
-   1. Egress guard — identical masking contract to
-   api/map-schema.js's assertMasked(), plus a candidates/ruleHint
-   check specific to this task.
+   1. Egress guard — task:'detect-retailer'
    ========================================================= */
-const MASKED_RE = /^[#Aa\s.,\-\/()&+_:*'"|\[\]]*$/;
-
 function assertMasked(samples) {
   if (!Array.isArray(samples)) throw new Error('samples must be an array');
   if (samples.length > MAX_SAMPLES) throw new Error('too many samples');
@@ -114,14 +99,28 @@ function assertMasked(samples) {
       const v = row[k];
       if (typeof v !== 'string') throw new Error('sample value must be a string');
       if (v.length > 40)         throw new Error('sample value too long');
-      if (/[0-9]/.test(v))       throw new Error('EGRESS GUARD: unmasked digit in sample');
-      if (!MASKED_RE.test(v))    throw new Error('EGRESS GUARD: unmasked characters in sample');
+      core.assertMaskedValue(v, 'sample.' + k);
     }
   }
 }
 
+function validateContentLabels(labels) {
+  if (labels === undefined || labels === null) return [];
+  if (!Array.isArray(labels)) throw new Error('contentLabels must be an array');
+  if (labels.length > MAX_CONTENT_LABELS) throw new Error('too many contentLabels');
+  const seen = new Set();
+  const out = [];
+  for (const l of labels) {
+    const v = core.checkLabel(String(l), 'contentLabels[]', MAX_CONTENT_LABEL_LEN, core.DIGIT_RUN_RE_4);
+    if (!v.trim() || seen.has(v)) continue;
+    seen.add(v);
+    out.push(v);
+  }
+  return out;
+}
+
 function validateDetectRetailerBody(body) {
-  const allowed = ['task', 'headers', 'samples', 'candidates', 'ruleHint', 'filename', 'sheetName'];
+  const allowed = ['task', 'headers', 'samples', 'candidates', 'ruleHint', 'filename', 'sheetName', 'contentLabels'];
   for (const k of Object.keys(body || {})) {
     if (!allowed.includes(k)) throw new Error('unexpected field: ' + k);
   }
@@ -166,39 +165,31 @@ function validateDetectRetailerBody(body) {
     candidates,
     ruleHint,
     filename: typeof body.filename === 'string' ? body.filename.slice(0, 120) : '',
-    sheetName: typeof body.sheetName === 'string' ? body.sheetName.slice(0, 60) : ''
+    sheetName: typeof body.sheetName === 'string' ? body.sheetName.slice(0, 60) : '',
+    contentLabels: validateContentLabels(body.contentLabels)
   };
 }
 
 /* =========================================================
-   1b. Egress guard — task:'enrich-items' (Phase D)
+   1b. Egress guard — task:'enrich-items' (unchanged)
    ---------------------------------------------------------
    DESIGN NOTE — why descriptions are NOT shape-masked here:
    Tier 1's mask (digit->#, upper->A, lower->a) is built for
    STRUCTURAL classification, where only a value's shape carries
-   signal (e.g. is this column a price or a barcode). A product
-   description's entire value to this task is its WORDS ("Floral
-   Maxi Dress") — shape-masking it would destroy exactly the
-   signal this task needs, while contributing no privacy benefit
-   AI Data Policy actually cares about: a description is product
-   CATALOG text (the same words a retailer already publishes on
-   its own storefront), not a barcode, not a price, not tied to
-   any one transaction or customer. It is deliberately treated as
-   Tier 2's one exception to shape-masking, with a different,
-   more appropriate safety net instead: a hard length cap, and
-   DIGIT_RUN_RE rejection of anything containing a 4+ digit run —
-   the same heuristic api/summarize.js already uses to catch a
-   barcode/phone/EAN that shouldn't be there. styleCode and
+   signal. A product description's entire value to this task is
+   its WORDS — shape-masking it would destroy exactly the signal
+   this task needs, while contributing no privacy benefit: a
+   description is product CATALOG text, not a barcode, not a
+   price, not tied to any one transaction or customer. It is
+   deliberately treated as Tier 2's one exception to shape-
+   masking, with a different safety net instead: a hard length
+   cap, and DIGIT_RUN_RE rejection of anything containing a 4+
+   digit run — the same heuristic api/summarize.js uses to catch
+   a barcode/phone/EAN that shouldn't be there. styleCode and
    priceShape are NOT descriptions — they carry no semantic text
    value, so they stay Tier-1-style shape-masked, same as always.
    ========================================================= */
-function assertNoDigitRun(s, field) {
-  if (DIGIT_RUN_RE.test(s)) throw new Error('EGRESS GUARD: ' + field + ' looks like raw data (long digit run)');
-}
-function assertMaskedShape(s, field) {
-  if (/[0-9]/.test(s)) throw new Error('EGRESS GUARD: unmasked digit in ' + field);
-  if (!MASKED_RE.test(s)) throw new Error('EGRESS GUARD: unmasked characters in ' + field);
-}
+function assertMaskedShape(s, field) { core.assertMaskedValue(s, field); }
 
 function validateEnrichItemsBody(body) {
   const allowed = ['task', 'items'];
@@ -231,7 +222,7 @@ function validateEnrichItemsBody(body) {
 
     const description = typeof it.description === 'string' ? it.description : '';
     if (description.length > MAX_ITEM_DESC_LEN) throw new Error('description too long');
-    if (description) assertNoDigitRun(description, 'description');
+    if (description && core.DIGIT_RUN_RE_4.test(description)) throw new Error('EGRESS GUARD: description looks like raw data (long digit run)');
 
     const priceShape = typeof it.priceShape === 'string' ? it.priceShape : '';
     if (priceShape.length > MAX_ITEM_CODE_LEN) throw new Error('priceShape too long');
@@ -240,7 +231,7 @@ function validateEnrichItemsBody(body) {
     const label = (v, field) => {
       const s = typeof v === 'string' ? v : '';
       if (s.length > MAX_ITEM_LABEL_LEN) throw new Error(field + ' too long');
-      if (s) assertNoDigitRun(s, field);
+      if (s && core.DIGIT_RUN_RE_4.test(s)) throw new Error('EGRESS GUARD: ' + field + ' looks like raw data (long digit run)');
       return s;
     };
     const colour = label(it.colour, 'colour');
@@ -254,100 +245,27 @@ function validateEnrichItemsBody(body) {
 }
 
 /* =========================================================
-   2. Firebase ID token verification — identical to the other
-   two AI endpoints (no firebase-admin, RS256 against Google's
-   public certs).
-   ========================================================= */
-let certCache = { keys: null, expires: 0 };
-
-async function googleCerts() {
-  const now = Date.now();
-  if (certCache.keys && now < certCache.expires) return certCache.keys;
-  const res = await fetch(CERT_URL);
-  if (!res.ok) throw new Error('cert fetch failed');
-  const keys = await res.json();
-  const cc = res.headers.get('cache-control') || '';
-  const m = cc.match(/max-age=(\d+)/);
-  certCache = { keys, expires: now + (m ? +m[1] * 1000 : 3600000) };
-  return keys;
-}
-
-function b64urlToBuf(s) {
-  return Buffer.from(s.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
-}
-
-async function verifyIdToken(token) {
-  const parts = String(token || '').split('.');
-  if (parts.length !== 3) throw new Error('malformed token');
-
-  const header  = JSON.parse(b64urlToBuf(parts[0]).toString('utf8'));
-  const payload = JSON.parse(b64urlToBuf(parts[1]).toString('utf8'));
-
-  if (header.alg !== 'RS256') throw new Error('bad alg');
-  if (!header.kid)            throw new Error('no kid');
-
-  const certs = await googleCerts();
-  const pem = certs[header.kid];
-  if (!pem) throw new Error('unknown kid');
-
-  const pubKey = new crypto.X509Certificate(pem).publicKey;
-  const ok = crypto.createVerify('RSA-SHA256')
-    .update(parts[0] + '.' + parts[1])
-    .verify(pubKey, b64urlToBuf(parts[2]));
-  if (!ok) throw new Error('bad signature');
-
-  const now = Math.floor(Date.now() / 1000);
-  if (payload.aud !== PROJECT_ID) throw new Error('bad aud');
-  if (payload.iss !== 'https://securetoken.google.com/' + PROJECT_ID) throw new Error('bad iss');
-  if (!payload.sub) throw new Error('no sub');
-  if (payload.exp <= now) throw new Error('expired');
-  if (payload.iat > now + 300) throw new Error('issued in future');
-
-  return payload.sub;
-}
-
-/* =========================================================
-   3. Rate limit — own independent bucket, same shape as the
-   other two endpoints (each AI endpoint in this repo has always
-   had its own in-memory limiter, not a shared one).
-   ========================================================= */
-const hits = new Map();
-
-function rateLimited(uid) {
-  const now = Date.now();
-  const rec = hits.get(uid) || [];
-  const fresh = rec.filter(t => now - t < 86400000);
-  const lastHour = fresh.filter(t => now - t < 3600000);
-  if (lastHour.length >= PER_USER_HOUR) return 'hour';
-  if (fresh.length >= PER_USER_DAY)     return 'day';
-  fresh.push(now);
-  hits.set(uid, fresh);
-  if (hits.size > 5000) hits.clear();
-  return null;
-}
-
-/* =========================================================
-   4. Gemini — task:'detect-retailer' (unchanged since Step C)
-   ---------------------------------------------------------
-   Candidate retailer keys come from the REQUEST (ultimately
-   RetailProfiles.PROFILES client-side), not hardcoded here —
-   adding a future retailer needs no change to this file, only a
-   longer candidates list from the caller. This is the concrete
-   payoff of Phase B's signature-registry generalisation carried
-   through to the AI tier.
+   2. Gemini — task:'detect-retailer'
    ========================================================= */
 function buildPrompt(input) {
   return [
     'You identify which retailer a masked retail data file most likely belongs to,',
     'for an Indian fashion-retail operation.',
     '',
-    'You are given ONLY column names and masked value shapes.',
-    'In the shapes: # = a digit, A = an uppercase letter, a = a lowercase letter.',
-    'You will never see real data.',
+    'You are given ONLY column names, masked value shapes, and (optionally) a short list',
+    'of already-categorical content labels (distinct Department/Category/Division/World',
+    'values actually seen in the file). In the shapes: # = a digit, A = an uppercase',
+    'letter, a = a lowercase letter. You will never see real row data or product',
+    'descriptions in this task.',
     '',
-    'Candidate retailers — choose exactly one key from this list, or "unknown" if',
-    'none fit confidently:',
+    'Candidate retailers — prefer one of these exact keys if it fits:',
     input.candidates.map(c => '  ' + c).join('\n'),
+    '',
+    'If NONE of the candidates fit, but the columns/shapes/content labels clearly indicate',
+    'a REAL, RECOGNISABLE retailer or brand that is simply not in the candidate list yet,',
+    'name it in "suggestedName" (a short, real brand/retailer name) instead of forcing a',
+    'candidate match — do not invent a plausible-sounding name with no real evidence. If you',
+    'have no confident signal either way, use "unknown".',
     '',
     input.ruleHint && input.ruleHint.retailer
       ? ('A separate deterministic, rule-based check weakly suggests "' + input.ruleHint.retailer +
@@ -368,90 +286,52 @@ function buildPrompt(input) {
       return '  ' + i + ' | ' + (h || '(blank)') + ' | ' + (shapes || '(empty)');
     }).join('\n'),
     '',
-    'Respond with JSON only, no markdown, no commentary:',
-    '{"retailer":"<one of the candidate keys, or unknown>","confidence":0.0}'
+    'Content labels seen in the file (department/category/division/world values):',
+    input.contentLabels.length ? input.contentLabels.map(l => '  - ' + l).join('\n') : '  (none provided)',
+    '',
+    'Respond with JSON only, no markdown, no commentary. Exactly one of "retailer" or',
+    '"suggestedName" should be set (the other null), or both null for "unknown":',
+    '{"retailer":"<one of the candidate keys, or null>","suggestedName":"<a real name not in the candidates, or null>","confidence":0.0}'
   ].join('\n');
 }
 
-async function callGeminiCascade(prompt) {
-  let lastErr;
-  for (const m of MODEL_CANDIDATES) {
-    try {
-      return { ai: await callGemini(prompt, m), model: m };
-    } catch (e) {
-      lastErr = e;
-      if (e.status !== 404) throw e;
-    }
-  }
-  throw lastErr;
-}
+/* Never trust the model's output shape. "retailer" must be one of
+   the exact candidates the caller sent — never anything the model
+   invented. A non-candidate name the model is confident about
+   comes back as a SEPARATE, capped-confidence, distinctly-typed
+   "suggestedName" — registered:false — so a caller can never
+   mistake an open-vocabulary guess for a confirmed match. */
+const SUGGESTED_NAME_RE = /^[A-Za-z0-9 &.'\-]+$/;
+const MAX_SUGGESTED_NAME_LEN = 40;
 
-async function callGemini(prompt, model) {
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
-              encodeURIComponent(model) + ':generateContent';
-
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), GEMINI_TIMEOUT);
-
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      signal: ctrl.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': process.env.GEMINI_API_KEY
-      },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0,
-          maxOutputTokens: 300,
-          responseMimeType: 'application/json'
-        }
-      })
-    });
-
-    const text = await res.text();
-    if (!res.ok) {
-      const err = new Error('gemini_' + res.status);
-      err.status = res.status;
-      err.quota = res.status === 429;
-      err.detail = String(text || '').slice(0, 180);
-      throw err;
-    }
-    const data = JSON.parse(text);
-    const out = (((data.candidates || [])[0] || {}).content || {}).parts || [];
-    const raw = out.map(p => p.text || '').join('').trim();
-    if (!raw) throw new Error('empty_response');
-    return JSON.parse(raw.replace(/^```json\s*|\s*```$/g, ''));
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-/* Never trust the model's output shape. retailer must be one of the
-   exact candidates the caller sent (or "unknown") — never anything
-   the model invented. "unknown" is never reported as high
-   confidence, since there is nothing to be confident about. */
 function sanitise(ai, candidates) {
-  let retailer = String((ai && ai.retailer) || 'unknown');
-  if (retailer !== 'unknown' && !candidates.includes(retailer)) retailer = 'unknown';
+  let retailer = ai && ai.retailer != null ? String(ai.retailer) : null;
+  if (retailer && !candidates.includes(retailer)) retailer = null;
 
   let confidence = Number(ai && ai.confidence);
   if (!isFinite(confidence) || confidence < 0 || confidence > 1) confidence = 0.5;
-  if (retailer === 'unknown') confidence = Math.min(confidence, 0.5);
 
-  return { retailer: retailer === 'unknown' ? null : retailer, confidence };
+  if (retailer) {
+    return { retailer, suggestedName: null, confidence, registered: true };
+  }
+
+  let suggestedName = ai && ai.suggestedName != null ? String(ai.suggestedName).trim() : '';
+  if (suggestedName.length > MAX_SUGGESTED_NAME_LEN) suggestedName = suggestedName.slice(0, MAX_SUGGESTED_NAME_LEN);
+  if (!suggestedName || !SUGGESTED_NAME_RE.test(suggestedName) || core.DIGIT_RUN_RE_4.test(suggestedName)) {
+    suggestedName = '';
+  }
+
+  if (!suggestedName) {
+    return { retailer: null, suggestedName: null, confidence: Math.min(confidence, 0.5), registered: false };
+  }
+  /* Open-vocabulary suggestions are hard-capped below what a
+     registered match could ever report — nothing downstream can
+     mistake "AI thinks this might be X" for "this is X". */
+  return { retailer: null, suggestedName, confidence: Math.min(confidence, 0.6), registered: false };
 }
 
 /* =========================================================
-   4b. Gemini — task:'enrich-items' (Phase D)
-   ---------------------------------------------------------
-   One prompt reasons about the WHOLE deduplicated batch at once,
-   and for each item reasons JOINTLY over every field given for
-   that item (Decision 2) rather than inferring one field from one
-   source — the model is explicitly told to use all of them
-   together, not pick a single strongest signal.
+   2b. Gemini — task:'enrich-items' (unchanged)
    ========================================================= */
 const ENRICH_TARGET_FIELDS = ['brand', 'category', 'gender', 'productFamily', 'pricingTier'];
 
@@ -492,12 +372,6 @@ function buildEnrichPrompt(input) {
   ].join('\n');
 }
 
-/* Never trust the model's output shape or invented keys. Only
-   items whose key was actually in the request survive; only the
-   five known target fields (+ their *Confidence) are read off
-   each; string fields are length-capped the same as the request
-   side; confidences are clamped 0-1 and a field without a valid
-   confidence is dropped entirely rather than assumed. */
 function sanitiseEnrich(ai, validKeys) {
   const validSet = new Set(validKeys);
   const rawItems = Array.isArray(ai && ai.items) ? ai.items : [];
@@ -514,7 +388,7 @@ function sanitiseEnrich(ai, validKeys) {
       const cf = raw[f + 'Confidence'];
       if (typeof v !== 'string' || !v.trim()) continue;
       let confidence = Number(cf);
-      if (!isFinite(confidence) || confidence < 0 || confidence > 1) continue;   // no valid confidence -> drop the field, never assume one
+      if (!isFinite(confidence) || confidence < 0 || confidence > 1) continue;
       out[f] = v.trim().slice(0, 40);
       out[f + 'Confidence'] = confidence;
     }
@@ -524,40 +398,31 @@ function sanitiseEnrich(ai, validKeys) {
 }
 
 /* =========================================================
-   5. Handler
+   3. Handler
    ========================================================= */
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
-  res.setHeader('X-RA-Version', '1');
+  res.setHeader('X-RA-Version', '2');
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'method_not_allowed' });
   }
   if (!process.env.GEMINI_API_KEY) {
-    console.error('[api/retail-knowledge] GEMINI_API_KEY is not set in this environment — AI requests cannot be served.');
-    return res.status(503).json({ error: 'ai_not_configured' });
+    return core.notConfigured(res, 'api/retail-knowledge');
   }
 
   let uid;
   try {
-    const h = req.headers.authorization || '';
-    if (!h.startsWith('Bearer ')) throw new Error('no bearer');
-    uid = await verifyIdToken(h.slice(7));
+    uid = await core.requireAuth(req);
   } catch (e) {
-    return res.status(401).json({ error: 'unauthorized' });
+    return core.unauthorized(res);
   }
 
   const limited = rateLimited(uid);
   if (limited) {
-    return res.status(429).json({ error: 'rate_limited', window: limited });
+    return core.rateLimitedResponse(res, limited);
   }
 
-  /* Peek at task before choosing which validator/byte-ceiling
-     applies — task:'enrich-items' (Phase D) gets the larger Tier 2
-     ceiling; everything else (including no task at all, which is
-     invalid here — this endpoint, unlike api/map-schema.js, has no
-     legacy default task to preserve) uses task:'detect-retailer's
-     original Tier 1 ceiling, unchanged since Step C. */
   let earlyTask;
   try {
     const peek = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
@@ -577,15 +442,16 @@ module.exports = async function handler(req, res) {
     input = isEnrich ? validateEnrichItemsBody(body) : validateDetectRetailerBody(body);
   } catch (e) {
     if (String(e.message).startsWith('EGRESS GUARD')) {
-      console.error('EGRESS GUARD TRIPPED on /api/retail-knowledge — blocked. ' + e.message);
-      return res.status(500).json({ error: 'egress_guard' });
+      return core.egressGuardTripped(res, '/api/retail-knowledge', e.message);
     }
-    return res.status(400).json({ error: 'bad_request', detail: e.message });
+    return core.badRequest(res, e.message);
   }
+
+  const geminiOpts = { temperature: 0, maxOutputTokens: 300, timeout: GEMINI_TIMEOUT };
 
   if (isEnrich) {
     try {
-      const got = await callGeminiCascade(buildEnrichPrompt(input));
+      const got = await core.callGeminiCascade(buildEnrichPrompt(input), geminiOpts);
       const clean = sanitiseEnrich(got.ai, input.items.map(it => it.key));
       console.log(JSON.stringify({
         evt: 'enrich-items', ok: true, model: got.model,
@@ -597,20 +463,16 @@ module.exports = async function handler(req, res) {
         evt: 'enrich-items', ok: false, code: e.message,
         detail: String(e.detail || '').slice(0, 180)
       }));
-      return res.status(503).json({
-        error: e.quota ? 'ai_quota' : 'ai_unavailable',
-        code: String(e.message || '').slice(0, 60),
-        detail: String(e.detail || '').slice(0, 180)
-      });
+      return core.geminiFailure(res, e);
     }
   }
 
   try {
-    const got = await callGeminiCascade(buildPrompt(input));
+    const got = await core.callGeminiCascade(buildPrompt(input), geminiOpts);
     const clean = sanitise(got.ai, input.candidates);
     console.log(JSON.stringify({
       evt: 'detect-retailer', ok: true, model: got.model,
-      retailer: clean.retailer, conf: clean.confidence
+      retailer: clean.retailer, suggested: clean.suggestedName, conf: clean.confidence
     }));
     return res.status(200).json({ ...clean, model: got.model, source: 'ai' });
   } catch (e) {
@@ -618,10 +480,6 @@ module.exports = async function handler(req, res) {
       evt: 'detect-retailer', ok: false, code: e.message,
       detail: String(e.detail || '').slice(0, 180)
     }));
-    return res.status(503).json({
-      error: e.quota ? 'ai_quota' : 'ai_unavailable',
-      code: String(e.message || '').slice(0, 60),
-      detail: String(e.detail || '').slice(0, 180)
-    });
+    return core.geminiFailure(res, e);
   }
 };

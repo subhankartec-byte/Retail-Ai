@@ -1,10 +1,14 @@
 /* =========================================================
    api/summarize.js — Retail AI · AI executive-summary endpoint
    ---------------------------------------------------------
-   Vercel serverless function. ZERO npm dependencies.
-   Same security architecture as api/map-schema.js: Firebase ID
-   token required, in-memory per-user rate limit, egress guard
-   on the request body before it ever reaches Gemini.
+   Vercel serverless function. Auth, rate limiting and the
+   Gemini call itself now live in ./_lib/ai-core.js (Universal
+   AI Pipeline core, shared by every AI endpoint) — this file
+   keeps only what's genuinely specific to this task: its
+   request shape, its egress guard, its prompt, and its
+   response sanitiser. Request/response shapes, status codes,
+   rate limits and env vars are unchanged from before this
+   refactor.
 
    WHAT THIS SENDS TO GOOGLE:
      - already-aggregated business metrics the manager can already
@@ -24,50 +28,24 @@
    ========================================================= */
 'use strict';
 
-const crypto = require('crypto');
+const core = require('./_lib/ai-core');
 
-const MODEL_CANDIDATES = [
-  process.env.GEMINI_MODEL,
-  'gemini-flash-lite-latest',
-  'gemini-2.5-flash-lite',
-  'gemini-flash-latest',
-  'gemini-2.5-flash'
-].filter(Boolean);
-const PROJECT_ID = process.env.FIREBASE_PROJECT || 'retail-ai-2c674';
-const CERT_URL   = 'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com';
-
-/* ---------- limits ---------- */
-const MAX_BODY_BYTES  = 20 * 1024;   // generous for aggregates, cannot hold row-level data
+/* ---------- limits (unchanged) ---------- */
 const MAX_NAME_LEN    = 60;
 const MAX_STAFF       = 30;
 const MAX_DEPARTMENTS = 30;
 const MAX_FESTIVE     = 15;
 const MAX_BRANDS      = 15;
 const MAX_SIZES       = 30;
-const PER_USER_HOUR   = 20;
-const PER_USER_DAY    = 100;
+const MAX_BODY_BYTES  = 20 * 1024;
 const GEMINI_TIMEOUT  = 12000;
+const rateLimited = core.makeRateLimiter(20, 100);   // unchanged
 
 /* =========================================================
    1. Egress guard — the privacy promise, as code
-   ---------------------------------------------------------
-   Every "name" field must be a short label, never a long run of
-   digits (which would indicate a barcode/phone/EAN slipped in
-   instead of a staff/department/brand/size label). Every metric
-   must be a finite number. Unknown top-level keys are rejected
-   outright, and every list is capped — a real aggregate view
-   never has hundreds of departments or thousands of "staff".
    ========================================================= */
-const DIGIT_RUN_RE = /\d{6,}/;
-
-function checkLabel(v, field) {
-  if (typeof v !== 'string') throw new Error('EGRESS GUARD: ' + field + ' must be a string');
-  if (v.length > MAX_NAME_LEN) throw new Error('EGRESS GUARD: ' + field + ' too long');
-  if (DIGIT_RUN_RE.test(v)) throw new Error('EGRESS GUARD: ' + field + ' looks like raw data (long digit run)');
-}
-function checkNum(v, field) {
-  if (typeof v !== 'number' || !isFinite(v)) throw new Error('EGRESS GUARD: ' + field + ' must be a finite number');
-}
+function checkLabel(v, field) { return core.checkLabel(v, field, MAX_NAME_LEN, core.DIGIT_RUN_RE_6); }
+function checkNum(v, field) { return core.checkNum(v, field); }
 function checkNumOrNull(v, field) {
   if (v === null || v === undefined) return;
   checkNum(v, field);
@@ -146,76 +124,7 @@ function validateBody(body) {
 }
 
 /* =========================================================
-   2. Firebase ID token verification — identical to map-schema.js
-   ========================================================= */
-let certCache = { keys: null, expires: 0 };
-
-async function googleCerts() {
-  const now = Date.now();
-  if (certCache.keys && now < certCache.expires) return certCache.keys;
-  const res = await fetch(CERT_URL);
-  if (!res.ok) throw new Error('cert fetch failed');
-  const keys = await res.json();
-  const cc = res.headers.get('cache-control') || '';
-  const m = cc.match(/max-age=(\d+)/);
-  certCache = { keys, expires: now + (m ? +m[1] * 1000 : 3600000) };
-  return keys;
-}
-
-function b64urlToBuf(s) {
-  return Buffer.from(s.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
-}
-
-async function verifyIdToken(token) {
-  const parts = String(token || '').split('.');
-  if (parts.length !== 3) throw new Error('malformed token');
-
-  const header  = JSON.parse(b64urlToBuf(parts[0]).toString('utf8'));
-  const payload = JSON.parse(b64urlToBuf(parts[1]).toString('utf8'));
-
-  if (header.alg !== 'RS256') throw new Error('bad alg');
-  if (!header.kid)            throw new Error('no kid');
-
-  const certs = await googleCerts();
-  const pem = certs[header.kid];
-  if (!pem) throw new Error('unknown kid');
-
-  const pubKey = new crypto.X509Certificate(pem).publicKey;
-  const ok = crypto.createVerify('RSA-SHA256')
-    .update(parts[0] + '.' + parts[1])
-    .verify(pubKey, b64urlToBuf(parts[2]));
-  if (!ok) throw new Error('bad signature');
-
-  const now = Math.floor(Date.now() / 1000);
-  if (payload.aud !== PROJECT_ID) throw new Error('bad aud');
-  if (payload.iss !== 'https://securetoken.google.com/' + PROJECT_ID) throw new Error('bad iss');
-  if (!payload.sub) throw new Error('no sub');
-  if (payload.exp <= now) throw new Error('expired');
-  if (payload.iat > now + 300) throw new Error('issued in future');
-
-  return payload.sub;
-}
-
-/* =========================================================
-   3. Rate limit — identical shape to map-schema.js
-   ========================================================= */
-const hits = new Map();
-
-function rateLimited(uid) {
-  const now = Date.now();
-  const rec = hits.get(uid) || [];
-  const fresh = rec.filter(t => now - t < 86400000);
-  const lastHour = fresh.filter(t => now - t < 3600000);
-  if (lastHour.length >= PER_USER_HOUR) return 'hour';
-  if (fresh.length >= PER_USER_DAY)     return 'day';
-  fresh.push(now);
-  hits.set(uid, fresh);
-  if (hits.size > 5000) hits.clear();
-  return null;
-}
-
-/* =========================================================
-   4. Gemini
+   2. Gemini
    ========================================================= */
 function fmtGroup(list, labelField) {
   if (!list || !list.length) return '(none)';
@@ -269,62 +178,6 @@ function buildPrompt(d) {
   ].join('\n');
 }
 
-async function callGeminiCascade(prompt) {
-  let lastErr;
-  for (const m of MODEL_CANDIDATES) {
-    try {
-      return { ai: await callGemini(prompt, m), model: m };
-    } catch (e) {
-      lastErr = e;
-      if (e.status !== 404) throw e;
-    }
-  }
-  throw lastErr;
-}
-
-async function callGemini(prompt, model) {
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
-              encodeURIComponent(model) + ':generateContent';
-
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), GEMINI_TIMEOUT);
-
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      signal: ctrl.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': process.env.GEMINI_API_KEY
-      },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 700,
-          responseMimeType: 'application/json'
-        }
-      })
-    });
-
-    const text = await res.text();
-    if (!res.ok) {
-      const err = new Error('gemini_' + res.status);
-      err.status = res.status;
-      err.quota = res.status === 429;
-      err.detail = String(text || '').slice(0, 180);
-      throw err;
-    }
-    const data = JSON.parse(text);
-    const out = (((data.candidates || [])[0] || {}).content || {}).parts || [];
-    const raw = out.map(p => p.text || '').join('').trim();
-    if (!raw) throw new Error('empty_response');
-    return JSON.parse(raw.replace(/^```json\s*|\s*```$/g, ''));
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 /* Never trust the model's output shape. */
 function sanitise(ai) {
   const headline = typeof (ai && ai.headline) === 'string' ? ai.headline.slice(0, 240) : '';
@@ -337,7 +190,7 @@ function sanitise(ai) {
 }
 
 /* =========================================================
-   5. Handler
+   3. Handler
    ========================================================= */
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -347,22 +200,19 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'method_not_allowed' });
   }
   if (!process.env.GEMINI_API_KEY) {
-    console.error('[api/summarize] GEMINI_API_KEY is not set in this environment — AI requests cannot be served.');
-    return res.status(503).json({ error: 'ai_not_configured' });
+    return core.notConfigured(res, 'api/summarize');
   }
 
   let uid;
   try {
-    const h = req.headers.authorization || '';
-    if (!h.startsWith('Bearer ')) throw new Error('no bearer');
-    uid = await verifyIdToken(h.slice(7));
+    uid = await core.requireAuth(req);
   } catch (e) {
-    return res.status(401).json({ error: 'unauthorized' });
+    return core.unauthorized(res);
   }
 
   const limited = rateLimited(uid);
   if (limited) {
-    return res.status(429).json({ error: 'rate_limited', window: limited });
+    return core.rateLimitedResponse(res, limited);
   }
 
   let input;
@@ -374,23 +224,18 @@ module.exports = async function handler(req, res) {
     input = validateBody(body);
   } catch (e) {
     if (String(e.message).startsWith('EGRESS GUARD')) {
-      console.error('EGRESS GUARD TRIPPED on /api/summarize — blocked. ' + e.message);
-      return res.status(500).json({ error: 'egress_guard' });
+      return core.egressGuardTripped(res, '/api/summarize', e.message);
     }
-    return res.status(400).json({ error: 'bad_request', detail: e.message });
+    return core.badRequest(res, e.message);
   }
 
   try {
-    const got = await callGeminiCascade(buildPrompt(input));
+    const got = await core.callGeminiCascade(buildPrompt(input), { temperature: 0.3, maxOutputTokens: 700, timeout: GEMINI_TIMEOUT });
     const clean = sanitise(got.ai);
     console.log(JSON.stringify({ evt: 'summarize', ok: true, model: got.model, bullets: clean.bullets.length }));
     return res.status(200).json({ ...clean, model: got.model, source: 'ai' });
   } catch (e) {
     console.log(JSON.stringify({ evt: 'summarize', ok: false, code: e.message, detail: String(e.detail || '').slice(0, 180) }));
-    return res.status(503).json({
-      error: e.quota ? 'ai_quota' : 'ai_unavailable',
-      code: String(e.message || '').slice(0, 60),
-      detail: String(e.detail || '').slice(0, 180)
-    });
+    return core.geminiFailure(res, e);
   }
 };

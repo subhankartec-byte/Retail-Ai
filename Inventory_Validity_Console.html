@@ -323,6 +323,13 @@ tr.totalrow td.red{color:var(--red)}
 
     <div class="kpis" id="kpis"></div>
 
+    <div style="margin:0 0 14px">
+      <button class="dlbtn" id="aiBtn" type="button">
+        <span id="aiBtnLabel">Generate AI Analysis</span>
+      </button>
+      <div id="aiPanel" hidden style="margin-top:10px"></div>
+    </div>
+
     <div class="tabsbar">
       <div class="tabs" id="tabs">
         <button data-tab="summary" class="on" type="button">Summary</button>
@@ -1018,11 +1025,30 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
   // ---------------- House detection (Phase 3: multi-brand) ----------------
   window.HOUSE_PREFIX = "";
-  window.updateHousePrefix = function(rows2D){
+  window.updateHousePrefix = function(rows2D, sheetName){
     try{
+      /* Universal AI Pipeline Stage 1/3 input, see #aiBtn. This
+         function runs once PER WORKSHEET (called from
+         aoaFromWorksheet inside a wb.SheetNames.forEach loop), so
+         __lastSheets accumulates every real sheet rather than being
+         overwritten by whichever sheet happens to run last — a
+         multi-sheet workbook (e.g. Data + a blank Notes tab) was
+         previously left holding only the last, possibly-blank,
+         sheet. Also skip everything below for a sheet with no rows
+         at all — nothing to detect. */
+      if(!window.__lastSheets) window.__lastSheets=[];
+      if(rows2D && rows2D.length) window.__lastSheets.push({name:sheetName||('Sheet'+(window.__lastSheets.length+1)), rows:rows2D});
+      if(!rows2D || !rows2D.length) return;
       if(window.HOUSE_PREFIX) return;              /* first successful detection wins per file */
       if(!window.RetailImport || !window.RetailProfiles) return;
       var hdr = RetailImport.findHeaderRow(rows2D);
+      /* A worksheet with no recognisable header (e.g. a blank/notes
+         tab alongside the real data sheet) has nothing to detect —
+         skip it rather than treating "no header found" the same as
+         "header found, house unknown" (which would otherwise fire
+         the AI fallback and the manual-confirm modal once per such
+         sheet instead of once for the file's real data). */
+      if(!hdr || hdr.hits<=0) return;
       var mapped = RetailImport.mapColumns(rows2D, hdr.idx);
       /* Phase 4: saved header-fingerprint memory wins */
       if (window.RetailMapping) {
@@ -1033,24 +1059,76 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           return;
         }
       }
-      var hi = RetailImport.detectHouse(rows2D, hdr.idx, mapped.fields);
-      /* Universal Intelligence (Phase 7 Step B) confirms RetailImport's
-         result, never overrides it — same "confirm, don't override"
-         pattern proven safe in BlueDart_Etail_Waybill_Builder1.html.
-         hi.house (computed above) is always what actually gets used
-         below; this only records whether RetailIntelligence agreed. */
+      /* Brand Detection Engine (Universal AI Pipeline, Stage 3) —
+         replaces the old closed, 2-brand-set RetailImport.detectHouse().
+         Layers 1-3 (learned style-code shape, brand column, header
+         fingerprint) run synchronously here via RetailIntelligence —
+         for W/Aurelia/Jaypore files this is a strict generalisation
+         of the detector it replaces (same brand-code data, same
+         Jaypore fingerprint), so existing files detect identically.
+         Layer 4 (Gemini, only reached when Layers 1-3 aren't already
+         confident) runs separately below, asynchronously, the same
+         non-blocking way the manual-confirm fallback already does —
+         it can only ever IMPROVE on 'unknown', never override an
+         already-confident synchronous result. */
       window.HOUSE_RI_CONFIRMED = false; window.HOUSE_RI_RESULT = null;
+      var ri = { retailer: 'unknown', confidence: 0, level: 'low' };
       try{
         if(window.RetailIntelligence){
-          var ri = RetailIntelligence.detectRetailer([{name:'Sheet', rows:rows2D}]);
+          /* Layer 1 (learned style-code shape) needs its learned
+             signatures passed in explicitly — RetailIntelligence
+             stays pure/I-O-free by design. Omitting this argument
+             (as earlier code here did) meant Layer 1 never actually
+             ran in this synchronous path even though
+             ai-learning-store.js IS loaded on this page and Layer 1
+             has real signatures to check — found in production-
+             readiness review: the comment above claimed "Layers 1-3
+             run synchronously here" while Layer 1 silently never
+             fired. */
+          var learned = (typeof AILearningStore !== 'undefined' && AILearningStore.list)
+            ? AILearningStore.list('retailerSignature') : [];
+          ri = RetailIntelligence.detectRetailer([{name:'Sheet', rows:rows2D}], { learnedStyleSignatures: learned });
           window.HOUSE_RI_RESULT = ri;
-          if(ri.level==='high' && ri.retailer===hi.house) window.HOUSE_RI_CONFIRMED = true;
         }
-      }catch(e){ /* Universal Intelligence must never block the existing detector */ }
-      if (hi.house !== 'unknown') {
-        window.HOUSE_PREFIX = RetailProfiles.get(hi.house).reportPrefix || "";
+      }catch(e){ /* detection must never block the existing report */ }
+
+      /* Auto-apply threshold: the detector this replaced
+         (RetailImport.detectHouse()) auto-applied on a real
+         majority — known-brand rows >= unrecognised rows (roughly
+         >=50% of the column) — not RetailIntelligence's stricter
+         global 'high' band (>=75%, tuned for the AI-fallback
+         cost-optimisation decision elsewhere in this app, not for
+         this specific "skip the confirm dialog" decision). Gating
+         on 'high' here was a real backward-compatibility regression
+         found in production-readiness review: files that used to
+         auto-detect (a clear-but-not-75%-dominant single-brand
+         majority) now always fell through to the manual-confirm
+         modal. Using ri.confidence directly restores the original
+         sensitivity without changing RetailIntelligence's shared
+         confidence-level semantics (still used unmodified for the
+         AI-fallback decision inside RetailKnowledge.detectRetailer). */
+      if (ri.confidence >= 0.5 && ri.retailer && ri.retailer !== 'unknown') {
+        window.HOUSE_RI_CONFIRMED = true;
+        window.HOUSE_PREFIX = RetailProfiles.get(ri.retailer).reportPrefix || "";
         return;
       }
+
+      /* Not yet confident: try the full pipeline (adds AI Layer 4 +
+         open-vocabulary suggestions) in the background. It can only
+         fill in HOUSE_PREFIX if nothing else already has by the time
+         it resolves — never overrides a house the user has since
+         confirmed via the modal below. */
+      if (window.RetailKnowledge && window.RetailKnowledge.detectRetailer && !window.__aiDetectAsked) {
+        window.__aiDetectAsked = true;   /* once per file, not once per worksheet */
+        RetailKnowledge.detectRetailer([{name:'Sheet', rows:rows2D}]).then(function(full){
+          window.HOUSE_RI_RESULT = full;
+          if (!window.HOUSE_PREFIX && full.level === 'high' && full.retailer) {
+            window.HOUSE_PREFIX = RetailProfiles.get(full.retailer).reportPrefix || "";
+          }
+          if (full.suggestedName) window.HOUSE_SUGGESTED_NAME = full.suggestedName;
+        }).catch(function(){});
+      }
+
       /* unknown house: ask once per file (non-blocking), remembered by fingerprint */
       if (window.RetailMapping && !window.__raiAsked) {
         window.__raiAsked = true;
@@ -1061,7 +1139,16 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             needsConfirmation: true,
             confirmReasons: ['brand house could not be detected']
           }, { mode: 'house' }).then(function(res){
-            if (res && res.house) window.HOUSE_PREFIX = RetailProfiles.get(res.house).reportPrefix || "";
+            if (res && res.house) {
+              window.HOUSE_PREFIX = RetailProfiles.get(res.house).reportPrefix || "";
+              /* Stage 8 learning: a human just confirmed this file's
+                 house — persist a style-code shape signature so a
+                 future file from the same retailer without a usable
+                 brand column can still be caught by Layer 1. */
+              if (window.RetailKnowledge && window.RetailKnowledge.confirmRetailer) {
+                RetailKnowledge.confirmRetailer([{name:'Sheet', rows:rows2D}], res.house);
+              }
+            }
           });
         }, 0);
       }
@@ -1416,9 +1503,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       return t;
     }catch(e){ return new TextDecoder().decode(buf); }
   }
-  function aoaFromWorksheet(ws){
+  function aoaFromWorksheet(ws, sheetName){
     var rows2D = XLSX.utils.sheet_to_json(ws,{header:1, raw:true, defval:"", blankrows:false});
-    if (window.updateHousePrefix) window.updateHousePrefix(rows2D);
+    if (window.updateHousePrefix) window.updateHousePrefix(rows2D, sheetName);
     return rows2D;
   }
 
@@ -1427,23 +1514,35 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     var reader=new FileReader();
     reader.onload=function(){
       try{
+        /* Reset every file-scoped Universal AI Pipeline global here,
+           unconditionally, for EVERY file format — not just inside
+           the XLSX branches below. A plain CSV/TSV upload previously
+           skipped this reset entirely (it never calls
+           aoaFromWorksheet()/updateHousePrefix() at all), so
+           uploading a .csv right after an .xlsx left __lastSheets
+           holding the PREVIOUS file's sheets: clicking "Generate AI
+           Analysis" then sent the new file's aggregate numbers to
+           the AI together with the old file's headers/retailer
+           detection — a real cross-file data-mismatch bug found in
+           production-readiness review. */
+        window.HOUSE_PREFIX = ""; window.__raiAsked = false; window.__aiDetectAsked = false; window.__lastSheets = [];
         var buf=reader.result;
         var bytes=new Uint8Array(buf);
         var sheets=[];
         var isZip = bytes[0]===0x50&&bytes[1]===0x4B;                       // PK -> xlsx/xlsm
         var isCFB = bytes[0]===0xD0&&bytes[1]===0xCF&&bytes[2]===0x11&&bytes[3]===0xE0; // legacy .xls
         if(isZip||isCFB){
-          window.HOUSE_PREFIX = ""; window.__raiAsked = false;
+          window.HOUSE_PREFIX = ""; window.__raiAsked = false; window.__aiDetectAsked = false; window.__lastSheets = [];
           var wb=XLSX.read(bytes,{type:"array",cellDates:false,raw:true});
-          wb.SheetNames.forEach(function(nm){ sheets.push({name:nm, aoa:aoaFromWorksheet(wb.Sheets[nm])}); });
+          wb.SheetNames.forEach(function(nm){ sheets.push({name:nm, aoa:aoaFromWorksheet(wb.Sheets[nm], nm)}); });
         }else{
           var text=decodeText(buf);
           var head=text.replace(/^\uFEFF/,"").slice(0,400).toLowerCase();
           if(head.indexOf("<table")>=0 || head.indexOf("<html")>=0 || head.indexOf("<!doctype")>=0 || head.indexOf("mime-version")>=0){
             try{
-              window.HOUSE_PREFIX = ""; window.__raiAsked = false;
+              window.HOUSE_PREFIX = ""; window.__raiAsked = false; window.__aiDetectAsked = false; window.__lastSheets = [];
               var wbh=XLSX.read(text,{type:"string"});
-              wbh.SheetNames.forEach(function(nm){ sheets.push({name:nm, aoa:aoaFromWorksheet(wbh.Sheets[nm])}); });
+              wbh.SheetNames.forEach(function(nm){ sheets.push({name:nm, aoa:aoaFromWorksheet(wbh.Sheets[nm], nm)}); });
             }catch(e){ sheets.push({name:"Sheet1", aoa:IVC.parseDelimited(text)}); }
           }else{
             sheets.push({name:"Sheet1", aoa:IVC.parseDelimited(text)});
@@ -1574,11 +1673,47 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           qty:u.totalQty,value:Math.round(u.totalValue),sizeCount:u.sizeCount};});
       var groups=m.summary.map(function(g){return {key:g.key,styles:g.styles,valid:g.valid,cut:g.cut,free:g.free,
         qtyTotal:g.qtyTotal,qtyCut:g.qtyCut,valTotal:Math.round(g.valTotal),valCut:Math.round(g.valCut)};});
-      RetailDecision.saveSummary('inventoryValidity',{
-        totals:m.totals, groups:groups, topCutPiece:topCutPiece, multiStore:m.multiStore
-      });
+      var payload={ totals:m.totals, groups:groups, topCutPiece:topCutPiece, multiStore:m.multiStore };
+      RetailDecision.saveSummary('inventoryValidity', payload);
+      window.__lastAggregateContext=payload;   /* Universal AI Pipeline, see #aiBtn below */
     }catch(e){ /* never let this break the tool's own report */ }
   }
+
+  /* ---------- AI Business Analysis (Universal AI Pipeline, Stage 5-9) ----------
+     Reuses the exact aggregate this tool already builds for
+     RetailDecision.saveSummary() above — same shared /api/chat
+     reasoning and report shape every other tool on the pipeline
+     uses. Purely additive; nothing existing is touched. ---------- */
+  var AI_REPORT_BUSY=false;
+  var aiBtn=document.getElementById("aiBtn");
+  if(aiBtn) aiBtn.addEventListener("click", function(){
+    if(AI_REPORT_BUSY)return;
+    if(!window.__lastAggregateContext){ alert('Upload and process a file first.'); return; }
+    var panel=document.getElementById("aiPanel"), label=document.getElementById("aiBtnLabel");
+    if(typeof AIPipeline==='undefined'||!AIPipeline){
+      panel.hidden=false;
+      if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','AI Analysis could not load. Refresh the page and try again.');
+      return;
+    }
+    AI_REPORT_BUSY=true;
+    var prevLabel=label.textContent;
+    label.textContent='Thinking…'; aiBtn.disabled=true;
+    panel.hidden=false;
+    if(typeof AIReportUI!=='undefined') AIReportUI.renderBusy('aiPanel','Generating analysis from this inventory validity report…');
+    var ctx=window.__lastAggregateContext;
+    AIPipeline.run({ sheets: window.__lastSheets||[], aggregateContext: ctx, toolName: 'Inventory Validity Console' }).then(function(result){
+      label.textContent=prevLabel; aiBtn.disabled=false; AI_REPORT_BUSY=false;
+      if(ctx!==window.__lastAggregateContext)return;
+      if(!result||!result.report){
+        if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','Could not generate an analysis. Try again.');
+        return;
+      }
+      if(typeof AIReportUI!=='undefined') AIReportUI.renderReport('aiPanel', result.report);
+    }).catch(function(){
+      label.textContent=prevLabel; aiBtn.disabled=false; AI_REPORT_BUSY=false;
+      if(typeof AIReportUI!=='undefined') AIReportUI.renderError('aiPanel','Could not generate an analysis. Try again.');
+    });
+  });
 
   /* ---------- KPIs ---------- */
   function renderKPIs(){
@@ -1975,6 +2110,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 <script src="retail-mapping.js"></script>
 <script src="retail-decision.js"></script>
 <script src="retail-intelligence.js"></script>
+<script src="ai-learning-store.js"></script>
+<script src="ai-report-ui.js"></script>
+<script type="module" src="retail-knowledge.js"></script>
+<script type="module" src="ai-pipeline.js"></script>
 <script type="module" src="auth-guard.js"></script>
 </body>
 </html>
