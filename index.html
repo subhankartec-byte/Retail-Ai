@@ -880,22 +880,6 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════
-     DECISION ENGINE — recommendations from your own reports
-     (Store Review + Inventory Validity Console so far. Hidden for
-     signed-out visitors and while no tool has saved any data yet.)
-═══════════════════════════════════════════════════════════════ -->
-<div class="container">
-  <div class="decision-panel hidden" id="decisionPanel">
-    <div class="dp-head">
-      <span class="dp-title">Your Recommendations</span>
-      <span class="dp-confidence" id="dpConfidence"></span>
-    </div>
-    <div class="dp-signals" id="dpSignals"></div>
-    <div id="dpBody"><p class="dp-empty">Loading…</p></div>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════
      TRUST MARQUEE — who Retail AI is built for
 ═══════════════════════════════════════════════════════════════ -->
 <section class="trust" aria-label="Built for retail roles">
@@ -1779,104 +1763,6 @@ $('#year').textContent = new Date().getFullYear();
        }
      });
    })();
-   </script>
-
-   <script src="retail-decision.js"></script>
-   <script type="module">
-   /* ---------- Decision Engine panel (Phase 6 pilot) ----------
-      Reads whatever tools have saved a summary via
-      RetailDecision.saveSummary() and renders recommendations.
-      Signed-out visitors never see this — only signed-in
-      managers, and only once at least one tool has real data. */
-   import { auth } from "./firebase.js";
-   import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-
-   const TOOL_LABEL = {
-     storeReview: "Store Review", inventoryValidity: "Inventory Validity Console",
-     inventoryAudit: "Inventory Audit Tool", stockAdjustment: "Stock IN/OUT Adjustment",
-     sohImageLinks: "SOH Image Link Builder", blueDart: "BlueDart Waybill Builder"
-   };
-   const escHtml = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
-
-   const CONFIDENCE_LABEL = { high: "High confidence", medium: "Medium confidence", low: "Low confidence", none: "" };
-
-   /* Fixed display order and section title per category. A category
-      simply doesn't render a section while its array is empty —
-      no per-category branching needed beyond this lookup. */
-   const CATEGORY_ORDER = ["attention", "coaching", "atRisk", "reorders", "transfers"];
-   const CATEGORY_TITLE = {
-     attention: "Needs Attention", coaching: "Staff Coaching", atRisk: "Inventory At Risk",
-     reorders: "Reorder Suggestions", transfers: "Transfer Suggestions"
-   };
-
-   function renderSignals(perTool) {
-     return RetailDecision.TOOL_KEYS.map(k => {
-       const p = perTool[k];
-       const cls = p.status === "available" ? p.freshness : "missing";
-       const text = p.status === "available"
-         ? TOOL_LABEL[k] + " · " + (p.ageDays < 1 ? "today" : Math.round(p.ageDays) + "d old")
-         : TOOL_LABEL[k] + " · not connected";
-       return '<span class="dp-signal ' + cls + '">' + escHtml(text) + '</span>';
-     }).join('');
-   }
-
-   /* Single renderer for every Recommendation Card, regardless of
-      category — every card carries the same {title, context,
-      reason, metricValue, severity, evidence} shape. */
-   function renderCard(c) {
-     return '<li class="sev-' + c.severity + '"><div><div class="who">' + escHtml(c.title) +
-       (c.context ? ' <span class="why">(' + escHtml(c.context) + ')</span>' : '') + '</div>' +
-       '<div class="why">' + escHtml(c.reason) + '</div></div>' +
-       '<div class="gap">' + escHtml(c.metricValue) + '</div></li>';
-   }
-
-   function renderCategory(cards) {
-     return '<ul class="dp-list">' + cards.map(renderCard).join('') + '</ul>';
-   }
-
-   function renderDecisionPanel() {
-     const panel = document.getElementById("decisionPanel");
-     if (!panel || typeof RetailDecision === "undefined") return;
-
-     const summaries = RetailDecision.loadSummaries();
-     const { coverage, confidence, recommendations } = RetailDecision.evaluate(summaries);
-     const body = document.getElementById("dpBody");
-     const conf = document.getElementById("dpConfidence");
-     const signals = document.getElementById("dpSignals");
-
-     signals.innerHTML = renderSignals(coverage.perTool);
-
-     if (!coverage.available.length) {
-       panel.classList.remove("hidden");
-       conf.textContent = "";
-       conf.className = "dp-confidence";
-       body.innerHTML = '<p class="dp-empty">No reports yet — run <a href="Store_Review a1.html">Store Review</a> to start seeing recommendations here.</p>';
-       return;
-     }
-
-     panel.classList.remove("hidden");
-     conf.textContent = CONFIDENCE_LABEL[confidence.level];
-     conf.className = "dp-confidence conf-" + confidence.level;
-     conf.title = confidence.reason;
-
-     const sections = CATEGORY_ORDER
-       .filter(cat => recommendations[cat] && recommendations[cat].length)
-       .map(cat => '<div class="dp-section-title">' + CATEGORY_TITLE[cat] + '</div>' + renderCategory(recommendations[cat]));
-
-     if (!sections.length) {
-       body.innerHTML = '<p class="dp-empty">Nothing needs attention right now based on ' + coverage.available.map(k => TOOL_LABEL[k]).join(", ") + ".</p>";
-       return;
-     }
-     body.innerHTML = sections.join('');
-   }
-
-   onAuthStateChanged(auth, user => {
-     if (!user) return;              // stays hidden for signed-out visitors
-     renderDecisionPanel();
-   });
-   window.addEventListener("storage", e => {
-     if (e.key && e.key.indexOf(RetailDecision.LS_PREFIX) === 0 && auth.currentUser) renderDecisionPanel();
-   });
    </script>
 
    <script type="module" src="auth-guard.js"></script>
