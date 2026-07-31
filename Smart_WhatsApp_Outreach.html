@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smart WhatsApp Outreach</title>
+<title>AI Customer Campaign Builder</title>
 <style>
   :root{
     --navy:#122145;--navy-2:#0c1730;--navy-3:#1c2f5c;
@@ -203,7 +203,7 @@
     <div class="crest">💬</div>
     <div class="mhead-txt">
       <p class="eyebrow">RETAIL OUTREACH</p>
-      <h1>Smart WhatsApp Outreach</h1>
+      <h1>AI Customer Campaign Builder</h1>
       <p>Spreads your in-stock pieces across your customers — 2 Sets &amp; 2 Kurtas each, different for as many people as possible — and builds a ready-to-send WhatsApp with today's offer.</p>
     </div>
     <div class="mhead-badges">
@@ -380,7 +380,7 @@
   </section>
 
   <div class="foot">
-    <b>Smart Outreach</b> · self-contained &amp; offline — your customer, purchase and stock files stay in this browser tab and are never uploaded.<br>
+    <b>AI Customer Campaign Builder</b> · self-contained &amp; offline — your customer, purchase and stock files stay in this browser tab and are never uploaded.<br>
     Message only customers who've opted in to hear from the store (DPDP Act). Each link opens WhatsApp with the text pre-filled — you still press send yourself.
   </div>
 </div>
@@ -465,7 +465,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 <script type="module" src="ai-pipeline.js"></script>
 <script>
 /* ============================================================
-   Smart WhatsApp Outreach — 2-file distribution logic
+   AI Customer Campaign Builder — 2-file distribution logic
    ============================================================ */
 (function(){
   "use strict";
@@ -772,7 +772,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         return;
       }
       var ctx=buildAggregateContext();
-      AIPipeline.run({sheets:[],aggregateContext:ctx,toolName:"Smart WhatsApp Outreach"}).then(function(result){
+      AIPipeline.run({sheets:[],aggregateContext:ctx,toolName:"AI Customer Campaign Builder"}).then(function(result){
         AI_BUSY=false;if(btn){btn.textContent=prevLabel;btn.disabled=false;}
         if(!result||!result.report){if(typeof AIReportUI!=="undefined")AIReportUI.renderError("aiPanel","Could not generate a summary. Try again.");return;}
         if(typeof AIReportUI!=="undefined")AIReportUI.renderReport("aiPanel",result.report);
