@@ -191,8 +191,54 @@
   .printbtn{background:var(--navy,#122145);color:#fff;border:1px solid var(--navy,#122145);border-radius:5px;padding:6px 11px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap;font-family:inherit}
   .printbtn:hover{filter:brightness(1.15)}
   .printbtn:disabled{opacity:.55;cursor:default}
+  /* ---------- Mobile Campaign Mode ---------- */
+  #mode-toggle .btn.active{background:var(--navy);color:#fff}
+  #mode-toggle .btn:not(.active){background:#fff;color:var(--navy);border-color:#cdd3e2}
+  .mc-wrap{max-width:480px;margin:0 auto}
+  .mc-progress{background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#fff;border-radius:14px;padding:16px 18px;margin-bottom:14px}
+  .mc-progress .mc-big{font-size:26px;font-weight:800;letter-spacing:-.3px}
+  .mc-progress .mc-lbl{font-size:11.5px;letter-spacing:.3px;text-transform:uppercase;color:var(--gold-soft);font-weight:700;margin-bottom:4px}
+  .mc-bar{background:rgba(255,255,255,.15);border-radius:999px;height:9px;margin-top:10px;overflow:hidden}
+  .mc-bar-fill{background:var(--gold);height:100%;border-radius:999px;transition:width .3s ease}
+  .mc-stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+  .mc-stat-row div{background:rgba(255,255,255,.08);border-radius:8px;padding:7px 4px;text-align:center}
+  .mc-stat-row .mc-sn{display:block;font-size:16px;font-weight:800}
+  .mc-stat-row .mc-sl{font-size:9.5px;letter-spacing:.2px;text-transform:uppercase;color:#c6cede}
+  .mc-eta{font-size:11.5px;color:#c6cede;margin-top:8px}
+  .mc-card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px;text-align:center}
+  .mc-card h2{margin:0;font-size:22px;color:var(--navy-2)}
+  .mc-card .mc-phone{font-family:ui-monospace,monospace;font-size:15px;color:var(--muted);margin-top:4px}
+  .mc-card .mc-badge{display:inline-block;margin-top:8px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px}
+  .mc-card .mc-badge.ok{background:var(--green-tint);color:var(--green)}
+  .mc-card .mc-badge.bad{background:var(--red-tint);color:var(--red)}
+  .mc-picks{text-align:left;margin:16px 0;display:flex;flex-direction:column;gap:8px}
+  .mc-pick{border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13px;background:#fbfbfd}
+  .mc-pick b{color:var(--navy-2)}
+  .mc-pick a{color:var(--navy-3);text-decoration:none;font-weight:600}
+  .mc-preview{background:#ece5dd;border-radius:12px;padding:12px;text-align:left;margin:14px 0}
+  .mc-preview .bubble{font-size:13px}
+  .mc-open-wa{display:flex;align-items:center;justify-content:center;gap:9px;background:#25D366;color:#08331b;border:none;border-radius:12px;padding:16px;font-size:16.5px;font-weight:800;width:100%;cursor:pointer;box-shadow:0 6px 18px -6px rgba(37,211,102,.6)}
+  .mc-open-wa:hover{background:#20c25c}
+  .mc-confirm{margin-top:16px;padding-top:16px;border-top:1px dashed var(--line)}
+  .mc-confirm p{font-weight:700;color:var(--navy-2);margin:0 0 10px}
+  .mc-confirm-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .mc-confirm-row button{border:none;border-radius:10px;padding:13px 6px;font-weight:800;font-size:13.5px;cursor:pointer}
+  .mc-yes{background:var(--green-tint);color:var(--green)}
+  .mc-no{background:var(--red-tint);color:var(--red)}
+  .mc-skip{background:#eef1f8;color:var(--navy-3)}
+  .mc-nav{display:flex;justify-content:space-between;margin-top:14px}
+  .mc-done{text-align:center;padding:40px 20px}
+  .mc-done .mc-score{font-size:44px;font-weight:800;color:var(--navy-2)}
+  .mc-split-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:14px}
+  .mc-split-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#fff}
+  .mc-split-card h4{margin:0 0 6px;font-size:14px;color:var(--navy-2)}
+  .mc-split-bar{background:var(--line);border-radius:999px;height:7px;margin:8px 0;overflow:hidden}
+  .mc-split-bar-fill{background:var(--green);height:100%}
+  .mc-split-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .mc-split-actions button{font-size:11.5px;padding:6px 9px}
+  .mc-overall{background:var(--gold-tint);border:1px solid var(--gold-soft);border-radius:12px;padding:14px 16px;margin-top:16px}
   @media print{
-    .masthead,.flow,#card-load,#card-map,#card-set,#card-compose,.toolbar,.pager,.export-band,#aiToolbarSlot{display:none!important}
+    .masthead,.flow,#card-load,#card-map,#card-set,#card-compose,.toolbar,.pager,.export-band,#aiToolbarSlot,#mode-toggle,#mobile-view{display:none!important}
     body{background:#fff}
   }
 </style>
@@ -332,6 +378,10 @@
           </div>
         </div>
       </div>
+      <div class="opt-row">
+        <label class="optl"><input type="checkbox" id="opt-split-enable"> 🔀 Split Campaign across staff</label>
+        <label class="optl" id="split-parts-row" style="display:none">Number of parts <input type="number" id="opt-split-parts" value="4" min="2" max="20" style="width:70px"></label>
+      </div>
       <div class="btn-row"><button class="btn btn-primary btn-lg" id="btn-generate">Analyse &amp; generate all →</button></div>
       <div class="busy" id="busy"><span class="spin"></span> Sharing stock across customers…</div>
     </div>
@@ -341,6 +391,11 @@
   <section class="card locked" id="card-results">
     <div class="card-band"><span class="step-no">5</span><h2>Your campaign</h2><span class="sub" id="res-status"></span></div>
     <div class="card-body">
+      <div class="btn-row" id="mode-toggle" style="margin-bottom:14px">
+        <button class="btn btn-navy" id="mode-desktop" type="button">🖥️ Desktop Mode</button>
+        <button class="btn btn-ghost" id="mode-mobile" type="button">📱 Mobile Campaign Mode</button>
+      </div>
+      <div id="desktop-view">
       <div class="stats">
         <div class="stat total"><div class="n" id="s-total">0</div><div class="l">Customers</div></div>
         <div class="stat match"><div class="n" id="s-sets">0</div><div class="l">Sets in stock</div></div>
@@ -393,6 +448,8 @@
           <div class="btn-row" style="margin-top:8px"><button class="btn btn-ghost" id="btn-resume">Mark these as sent</button></div>
         </div>
       </div>
+      </div>
+      <div id="mobile-view" hidden></div>
     </div>
   </section>
 
@@ -500,7 +557,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       offer:"\uD83D\uDECD\uFE0F Buy 2 & Get 40% OFF\n\uD83D\uDECD\uFE0F Buy 4 & Get 50% OFF"
     },
     idx:null,dirty:true,gen:[],
-    view:{page:1,size:50,search:"",type:"all",hideSent:false}
+    view:{page:1,size:50,search:"",type:"all",hideSent:false},
+    mode:"desktop",
+    splits:null,
+    mobile:{splitIdx:null,cursor:0,awaitingConfirm:false,startedAt:null,completedTimes:[]},
+    staffPayload:null
   };
 
   var toastT;
@@ -799,13 +860,243 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         var kurtas=pickTwo(kp,kurtaCur,pref);
         var picks=sets.concat(kurtas);
         var msg=buildMessage(name,sal,picks);
-        return {i:i+1,name:name||"(no name)",sal:sal,local:ph.local,e164:ph.e164,valid:ph.valid,sets:sets,kurtas:kurtas,none:picks.length===0,msg:msg,url:buildWaUrl(ph.e164,msg),sent:false,personalized:!!pref};
+        return {i:i+1,name:name||"(no name)",sal:sal,local:ph.local,e164:ph.e164,valid:ph.valid,sets:sets,kurtas:kurtas,none:picks.length===0,msg:msg,url:buildWaUrl(ph.e164,msg),sent:false,personalized:!!pref,mobileStatus:"pending"};
       });
+      S.splits=$("opt-split-enable").checked?buildSplits(S.gen,Math.max(2,Math.min(20,+$("opt-split-parts").value||4))):null;
+      S.mobile={splitIdx:null,cursor:0,awaitingConfirm:false,startedAt:null,completedTimes:[]};
       S.view.page=1;$("card-results").classList.remove("locked");updateStats();renderTable();runQualityCheck();
       $("res-status").textContent="Generated "+S.gen.length.toLocaleString("en-IN")+" messages";
       $("busy").classList.remove("show");$("card-results").scrollIntoView({behavior:"smooth",block:"start"});
       toast("Done \u2014 "+S.gen.length.toLocaleString("en-IN")+" messages ready \uD83C\uDF89");
     },30);
+  }
+
+  /* ---------- Split Campaign ----------
+     Balanced round-robin distribution \u2014 every part differs in size by at
+     most 1, no customer appears in more than one part. Pure client-side,
+     no server involved. */
+  function buildSplits(gen,parts){
+    var groups=[];for(var p=0;p<parts;p++)groups.push([]);
+    gen.forEach(function(g,i){groups[i%parts].push(g);});
+    return groups.map(function(list,i){return {label:String.fromCharCode(65+i),list:list};});
+  }
+
+  /* ============================================================
+     MOBILE CAMPAIGN MODE
+     One-customer-at-a-time flow for staff working off their own phone.
+     Reuses the exact same S.gen entries (name/local/e164/msg/url/sets/
+     kurtas) the desktop table and Excel export already use — no
+     duplicated data model, no duplicated AI logic. WhatsApp is still
+     only ever opened via the same wa.me/web.whatsapp.com deep link
+     buildWaUrl() already builds; nothing here auto-sends anything —
+     the staff member always presses Send themselves inside WhatsApp.
+     ============================================================ */
+
+  function mcCurrentList(){
+    if(S.staffPayload)return S.staffPayload.gen;
+    if(S.splits&&S.mobile.splitIdx!=null)return S.splits[S.mobile.splitIdx].list;
+    return S.gen;
+  }
+  function mcStats(list){
+    var completed=0,skipped=0,failed=0;
+    list.forEach(function(g){if(g.mobileStatus==="completed")completed++;else if(g.mobileStatus==="skipped")skipped++;else if(g.mobileStatus==="failed")failed++;});
+    var total=list.length,remaining=total-completed-skipped-failed,pct=total?Math.round((completed/total)*100):0;
+    var avgMs=S.mobile.completedTimes.length?(S.mobile.completedTimes.reduce(function(a,b){return a+b;},0)/S.mobile.completedTimes.length):null;
+    var etaMs=avgMs!=null?avgMs*remaining:null;
+    var resolvedRate=(completed+failed+skipped)?Math.round((completed/(completed+failed+skipped))*100):100;
+    var score=Math.max(0,Math.min(100,Math.round(pct*0.7+resolvedRate*0.3)));
+    return {total:total,completed:completed,skipped:skipped,failed:failed,remaining:remaining,pct:pct,etaMs:etaMs,score:score};
+  }
+  function mcFmtEta(ms){
+    if(ms==null)return "—";
+    var mins=Math.round(ms/60000);
+    if(mins<1)return "<1 min";if(mins<60)return mins+" min";
+    return Math.floor(mins/60)+"h "+(mins%60)+"m";
+  }
+
+  function setMode(mode){
+    S.mode=mode;
+    $("mode-desktop").classList.toggle("active",mode==="desktop");
+    $("mode-mobile").classList.toggle("active",mode==="mobile");
+    $("desktop-view").hidden=mode!=="desktop";
+    $("mobile-view").hidden=mode!=="mobile";
+    if(mode==="mobile")renderMobileView();
+  }
+
+  function renderMobileView(){
+    var root=$("mobile-view");
+    if(S.splits&&S.mobile.splitIdx==null&&!S.staffPayload){renderSplitDashboard(root);return;}
+    var list=mcCurrentList();
+    if(!list||!list.length){root.innerHTML='<div class="empty">No customers in this campaign.</div>';return;}
+    if(S.mobile.startedAt==null)S.mobile.startedAt=Date.now();
+    var idx=Math.min(S.mobile.cursor,list.length);
+    if(idx>=list.length){renderMcDone(root,list);return;}
+    renderMcCard(root,list,idx);
+  }
+
+  function renderSplitDashboard(root){
+    var html='<div class="mc-wrap">';
+    if(!S.staffPayload)html+='<div class="btn-row" style="margin-bottom:10px"><button class="btn btn-ghost" id="mc-view-all" type="button">View full campaign (all customers)</button></div>';
+    html+='<div class="mc-split-grid">';
+    S.splits.forEach(function(sp,i){
+      var st=mcStats(sp.list);
+      html+='<div class="mc-split-card"><h4>Campaign '+sp.label+'</h4>'+
+        '<div>'+st.completed+' / '+st.total+' complete</div>'+
+        '<div class="mc-split-bar"><div class="mc-split-bar-fill" style="width:'+st.pct+'%"></div></div>'+
+        '<div class="mc-split-actions">'+
+          '<button class="btn btn-primary" data-open="'+i+'" type="button">Open</button>'+
+          '<button class="btn btn-ghost" data-share="'+i+'" type="button">Share</button>'+
+          '<button class="btn btn-ghost" data-copy="'+i+'" type="button">Copy Link</button>'+
+        '</div></div>';
+    });
+    html+='</div>';
+    var overall=mcStats(S.gen);
+    html+='<div class="mc-overall"><b>Overall progress</b> — '+overall.completed+' / '+overall.total+' complete ('+overall.pct+'%)</div>';
+    html+='</div>';
+    root.innerHTML=html;
+    var viewAll=root.querySelector("#mc-view-all");if(viewAll)viewAll.addEventListener("click",function(){S.mobile.splitIdx=-1;S.mobile.cursor=0;renderMobileView();});
+    root.querySelectorAll("[data-open]").forEach(function(b){b.addEventListener("click",function(){S.mobile.splitIdx=+b.getAttribute("data-open");S.mobile.cursor=0;renderMobileView();});});
+    root.querySelectorAll("[data-share]").forEach(function(b){b.addEventListener("click",function(){mcShareSplit(+b.getAttribute("data-share"),"share");});});
+    root.querySelectorAll("[data-copy]").forEach(function(b){b.addEventListener("click",function(){mcShareSplit(+b.getAttribute("data-copy"),"copy");});});
+  }
+  /* splitIdx -1 is used as "all customers, no specific split" sentinel distinct from null (dashboard) */
+  function mcActiveList(){
+    if(S.mobile.splitIdx===-1)return S.gen;
+    return mcCurrentList();
+  }
+
+  function renderMcCard(root,list,idx){
+    var g=list[idx];
+    var st=mcStats(list);
+    var picksHtml=allPicks(g).map(function(p){return '<div class="mc-pick"><b>'+escapeHtml(p.name)+'</b> <code>'+escapeHtml(p.code)+'</code>'+(p.link?' · <a href="'+escapeAttr(p.link)+'" target="_blank" rel="noopener">view</a>':'')+'</div>';}).join("")||'<div class="mc-pick">No pieces available for this customer.</div>';
+    var html='<div class="mc-wrap">'+
+      '<div class="mc-progress">'+
+        '<div class="mc-lbl">Campaign Progress</div>'+
+        '<div class="mc-big">'+st.completed+' / '+st.total+' Customers Completed</div>'+
+        '<div class="mc-bar"><div class="mc-bar-fill" style="width:'+st.pct+'%"></div></div>'+
+        '<div class="mc-stat-row">'+
+          '<div><span class="mc-sn">'+st.completed+'</span><span class="mc-sl">Done</span></div>'+
+          '<div><span class="mc-sn">'+st.remaining+'</span><span class="mc-sl">Remaining</span></div>'+
+          '<div><span class="mc-sn">'+st.skipped+'</span><span class="mc-sl">Skipped</span></div>'+
+          '<div><span class="mc-sn">'+st.failed+'</span><span class="mc-sl">Failed</span></div>'+
+        '</div>'+
+        '<div class="mc-eta">Est. time remaining: '+mcFmtEta(st.etaMs)+' · Campaign score '+st.score+'/100</div>'+
+      '</div>'+
+      '<div class="mc-card">'+
+        '<h2>'+escapeHtml(g.name)+'</h2>'+
+        '<div class="mc-phone">+'+escapeHtml(g.e164)+'</div>'+
+        (g.valid?'<span class="mc-badge ok">valid number</span>':'<span class="mc-badge bad">check number</span>')+
+        '<div class="mc-picks">'+picksHtml+'</div>'+
+        '<div class="mc-preview"><div class="bubble">'+linkify(g.msg)+'</div></div>'+
+        '<button class="mc-open-wa" id="mc-open-wa" type="button">💬 Open WhatsApp</button>'+
+        '<div class="mc-confirm" id="mc-confirm" hidden>'+
+          '<p>✓ Message sent?</p>'+
+          '<div class="mc-confirm-row">'+
+            '<button class="mc-yes" data-c="completed" type="button">YES</button>'+
+            '<button class="mc-no" data-c="failed" type="button">NO</button>'+
+            '<button class="mc-skip" data-c="skipped" type="button">SKIP</button>'+
+          '</div>'+
+        '</div>'+
+        '<div class="mc-nav">'+
+          '<button class="btn btn-ghost" id="mc-prev" type="button"'+(idx===0?" disabled":"")+'>← Prev</button>'+
+          '<button class="btn btn-ghost" id="mc-back" type="button">'+(S.splits&&!S.staffPayload?"All campaigns":"Skip for now")+'</button>'+
+          '<button class="btn btn-ghost" id="mc-next" type="button"'+(idx>=list.length-1?" disabled":"")+'>Next →</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+    root.innerHTML=html;
+    $("mc-open-wa").addEventListener("click",function(){
+      S.mobile.awaitingConfirm=true;S.mobile.awaitingSince=Date.now();
+      window.open(g.url,"_blank","noopener");
+      $("mc-confirm").hidden=false;
+    });
+    root.querySelectorAll("#mc-confirm button").forEach(function(b){b.addEventListener("click",function(){mcConfirm(list,idx,b.getAttribute("data-c"));});});
+    var prevBtn=$("mc-prev");if(prevBtn)prevBtn.addEventListener("click",function(){S.mobile.cursor=Math.max(0,idx-1);S.mobile.awaitingConfirm=false;renderMobileView();});
+    var nextBtn=$("mc-next");if(nextBtn)nextBtn.addEventListener("click",function(){S.mobile.cursor=Math.min(list.length-1,idx+1);S.mobile.awaitingConfirm=false;renderMobileView();});
+    var backBtn=$("mc-back");if(backBtn)backBtn.addEventListener("click",function(){if(S.splits&&!S.staffPayload){S.mobile.splitIdx=null;S.mobile.cursor=0;renderMobileView();}else{mcConfirm(list,idx,"skipped");}});
+  }
+  function mcConfirm(list,idx,status){
+    var g=list[idx];
+    g.mobileStatus=status;
+    if(status==="completed"){g.sent=true;if(S.mobile.awaitingSince)S.mobile.completedTimes.push(Date.now()-S.mobile.awaitingSince);}
+    S.mobile.awaitingConfirm=false;S.mobile.awaitingSince=null;
+    updateStats();
+    var next=idx+1;while(next<list.length&&list[next].mobileStatus!=="pending")next++;
+    S.mobile.cursor=next<list.length?next:list.length;
+    renderMobileView();
+  }
+  function renderMcDone(root,list){
+    var st=mcStats(list);
+    root.innerHTML='<div class="mc-wrap"><div class="mc-card mc-done">'+
+      '<div>🎉 Campaign complete</div>'+
+      '<div class="mc-score">'+st.score+'</div>'+
+      '<div style="color:var(--muted)">Campaign score out of 100</div>'+
+      '<div style="margin-top:14px">'+st.completed+' completed · '+st.skipped+' skipped · '+st.failed+' failed</div>'+
+      (S.splits&&!S.staffPayload?'<div class="btn-row" style="justify-content:center;margin-top:16px"><button class="btn btn-navy" id="mc-back-done" type="button">Back to all campaigns</button></div>':"")+
+    '</div></div>';
+    var b=root.querySelector("#mc-back-done");if(b)b.addEventListener("click",function(){S.mobile.splitIdx=null;renderMobileView();});
+  }
+
+  document.addEventListener("visibilitychange",function(){
+    if(document.visibilityState==="visible"&&S.mobile.awaitingConfirm){
+      var el=$("mc-confirm");if(el)el.hidden=false;
+    }
+  });
+
+  /* ---------- Staff sharing: encode a split entirely into the link itself ----------
+     No server, ever — the compressed payload travels only inside the URL
+     fragment (after #), which browsers never send to any server. Whoever
+     opens the link decodes it locally in their own browser, same as this
+     page always has. */
+  function b64EncodeUtf8(str){return btoa(unescape(encodeURIComponent(str)));}
+  function b64DecodeUtf8(str){return decodeURIComponent(escape(atob(str)));}
+  /* Payload stores the shared template ONCE plus minimal per-customer
+     fields, never the fully-expanded message or WhatsApp URL (which would
+     duplicate the same text twice per customer). The staff device
+     reconstructs msg/url locally via the exact same buildMessage()/
+     buildWaUrl() this page already uses — reused, not duplicated. */
+  function mcBuildPayload(splitIdx){
+    var list=S.splits[splitIdx].list;
+    return {v:2,label:S.splits[splitIdx].label,
+      tmpl:{main:$("tmpl-main").value,pick:$("tmpl-pick").value,offer:$("opt-offer").value,store:$("opt-store").value,endpoint:$("opt-endpoint").value},
+      cust:list.map(function(g){
+        return {name:g.name,sal:g.sal,local:g.local,e164:g.e164,valid:g.valid,
+          sets:g.sets.map(function(p){return {name:p.name,code:p.code,link:p.link};}),
+          kurtas:g.kurtas.map(function(p){return {name:p.name,code:p.code,link:p.link};})};
+      })};
+  }
+  function mcShareUrl(splitIdx){
+    var payload=mcBuildPayload(splitIdx);
+    var encoded=b64EncodeUtf8(JSON.stringify(payload));
+    return location.origin+location.pathname+"#staff="+encoded;
+  }
+  function mcShareSplit(splitIdx,mode){
+    var url=mcShareUrl(splitIdx);
+    if(url.length>6000)toast("⚠ This link is long ("+url.length+" chars) — works, but may be awkward to share for very large splits.");
+    if(mode==="share"&&navigator.share){navigator.share({title:"Campaign "+S.splits[splitIdx].label,url:url}).catch(function(){});}
+    else{copyText(url,"Campaign "+S.splits[splitIdx].label+" link copied");}
+  }
+  function mcRehydratePick(p){return {code:p.code,name:p.name,link:p.link,size:"",price:NaN,colText:p.code+" "+p.name,bucket:null};}
+  function tryLoadStaffPayload(){
+    var m=/#staff=(.+)$/.exec(location.hash);
+    if(!m)return false;
+    try{
+      var payload=JSON.parse(b64DecodeUtf8(decodeURIComponent(m[1])));
+      if(!payload||!payload.cust)return false;
+      $("tmpl-main").value=payload.tmpl.main||S.tmpl.main;
+      $("tmpl-pick").value=payload.tmpl.pick||S.tmpl.pick;
+      $("opt-offer").value=payload.tmpl.offer||"";
+      $("opt-store").value=payload.tmpl.store||"our store";
+      if(payload.tmpl.endpoint)$("opt-endpoint").value=payload.tmpl.endpoint;
+      var gen=payload.cust.map(function(c,i){
+        var sets=(c.sets||[]).map(mcRehydratePick),kurtas=(c.kurtas||[]).map(mcRehydratePick);
+        var picks=sets.concat(kurtas);
+        var msg=buildMessage(c.name,c.sal,picks);
+        return {i:i+1,name:c.name,sal:c.sal,local:c.local,e164:c.e164,valid:c.valid,sets:sets,kurtas:kurtas,none:picks.length===0,msg:msg,url:buildWaUrl(c.e164,msg),sent:false,mobileStatus:"pending"};
+      });
+      S.staffPayload={label:payload.label,gen:gen};
+      return true;
+    }catch(e){return false;}
   }
 
   /* ---------- AI quality check ----------
@@ -1032,6 +1323,22 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   $("ex-xlsx").addEventListener("click",exportReport);$("ex-csv").addEventListener("click",exportCsv);
   $("ex-copy-msg").addEventListener("click",copyAllTsv);$("ex-copy-links").addEventListener("click",copyLinks);
   $("ex-copy-sent").addEventListener("click",copySent);$("btn-resume").addEventListener("click",resumeSent);
+  $("mode-desktop").addEventListener("click",function(){setMode("desktop");});
+  $("mode-mobile").addEventListener("click",function(){setMode("mobile");});
+  $("opt-split-enable").addEventListener("change",function(){$("split-parts-row").style.display=this.checked?"":"none";});
+
+  /* ---------- Staff link entry point ----------
+     If this page was opened via a shared "#staff=..." link, skip the
+     entire upload/mapping/compose flow (the staff member never touches
+     any of that) and drop straight into their assigned customer list. */
+  if(tryLoadStaffPayload()){
+    ["card-load","card-map","card-set","card-compose"].forEach(function(id){$(id).hidden=true;});
+    $("card-results").classList.remove("locked");
+    $("res-status").textContent="Campaign "+(S.staffPayload.label||"")+" — assigned to you";
+    setMode("mobile");
+  }else{
+    setMode("desktop");
+  }
 })();
 </script>
 <script type="module" src="auth-guard.js"></script>
