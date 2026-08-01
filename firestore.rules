@@ -42,7 +42,7 @@ service cloud.firestore {
        campaigns/{campaignId}/assignments/{token}
          One doc per staff split. The document ID *is* the bearer
          token — a client-generated, cryptographically random
-         string (see mkShareToken() in the app). Knowing this exact
+         string (see mkToken() in campaign-store.js). Knowing this exact
          ID is the only way in; it is never listable, and a `get`
          only succeeds while `active == true` and `expiresAt` is in
          the future. Revoke = flip `active` to false. Regenerate =
@@ -53,7 +53,7 @@ service cloud.firestore {
 
        campaigns/{campaignId}/assignments/{token}/customers/{idx}
          One doc per customer in that split. Staff (unauthenticated,
-         holding only the token) may update ONLY `status` and
+         holding only the token) may update ONLY `mobileStatus` and
          `updatedAt` on a doc they can already read — never the
          customer's name/phone/message content, never another
          split's customers, never list customers outside an active,
@@ -108,7 +108,7 @@ service cloud.firestore {
           allow update: if isCampaignOwnerForCustomers()
                         || (
                              isActiveLinkForCustomers()
-                             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+                             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mobileStatus', 'updatedAt'])
                            );
         }
       }
