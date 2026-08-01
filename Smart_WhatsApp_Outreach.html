@@ -40,8 +40,9 @@
   .card-band .sub{color:#b9c4dc;font-size:12.5px;margin-left:auto;font-weight:500}
   .card-body{padding:18px}
   .card.locked{opacity:.5;pointer-events:none;filter:grayscale(.2)}
-  .up-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;max-width:760px}
-  @media(max-width:820px){.up-grid{grid-template-columns:1fr}}
+  .up-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:1100px}
+  @media(max-width:980px){.up-grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:640px){.up-grid{grid-template-columns:1fr}}
   .up{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
   .up-head{padding:10px 13px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--line)}
   .up-head .ux{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex:0 0 auto;color:#fff}
@@ -223,7 +224,7 @@
 
   <!-- STEP 1 -->
   <section class="card" id="card-load">
-    <div class="card-band"><span class="step-no">1</span><h2>Load your two files</h2><span class="sub" id="load-status">0 of 2 loaded</span></div>
+    <div class="card-band"><span class="step-no">1</span><h2>Load your files</h2><span class="sub" id="load-status">0 of 2 loaded</span></div>
     <div class="card-body">
       <div class="loadbar">
         <div class="lx">🚀</div>
@@ -243,6 +244,12 @@
           <input type="file" data-slot="soh" accept=".xlsx,.xls,.csv" hidden>
           <div class="up-foot"><span class="up-status empty" data-slot="soh">Not loaded</span><button class="link-btn" data-tpl="soh">⬇ template</button></div>
         </div>
+        <div class="up c2">
+          <div class="up-head"><span class="ux">🧾</span><div><b>3 · Purchase History <span class="opt" style="text-transform:none;font-weight:600;color:var(--muted);font-size:11px">(optional)</span></b><small>Personalises recommendations</small></div></div>
+          <div class="drop" data-slot="hist"><div class="ic">🧾</div><b>Drop file</b><span>mobile + last purchase, ATV, category/brand pref…</span></div>
+          <input type="file" data-slot="hist" accept=".xlsx,.xls,.csv" hidden>
+          <div class="up-foot"><span class="up-status empty" data-slot="hist">Not loaded — works fine without it</span><button class="link-btn" data-tpl="hist">⬇ template</button></div>
+        </div>
       </div>
       <div class="warn-note" id="load-warn"></div>
     </div>
@@ -254,6 +261,7 @@
     <div class="card-body">
       <div class="mapset c1"><h4><span class="dot"></span> Customers <span class="cnt" id="cnt-cust"></span></h4><div class="fgrid" id="map-cust"><div class="mini-note">Load the customers file first.</div></div></div>
       <div class="mapset c3"><h4><span class="dot"></span> Stock (SOH) <span class="cnt" id="cnt-soh"></span></h4><div class="fgrid" id="map-soh"><div class="mini-note">Load the stock file first.</div></div></div>
+      <div class="mapset c2" id="mapset-hist" hidden><h4><span class="dot"></span> Purchase History <span class="cnt" id="cnt-hist"></span></h4><div class="fgrid" id="map-hist"></div></div>
       <div class="warn-note" id="map-warn"></div>
     </div>
   </section>
@@ -289,6 +297,13 @@
             <span class="tok" data-tok="{name}">{name}</span><span class="tok" data-tok="{salutation}">{salutation}</span>
             <span class="tok" data-tok="{picks}">{picks}</span><span class="tok" data-tok="{offer}">{offer}</span><span class="tok" data-tok="{store}">{store}</span>
           </div>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn btn-primary" id="btn-ai-write" type="button">✨ Write with AI</button>
+          </div>
+          <div class="tokens" id="ai-tone-row" style="margin-top:8px">
+            <span class="tok" data-tone="again">↻ Generate Again</span><span class="tok" data-tone="shorter">Shorter</span><span class="tok" data-tone="premium">More Premium</span><span class="tok" data-tone="friendly">More Friendly</span><span class="tok" data-tone="hindi">Hindi</span><span class="tok" data-tone="english">English</span><span class="tok" data-tone="hinglish">Hinglish</span><span class="tok" data-tone="festival">Festival Tone</span><span class="tok" data-tone="luxury">Luxury Tone</span><span class="tok" data-tone="urgent">Urgent Tone</span>
+          </div>
+          <div class="busy" id="ai-write-busy"><span class="spin"></span> AI is writing your message…</div>
           <p class="io-label" style="margin-top:16px">How each product line looks</p>
           <input type="text" id="tmpl-pick">
           <div class="tokens" id="tokens-pick">
@@ -333,6 +348,7 @@
         <div class="stat none"><div class="n" id="s-none">0</div><div class="l">No pieces</div></div>
         <div class="stat sent"><div class="n" id="s-sent">0</div><div class="l">Marked sent</div></div>
       </div>
+      <div id="campaign-extra-stats" style="color:var(--muted);font-size:12.5px;margin-top:8px"></div>
       <div style="margin:14px 0;display:flex;gap:7px;flex-wrap:wrap;align-items:center">
         <button class="printbtn" id="printBtn" type="button" onclick="window.print()">🖶 Print / PDF</button>
         <div id="aiToolbarSlot"></div>
@@ -360,6 +376,7 @@
         <button class="btn btn-ghost" id="pg-next">Next →</button>
         <span class="pgsize">Rows <select id="pg-size"><option value="25">25</option><option value="50" selected>50</option><option value="100">100</option><option value="99999">All</option></select></span>
       </div>
+      <div class="warn-note" id="quality-warn"></div>
       <div class="export-band">
         <h3>Download the report</h3>
         <p>A formatted Excel matching your store report — #, Customer, Mobile, Sir/Ma'am, the 4 clickable product cells (Set 1, Set 2, Kurta 1, Kurta 2), the full message, a <b>Send on WhatsApp</b> link and DONE BY. Use <b>Copy</b> if a download doesn't start.</p>
@@ -457,6 +474,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 //# sourceMappingURL=exceljs.min.js.map</script>
 <script src="retail-profiles.js"></script>
 <script src="retail-intelligence.js"></script>
+<script src="ai-learning-store.js"></script>
 <script src="ai-report-ui.js"></script>
 <script src="ai-toolbar-ui.js"></script>
 <script src="ai-chat-ui.js"></script>
@@ -471,9 +489,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   "use strict";
   var $=function(id){return document.getElementById(id);};
   var S={
-    files:{cust:{h:[],rows:[]},soh:{h:[],rows:[]}},
+    files:{cust:{h:[],rows:[]},soh:{h:[],rows:[]},hist:{h:[],rows:[]}},
     map:{cust:{name:null,phone:null,sal:null},
-         soh:{style:null,category:null,qty:null,desc:null,size:null,price:null,brand:null}},
+         soh:{style:null,category:null,qty:null,desc:null,size:null,price:null,brand:null,barcode:null,department:null,story:null,season:null},
+         hist:{phone:null,lastPurchase:null,purchaseCount:null,ltv:null,atv:null,categoryPref:null,brandPref:null,lastVisit:null}},
     buckets:{}, // normCat -> SET|KURTA|SKIP
     tmpl:{
       main:"Hi {name} {salutation} \uD83D\uDC4B\n\uD83D\uDE4F\uD83C\uDFFB Greetings from {store} \uD83C\uDF38\n{offer}\n\u23F3 Limited size availability on many bestselling styles.\n\u2728 A few handpicked for you:\n{picks}\nWould you like me to share a few more collections with you?",
@@ -504,8 +523,18 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   var SZORD={XS:1,S:2,M:3,L:4,XL:5,XXL:6,XXXL:7,"3XL":7,"4XL":8};
   function sizeRank(s){s=normSize(s);if(SZORD[s])return SZORD[s];var n=parseFloat(s);return isFinite(n)?100+n:200;}
   function firstSize(set){var a=Array.from(set);if(!a.length)return"";a.sort(function(x,y){return sizeRank(x)-sizeRank(y);});return a[0];}
-  function defaultBucket(c){if(/\bSET\b|SET$|CO.?ORD|COORD|SUIT/.test(c))return"SET";if(/KURTA|KURTI|TUNIC|\bTOP\b/.test(c))return"KURTA";return"SKIP";}
-  function bucketOf(catNorm){return S.buckets[catNorm]||defaultBucket(catNorm);}
+  /* ---------- AI product classification ----------
+     Recognises the common retail aliases for each family (SKD, Co-ord, Suit,
+     Three Piece, Dress Set → "Set" family; Kurti, Long/Straight Kurta →
+     "Kurta" family) from the Category label alone — the fast, free, rule
+     tier every detector in this platform tries first. Genuinely unrecognised
+     categories fall through to the existing manual bucket picker (the "ask
+     the user once" step), and a confirmed answer is remembered via
+     AILearningStore so the SAME category auto-classifies on every future
+     upload without asking again. */
+  function defaultBucket(c){if(/\bSET\b|SET$|CO.?ORD|COORD|SUIT|\bSKD\b|THREE.?PIECE|\b3.?PC\b/.test(c))return"SET";if(/KURTA|KURTI|TUNIC|\bTOP\b/.test(c))return"KURTA";return"SKIP";}
+  function learnedBucketOf(catNorm){if(typeof AILearningStore==="undefined")return null;var rec=AILearningStore.get("categoryBucket",catNorm);return (rec&&rec.validated)?rec.value:null;}
+  function bucketOf(catNorm){return S.buckets[catNorm]||learnedBucketOf(catNorm)||defaultBucket(catNorm);}
 
   /* ---------- parse into slot ---------- */
   function aoaToSlot(slot,aoa){
@@ -522,7 +551,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     reader.onload=function(e){try{var wb;if(name.endsWith(".csv"))wb=XLSX.read(e.target.result,{type:"string",raw:true});else wb=XLSX.read(new Uint8Array(e.target.result),{type:"array"});var ws=wb.Sheets[wb.SheetNames[0]];var aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""});if(aoaToSlot(slot,aoa)){setStatus(slot,file.name);onSlotLoaded(slot);}}catch(err){toast("Could not read that file");}};
     if(name.endsWith(".csv"))reader.readAsText(file);else reader.readAsArrayBuffer(file);
   }
-  function setStatus(slot,label){var el=document.querySelector('.up-status[data-slot="'+slot+'"]');var n=S.files[slot].rows.length;el.textContent=n?(n.toLocaleString("en-IN")+" rows"):"—";el.className="up-status "+(n?"ok":"empty");var loaded=["cust","soh"].filter(function(s){return S.files[s].rows.length;}).length;$("load-status").textContent=loaded+" of 2 loaded";}
+  function setStatus(slot,label){var el=document.querySelector('.up-status[data-slot="'+slot+'"]');var n=S.files[slot].rows.length;el.textContent=n?(n.toLocaleString("en-IN")+" rows"):(slot==="hist"?"Not loaded — works fine without it":"Not loaded");el.className="up-status "+(n?"ok":"empty");var loaded=["cust","soh"].filter(function(s){return S.files[s].rows.length;}).length;$("load-status").textContent=loaded+" of 2 loaded";}
 
   /* ---------- sample ---------- */
   var SAMPLE={
@@ -544,34 +573,60 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       ["F12022-921076","Kurta","Light Yellow Kurta","L","4999","2","W"],
       ["F12109-911906","Kurta","Blue Straight Kurta","L","4999","2","W"],
       ["W14227-225583","Kurta","Rust Printed Kurta","M","1799","4","W"],
-      ["W14401-226010","Kurta","Teal Kurta","L","2499","3","W"]]
+      ["W14401-226010","Kurta","Teal Kurta","L","2499","3","W"]],
+    hist:[["Mobile","Last Purchase","Purchase Count","LTV","ATV","Category Preference","Brand Preference","Last Visit"],
+      ["9902081186","2026-06-02","5","24990","1899","Kurta","W","2026-06-02"],
+      ["9829773797","2026-05-18","2","8990","2999","Kurta Set","W","2026-05-18"],
+      ["8867232377","2026-04-30","8","41000","2100","Kurta","W","2026-04-30"]]
   };
-  function loadSample(){["cust","soh"].forEach(function(s){aoaToSlot(s,SAMPLE[s].map(function(r){return r.slice();}));setStatus(s,"Sample");});["cust","soh"].forEach(onSlotLoaded);S.dirty=true;refresh();toast("Sample loaded \u2014 review, then Generate");$("card-set").scrollIntoView({behavior:"smooth",block:"start"});}
+  function loadSample(){["cust","soh","hist"].forEach(function(s){aoaToSlot(s,SAMPLE[s].map(function(r){return r.slice();}));setStatus(s,"Sample");});["cust","soh","hist"].forEach(onSlotLoaded);S.dirty=true;refresh();toast("Sample loaded \u2014 review, then Generate");$("card-set").scrollIntoView({behavior:"smooth",block:"start"});}
 
   /* ---------- templates ---------- */
   function textify(ws,cols){var rng=XLSX.utils.decode_range(ws["!ref"]);for(var R=1;R<=rng.e.r;R++){cols.forEach(function(C){var cell=ws[XLSX.utils.encode_cell({r:R,c:C})];if(cell){cell.t="s";cell.z="@";}});}}
   var TPL_GUIDE={
     cust:[["Column","What to put in it"],["Name","Customer name (used in the greeting)"],["Mobile","10-digit number. +91 / spaces / leading 0 all fine."],["Sir/Ma'am","(optional) Ma'am or Sir \u2014 defaults to Ma'am if blank"]],
-    soh:[["Column","What to put in it"],["Style Code","Style code \u2014 becomes the search link"],["Category","Kurta Set, Kurta\u2026 (used to know Sets vs Kurtas)"],["Description","Product name shown in the message (e.g. Ecru Kurta Set)"],["Size","(optional) shown on the pick; one row per size, or a single row"],["MRP","Price \u2014 shown on the pick"],["SOH Qty","Units in stock \u2014 zero/negative rows are out of stock"],["Brand","(optional)"]]
+    soh:[["Column","What to put in it"],["Style Code","Style code \u2014 becomes the search link"],["Category","Kurta Set, Kurta\u2026 (used to know Sets vs Kurtas)"],["Description","Product name shown in the message (e.g. Ecru Kurta Set)"],["Size","(optional) shown on the pick; one row per size, or a single row"],["MRP","Price \u2014 shown on the pick"],["SOH Qty","Units in stock \u2014 zero/negative rows are out of stock"],["Brand","(optional)"]],
+    hist:[["Column","What to put in it"],["Mobile","10-digit number \u2014 matched against the Customers file"],["Last Purchase","(optional) date of last purchase"],["Purchase Count","(optional) number of past orders"],["LTV","(optional) lifetime value"],["ATV","(optional) average transaction value \u2014 used for price-appropriate picks"],["Category Preference","(optional) their most-bought category"],["Brand Preference","(optional) their most-bought brand"],["Last Visit","(optional) used for recency"]]
   };
-  function downloadTpl(slot){var data=SAMPLE[slot].map(function(r){return r.slice();});var ws1=XLSX.utils.aoa_to_sheet(data);textify(ws1,data[0].map(function(_,i){return i;}));ws1["!cols"]=data[0].map(function(h){return {wch:Math.max(12,h.length+3)};});var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws1,slot==="cust"?"Customers":"Stock");var g=XLSX.utils.aoa_to_sheet(TPL_GUIDE[slot]);g["!cols"]=[{wch:16},{wch:64}];XLSX.utils.book_append_sheet(wb,g,"How to fill this in");var fn=(slot==="cust"?"Customers":"Stock_SOH")+"_TEMPLATE.xlsx";try{XLSX.writeFile(wb,fn);toast("Template downloaded \u2713");}catch(e){toast("Download blocked \u2014 open on desktop");}}
+  var TPL_NAME={cust:"Customers",soh:"Stock",hist:"Purchase_History"};
+  function downloadTpl(slot){var data=SAMPLE[slot].map(function(r){return r.slice();});var ws1=XLSX.utils.aoa_to_sheet(data);textify(ws1,data[0].map(function(_,i){return i;}));ws1["!cols"]=data[0].map(function(h){return {wch:Math.max(12,h.length+3)};});var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws1,TPL_NAME[slot]);var g=XLSX.utils.aoa_to_sheet(TPL_GUIDE[slot]);g["!cols"]=[{wch:16},{wch:64}];XLSX.utils.book_append_sheet(wb,g,"How to fill this in");var fn=TPL_NAME[slot]+"_TEMPLATE.xlsx";try{XLSX.writeFile(wb,fn);toast("Template downloaded \u2713");}catch(e){toast("Download blocked \u2014 open on desktop");}}
 
-  /* ---------- auto-detect + mapping ---------- */
-  var RX={phone:/phone|mobile|whats?app|contact|number|cell\b|\bmob\b/i,name:/name|customer|cust\b/i,sal:/sir|ma.?am|salut|title|gender/i,category:/categor|\bdept|division|class|type|product group|\bpg\b|garment|group/i,style:/style|\bsku\b|\bean\b|item ?code|article|design|\bcode\b/i,size:/\bsize\b|\bsz\b/i,price:/mrp|price|\brsp\b|amount|value|rate|\bmt\b/i,qty:/qty|quant|\bsoh\b|stock|on hand|\boh\b|units|balance|closing/i,desc:/desc|name|title|product|item name|style name/i,brand:/brand|\bbu\b/i};
+  /* ---------- AI auto-mapping (rule-tier detection + Learning Engine) ----------
+     Every column is auto-detected; the user only reviews. A header this store
+     has manually corrected before (AILearningStore, Stage 8) is trusted ahead
+     of the regex guess next time — the same "learn once, apply everywhere"
+     pattern already used for retailer detection elsewhere in this platform.
+     Never stores the header's DATA, only the header NAME → field mapping. ---------- */
+  var RX={phone:/phone|mobile|whats?app|contact|number|cell\b|\bmob\b/i,name:/name|customer|cust\b/i,sal:/sir|ma.?am|salut|title|gender/i,category:/categor|\bdept|division|class|type|product group|\bpg\b|garment|group/i,style:/style|\bsku\b|\bean\b|item ?code|article|design|\bcode\b/i,size:/\bsize\b|\bsz\b/i,price:/mrp|price|\brsp\b|amount|value|rate|\bmt\b/i,qty:/qty|quant|\bsoh\b|stock|on hand|\boh\b|units|balance|closing/i,desc:/desc|name|title|product|item name|style name/i,brand:/brand|\bbu\b/i,barcode:/barcode|\bean\b|\bupc\b/i,department:/department|\bdept\b/i,story:/\bstory\b|collection|theme/i,season:/season|\bss\d|\baw\d|spring|summer|autumn|winter|festive/i,lastPurchase:/last.?purchase|last.?order|recent.?purchase/i,purchaseCount:/purchase.?count|order.?count|\bfrequency\b|no.?of.?(orders|purchases|bills)/i,ltv:/\bltv\b|lifetime.?value|life.?time.?value/i,atv:/\batv\b|avg.*(bill|order|txn)|average.*(bill|order|txn)/i,categoryPref:/category.?pref|preferred.?categor|fav.*categor/i,brandPref:/brand.?pref|preferred.?brand|fav.*brand/i,lastVisit:/last.?visit|recency/i};
   function find(head,rx,exclude){for(var i=0;i<head.length;i++){if(exclude&&exclude.indexOf(i)>=0)continue;if(rx.test(head[i]))return i;}return -1;}
+  function mapLearnKey(slot,header){return slot+"|"+str(header).toLowerCase().replace(/[^a-z0-9]+/g,"");}
+  function learnedFieldIndex(slot,head,field){
+    if(typeof AILearningStore==="undefined")return -1;
+    for(var i=0;i<head.length;i++){var rec=AILearningStore.get("columnMapping",mapLearnKey(slot,head[i]));if(rec&&rec.validated&&rec.value===field)return i;}
+    return -1;
+  }
+  function detectField(slot,head,field,rx,exclude){var li=learnedFieldIndex(slot,head,field);if(li>=0&&(!exclude||exclude.indexOf(li)<0))return li;return find(head,rx,exclude);}
   function selHtml(id,head,chosen,allowNone){var h='<select id="'+id+'">';if(allowNone)h+='<option value="">— none —</option>';head.forEach(function(c,i){h+='<option value="'+escapeAttr(c)+'"'+(i===chosen?" selected":"")+'>'+escapeHtml(c)+'</option>';});return h+'</select>';}
   function fieldHtml(label,id,head,chosen,allowNone){return '<div class="field"><label>'+label+(allowNone?' <span class="opt">(optional)</span>':'')+'</label>'+selHtml(id,head,chosen,allowNone)+'</div>';}
   function onSlotLoaded(slot){
     var head=S.files[slot].h;if(!head.length)return;
-    if(slot==="cust"){var ph=find(head,RX.phone);var nm=find(head,RX.name,[ph]);var sl=find(head,RX.sal,[ph,nm]);if(nm<0)nm=(ph===0?1:0);if(ph<0)ph=(nm===0?1:0);
+    if(slot==="cust"){var ph=detectField(slot,head,"phone",RX.phone);var nm=detectField(slot,head,"name",RX.name,[ph]);var sl=detectField(slot,head,"sal",RX.sal,[ph,nm]);if(nm<0)nm=(ph===0?1:0);if(ph<0)ph=(nm===0?1:0);
       $("map-cust").innerHTML=fieldHtml("Customer name","m-cust-name",head,nm)+fieldHtml("Mobile number","m-cust-phone",head,ph)+fieldHtml("Sir / Ma'am","m-cust-sal",head,sl,true);
       bind("cust",{name:"m-cust-name",phone:"m-cust-phone",sal:"m-cust-sal"});$("cnt-cust").textContent=S.files.cust.rows.length.toLocaleString("en-IN")+" customers";}
-    if(slot==="soh"){var st=find(head,RX.style);var qc=find(head,RX.qty,[st]);var ct=find(head,RX.category,[st,qc]);var ds=find(head,RX.desc,[st,ct]);var s2=find(head,RX.size);var p2=find(head,RX.price,[qc]);var br=find(head,RX.brand);
-      $("map-soh").innerHTML=fieldHtml("Style code","m-s-style",head,st)+fieldHtml("Category","m-s-cat",head,ct)+fieldHtml("Stock qty","m-s-qty",head,qc)+fieldHtml("Description","m-s-desc",head,ds,true)+fieldHtml("Size","m-s-size",head,s2,true)+fieldHtml("Price / MRP","m-s-price",head,p2,true)+fieldHtml("Brand","m-s-brand",head,br,true);
-      bind("soh",{style:"m-s-style",category:"m-s-cat",qty:"m-s-qty",desc:"m-s-desc",size:"m-s-size",price:"m-s-price",brand:"m-s-brand"});$("cnt-soh").textContent=S.files.soh.rows.length.toLocaleString("en-IN")+" stock rows";}
+    if(slot==="soh"){var st=detectField(slot,head,"style",RX.style);var qc=detectField(slot,head,"qty",RX.qty,[st]);var ct=detectField(slot,head,"category",RX.category,[st,qc]);var ds=detectField(slot,head,"desc",RX.desc,[st,ct]);var s2=detectField(slot,head,"size",RX.size);var p2=detectField(slot,head,"price",RX.price,[qc]);var br=detectField(slot,head,"brand",RX.brand);var bc=detectField(slot,head,"barcode",RX.barcode,[st]);var dp=detectField(slot,head,"department",RX.department,[ct]);var sy=detectField(slot,head,"story",RX.story);var se=detectField(slot,head,"season",RX.season);
+      $("map-soh").innerHTML=fieldHtml("Style code","m-s-style",head,st)+fieldHtml("Category","m-s-cat",head,ct)+fieldHtml("Stock qty","m-s-qty",head,qc)+fieldHtml("Description","m-s-desc",head,ds,true)+fieldHtml("Size","m-s-size",head,s2,true)+fieldHtml("Price / MRP","m-s-price",head,p2,true)+fieldHtml("Brand","m-s-brand",head,br,true)+fieldHtml("Barcode / EAN","m-s-barcode",head,bc,true)+fieldHtml("Department","m-s-dept",head,dp,true)+fieldHtml("Story","m-s-story",head,sy,true)+fieldHtml("Season","m-s-season",head,se,true);
+      bind("soh",{style:"m-s-style",category:"m-s-cat",qty:"m-s-qty",desc:"m-s-desc",size:"m-s-size",price:"m-s-price",brand:"m-s-brand",barcode:"m-s-barcode",department:"m-s-dept",story:"m-s-story",season:"m-s-season"});$("cnt-soh").textContent=S.files.soh.rows.length.toLocaleString("en-IN")+" stock rows";}
+    if(slot==="hist"){var hp=detectField(slot,head,"phone",RX.phone);var lp=detectField(slot,head,"lastPurchase",RX.lastPurchase);var pc=detectField(slot,head,"purchaseCount",RX.purchaseCount);var lv2=detectField(slot,head,"ltv",RX.ltv);var av=detectField(slot,head,"atv",RX.atv);var cp=detectField(slot,head,"categoryPref",RX.categoryPref);var bp=detectField(slot,head,"brandPref",RX.brandPref);var lvi=detectField(slot,head,"lastVisit",RX.lastVisit);
+      $("map-hist").innerHTML=fieldHtml("Mobile number","m-h-phone",head,hp)+fieldHtml("Last purchase date","m-h-last",head,lp,true)+fieldHtml("Purchase count","m-h-count",head,pc,true)+fieldHtml("Lifetime value","m-h-ltv",head,lv2,true)+fieldHtml("ATV","m-h-atv",head,av,true)+fieldHtml("Category preference","m-h-catpref",head,cp,true)+fieldHtml("Brand preference","m-h-brandpref",head,bp,true)+fieldHtml("Last visit","m-h-visit",head,lvi,true);
+      bind("hist",{phone:"m-h-phone",lastPurchase:"m-h-last",purchaseCount:"m-h-count",ltv:"m-h-ltv",atv:"m-h-atv",categoryPref:"m-h-catpref",brandPref:"m-h-brandpref",lastVisit:"m-h-visit"});
+      $("cnt-hist").textContent=S.files.hist.rows.length.toLocaleString("en-IN")+" customers";$("mapset-hist").hidden=false;}
     refreshLocks();
   }
-  function bind(slot,ids){Object.keys(ids).forEach(function(field){var el=$(ids[field]);if(!el)return;S.map[slot][field]=el.value||null;el.onchange=function(){S.map[slot][field]=el.value||null;S.dirty=true;if(slot==="soh"&&field==="category")buildBucketUI();refresh();};});}
+  function bind(slot,ids){Object.keys(ids).forEach(function(field){var el=$(ids[field]);if(!el)return;S.map[slot][field]=el.value||null;el.onchange=function(){
+      S.map[slot][field]=el.value||null;S.dirty=true;
+      if(el.value&&typeof AILearningStore!=="undefined")AILearningStore.record("columnMapping",mapLearnKey(slot,el.value),field,{confidence:1,source:"manual-confirm",validated:true});
+      if(slot==="soh"&&field==="category")buildBucketUI();refresh();
+    };});}
   function ready(){return S.files.cust.rows.length&&S.files.soh.rows.length;}
   function refreshLocks(){if(ready()){["card-map","card-set","card-compose"].forEach(function(id){$(id).classList.remove("locked");});if(!$("tmpl-main").value)$("tmpl-main").value=S.tmpl.main;if(!$("tmpl-pick").value)$("tmpl-pick").value=S.tmpl.pick;if(!$("opt-offer").value)$("opt-offer").value=S.tmpl.offer;buildBucketUI();refresh();}}
   function refresh(){if(ready()){ensureIndexes();updateSpreadInfo();}checkWarn();renderPreview();}
@@ -580,11 +635,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   function distinctCats(){var m=new Map();var col=S.map.soh.category;if(!col)return m;S.files.soh.rows.forEach(function(r){var c=normCat(r[col]);if(!c)return;m.set(c,(m.get(c)||0)+1);});return m;}
   function buildBucketUI(){
     var cats=distinctCats();if(!cats.size){$("buckets").style.display="none";return;}
-    cats.forEach(function(_,c){if(!(c in S.buckets))S.buckets[c]=defaultBucket(c);});
+    cats.forEach(function(_,c){if(!(c in S.buckets))S.buckets[c]=learnedBucketOf(c)||defaultBucket(c);});
     var order=Array.from(cats.keys()).sort(function(a,b){return cats.get(b)-cats.get(a);});
     var html=order.map(function(c){var v=S.buckets[c];return '<div class="bkt"><b>'+escapeHtml(c)+'</b><span class="q">'+cats.get(c)+'</span><select data-bkt="'+escapeAttr(c)+'"><option value="SET"'+(v==="SET"?" selected":"")+'>Set</option><option value="KURTA"'+(v==="KURTA"?" selected":"")+'>Kurta</option><option value="SKIP"'+(v==="SKIP"?" selected":"")+'>Skip</option></select></div>';}).join("");
     $("bkt-list").innerHTML=html;$("buckets").style.display="";
-    $("bkt-list").querySelectorAll("select[data-bkt]").forEach(function(sel){sel.addEventListener("change",function(){S.buckets[sel.getAttribute("data-bkt")]=sel.value;S.dirty=true;refresh();});});
+    $("bkt-list").querySelectorAll("select[data-bkt]").forEach(function(sel){sel.addEventListener("change",function(){var c=sel.getAttribute("data-bkt");S.buckets[c]=sel.value;S.dirty=true;if(typeof AILearningStore!=="undefined")AILearningStore.record("categoryBucket",c,sel.value,{confidence:1,source:"manual-confirm",validated:true});refresh();});});
   }
   function checkWarn(){
     $("load-warn").classList.remove("show");
@@ -623,12 +678,38 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
   function buildIndexes(){
     var sm=S.map.soh,styleMap=new Map();
-    S.files.soh.rows.forEach(function(r){var style=str(r[sm.style]);if(!style)return;var cat=normCat(r[sm.category]);var size=sm.size?normSize(r[sm.size]):"";var qty=sm.qty?qtyNum(r[sm.qty]):1;var price=sm.price?money(r[sm.price]):NaN;var desc=sm.desc?str(r[sm.desc]):"";var o=styleMap.get(style);if(!o){o={style:style,cat:cat,desc:desc,sizes:new Set(),totalQty:0,prices:[]};styleMap.set(style,o);}if(!o.cat&&cat)o.cat=cat;if(!o.desc&&desc)o.desc=desc;if(qty>0&&size)o.sizes.add(size);o.totalQty+=(isFinite(qty)?qty:0);if(isFinite(price))o.prices.push(price);});
+    S.files.soh.rows.forEach(function(r){var style=str(r[sm.style]);if(!style)return;var cat=normCat(r[sm.category]);var size=sm.size?normSize(r[sm.size]):"";var qty=sm.qty?qtyNum(r[sm.qty]):1;var price=sm.price?money(r[sm.price]):NaN;var desc=sm.desc?str(r[sm.desc]):"";var brand=sm.brand?str(r[sm.brand]).toUpperCase():"";var o=styleMap.get(style);if(!o){o={style:style,cat:cat,desc:desc,brand:brand,sizes:new Set(),totalQty:0,prices:[]};styleMap.set(style,o);}if(!o.cat&&cat)o.cat=cat;if(!o.desc&&desc)o.desc=desc;if(!o.brand&&brand)o.brand=brand;if(qty>0&&size)o.sizes.add(size);o.totalQty+=(isFinite(qty)?qty:0);if(isFinite(price))o.prices.push(price);});
     var sets=[],kurtas=[];styleMap.forEach(function(o){if(sm.qty?o.totalQty>0:true){o.repPrice=o.prices.length?median(o.prices):NaN;o.bucket=bucketOf(o.cat);if(o.bucket==="SET")sets.push(o);else if(o.bucket==="KURTA")kurtas.push(o);}});
     sets.sort(function(a,b){return b.totalQty-a.totalQty;});kurtas.sort(function(a,b){return b.totalQty-a.totalQty;});
-    S.idx={sets:sets,kurtas:kurtas};S.linkFam=detectLinkFamily();S.dirty=false;
+    S.idx={sets:sets,kurtas:kurtas};S.linkFam=detectLinkFamily();S.histLookup=buildHistoryLookup();S.dirty=false;
   }
   function ensureIndexes(){if(S.dirty||!S.idx){buildIndexes();}}
+
+  /* ---------- optional Customer Purchase History → RFM-lite (Recency/Frequency/Monetary) ----------
+     Entirely optional: if no history file was uploaded, this returns an empty
+     map and every downstream lookup misses, falling straight through to the
+     tool's original stock-only round-robin — nothing about that path changes. */
+  function buildHistoryLookup(){
+    var map=new Map();
+    if(!S.files.hist.rows.length)return map;
+    var hm=S.map.hist;if(!hm.phone)return map;
+    var now=Date.now();
+    S.files.hist.rows.forEach(function(r){
+      var ph=cleanPhone(r[hm.phone]);if(!ph.valid)return;
+      var lastDateRaw=hm.lastVisit?r[hm.lastVisit]:(hm.lastPurchase?r[hm.lastPurchase]:null);
+      var lastDate=lastDateRaw?new Date(lastDateRaw):null;
+      var recencyDays=(lastDate&&!isNaN(lastDate))?Math.max(0,Math.round((now-lastDate.getTime())/86400000)):null;
+      map.set(ph.local,{
+        categoryPref:hm.categoryPref?normCat(r[hm.categoryPref]):"",
+        brandPref:hm.brandPref?str(r[hm.brandPref]).toUpperCase():"",
+        atv:hm.atv?money(r[hm.atv]):NaN,
+        ltv:hm.ltv?money(r[hm.ltv]):NaN,
+        frequency:hm.purchaseCount?qtyNum(r[hm.purchaseCount]):null,
+        recencyDays:recencyDays
+      });
+    });
+    return map;
+  }
 
   /* ---------- build a pick ---------- */
   function buildLink(code){
@@ -638,6 +719,25 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return "";
   }
   function mkPick(o){var code=o.style,name=o.desc||o.style,size=firstSize(o.sizes),price=o.repPrice;var link=buildLink(code);var colText=code+" "+name+(size?" Size "+size:"")+(isFinite(price)?" - \u20B9"+inr(price):"");return {code:code,name:name,size:size,price:price,link:link,colText:colText,bucket:o.bucket};}
+
+  /* ---------- AI product recommendation ----------
+     When Purchase History is uploaded, a customer's preferred category/brand
+     gets first look within a small forward window of the same fair
+     round-robin cursor \u2014 every stock item still cycles through in order
+     overall, a genuine preference match just jumps the queue a little.
+     With no history (or no match found), this is byte-for-byte the
+     original "next item in rotation" behaviour. */
+  function nextFromPool(pool,cursor,pref){
+    if(pref&&(pref.categoryPref||pref.brandPref)){
+      var win=Math.min(pool.length,8);
+      for(var d=0;d<win;d++){
+        var idx=(cursor.i+d)%pool.length,o=pool[idx];
+        if((pref.categoryPref&&o.cat===pref.categoryPref)||(pref.brandPref&&o.brand===pref.brandPref)){cursor.i=idx+1;return o;}
+      }
+    }
+    var o2=pool[cursor.i%pool.length];cursor.i++;return o2;
+  }
+  function pickTwo(pool,cursor,pref){var out=[];for(var a=0;a<2;a++){if(!pool.length)break;out.push(mkPick(nextFromPool(pool,cursor,pref)));}return out;}
 
   /* ---------- message + link ---------- */
   function fillPick(p,n){return $("tmpl-pick").value.replace(/\{n\}/g,n).replace(/\{name\}/g,p.name).replace(/\{code\}/g,p.code).replace(/\{link\}/g,p.link);}
@@ -652,9 +752,37 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   function buildWaUrl(e164,message){var ep=$("opt-endpoint").value,t=encodeURIComponent(message);if(ep==="wa")return "https://wa.me/"+e164+"?text="+t;if(ep==="api")return "https://api.whatsapp.com/send?phone="+e164+"&text="+t;return "https://web.whatsapp.com/send?phone="+e164+"&text="+t;}
   function salOf(row){return str(row[S.map.cust.sal])||str($("opt-sal").value)||"Ma'am";}
 
+  /* ---------- AI message writer (Universal AI Pipeline) ----------
+     Reuses retail-chat.js/api/chat.js exactly like Ask AI does — no new AI
+     endpoint, no duplicated logic. The AI is instructed to keep {name}/
+     {salutation}/{picks}/{offer}/{store} literal so the existing per-customer
+     substitution in buildMessage() keeps working unchanged; if AI is
+     unavailable (signed out, rate-limited, offline) the manual template the
+     tool has always had is untouched and still fully editable. */
+  var AI_TONE_LABELS={again:"Write a fresh, professional retail WhatsApp outreach message template",shorter:"Rewrite the current draft to be noticeably shorter and punchier",premium:"Rewrite the current draft in a more premium, upscale retail tone",friendly:"Rewrite the current draft in a warmer, more friendly tone",hindi:"Rewrite the current draft in Hindi (Devanagari script)",english:"Rewrite the current draft in English",hinglish:"Rewrite the current draft in Hinglish (Roman-script mixed Hindi-English, common in Indian retail WhatsApp)",festival:"Rewrite the current draft with a festive, celebratory tone",luxury:"Rewrite the current draft in a luxury boutique tone",urgent:"Rewrite the current draft with urgency, limited-time-offer framing"};
+  var AI_WRITE_BUSY=false;
+  function aiWriteMessage(mode){
+    if(AI_WRITE_BUSY)return;
+    if(typeof RetailChat==="undefined"||!RetailChat){toast("AI message writer needs sign-in — edit the template manually for now.");return;}
+    AI_WRITE_BUSY=true;$("ai-write-busy").classList.add("show");$("btn-ai-write").disabled=true;
+    var current=str($("tmpl-main").value)||S.tmpl.main;
+    var offer=str($("opt-offer").value);
+    var instruction=AI_TONE_LABELS[mode]||AI_TONE_LABELS.again;
+    var q="You are writing a WhatsApp marketing message TEMPLATE for a retail store manager to reuse across many customers. "+instruction+".\n\nCurrent draft:\n"+current+"\n\nToday's offer text: "+(offer||"(none set)")+
+      "\n\nCRITICAL: the output MUST keep the literal placeholder tokens {name}, {salutation}, {picks}, {offer} and {store} exactly as written, wherever they belong in the message — never translate, remove, or replace them, since this app substitutes them per customer after you respond. Reply with ONLY the message template text, no explanation, no quotes around it.";
+    var ctx={};try{ctx={toolContext:RetailChat.buildToolContext("whatsappOutreach",buildAggregateContext())};}catch(e){}
+    RetailChat.ask(q,ctx).then(function(res){
+      AI_WRITE_BUSY=false;$("ai-write-busy").classList.remove("show");$("btn-ai-write").disabled=false;
+      if(res&&res.ok&&res.answer){
+        $("tmpl-main").value=res.answer.trim();renderPreview();toast("Message updated by AI ✓");
+        if(typeof AILearningStore!=="undefined")AILearningStore.record("messagePreference","lastTone",mode,{confidence:1,source:"manual-confirm",validated:true});
+      }else{toast("AI could not write the message right now — try again or edit manually.");}
+    }).catch(function(){AI_WRITE_BUSY=false;$("ai-write-busy").classList.remove("show");$("btn-ai-write").disabled=false;toast("AI could not write the message right now — try again or edit manually.");});
+  }
+
   /* ---------- preview ---------- */
   function linkify(s){return escapeHtml(s).replace(/(https?:\/\/[^\s]+)/g,function(m){return '<a href="'+escapeAttr(m)+'" target="_blank" rel="noopener">'+m+'</a>';});}
-  function renderPreview(){if(!ready())return;ensureIndexes();var row=S.files.cust.rows[0];var name=str(row[S.map.cust.name]);var sal=salOf(row);var ph=cleanPhone(row[S.map.cust.phone]);var sp=S.idx.sets,kp=S.idx.kurtas;var sets=[],kurtas=[];if(sp.length)sets.push(mkPick(sp[0]));if(sp.length>1)sets.push(mkPick(sp[1]));if(kp.length)kurtas.push(mkPick(kp[0]));if(kp.length>1)kurtas.push(mkPick(kp[1]));var picks=sets.concat(kurtas);var msg=buildMessage(name,sal,picks);$("pv-text").innerHTML=linkify(msg);var url=buildWaUrl(ph.e164,msg);$("pv-link").href=url;$("pv-link").textContent=(name||"Customer")+" \u00b7 +"+ph.e164+" \u00b7 open in WhatsApp";$("pv-who").textContent="Preview for "+(name||"first customer")+" \u2014 first "+sets.length+" set(s) + "+kurtas.length+" kurta(s) from stock. The next customer gets the next pieces.";}
+  function renderPreview(){if(!ready())return;ensureIndexes();var row=S.files.cust.rows[0];var name=str(row[S.map.cust.name]);var sal=salOf(row);var ph=cleanPhone(row[S.map.cust.phone]);var pref=S.histLookup&&S.histLookup.get(ph.local);var sets=pickTwo(S.idx.sets,{i:0},pref);var kurtas=pickTwo(S.idx.kurtas,{i:0},pref);var picks=sets.concat(kurtas);var msg=buildMessage(name,sal,picks);$("pv-text").innerHTML=linkify(msg);var url=buildWaUrl(ph.e164,msg);$("pv-link").href=url;$("pv-link").textContent=(name||"Customer")+" \u00b7 +"+ph.e164+" \u00b7 open in WhatsApp";$("pv-who").textContent="Preview for "+(name||"first customer")+" \u2014 first "+sets.length+" set(s) + "+kurtas.length+" kurta(s) from stock"+(pref?" (personalised from purchase history)":"")+". The next customer gets the next pieces.";}
 
   /* ---------- generate: round-robin distribution ---------- */
   function generate(){
@@ -663,21 +791,59 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if(!S.idx.sets.length&&!S.idx.kurtas.length){toast("No Sets or Kurtas found in stock \u2014 check the Sets/Kurtas list");return;}
     $("busy").classList.add("show");
     setTimeout(function(){
-      var cm=S.map.cust,sp=S.idx.sets,kp=S.idx.kurtas,si=0,ki=0,a;
+      var cm=S.map.cust,sp=S.idx.sets,kp=S.idx.kurtas,setCur={i:0},kurtaCur={i:0},hist=S.histLookup;
       S.gen=S.files.cust.rows.map(function(row,i){
         var name=str(row[cm.name]);var sal=salOf(row);var ph=cleanPhone(row[cm.phone]);
-        var sets=[],kurtas=[];
-        for(a=0;a<2;a++){if(sp.length){sets.push(mkPick(sp[si%sp.length]));si++;}}
-        for(a=0;a<2;a++){if(kp.length){kurtas.push(mkPick(kp[ki%kp.length]));ki++;}}
+        var pref=hist&&hist.get(ph.local);
+        var sets=pickTwo(sp,setCur,pref);
+        var kurtas=pickTwo(kp,kurtaCur,pref);
         var picks=sets.concat(kurtas);
         var msg=buildMessage(name,sal,picks);
-        return {i:i+1,name:name||"(no name)",sal:sal,local:ph.local,e164:ph.e164,valid:ph.valid,sets:sets,kurtas:kurtas,none:picks.length===0,msg:msg,url:buildWaUrl(ph.e164,msg),sent:false};
+        return {i:i+1,name:name||"(no name)",sal:sal,local:ph.local,e164:ph.e164,valid:ph.valid,sets:sets,kurtas:kurtas,none:picks.length===0,msg:msg,url:buildWaUrl(ph.e164,msg),sent:false,personalized:!!pref};
       });
-      S.view.page=1;$("card-results").classList.remove("locked");updateStats();renderTable();
+      S.view.page=1;$("card-results").classList.remove("locked");updateStats();renderTable();runQualityCheck();
       $("res-status").textContent="Generated "+S.gen.length.toLocaleString("en-IN")+" messages";
       $("busy").classList.remove("show");$("card-results").scrollIntoView({behavior:"smooth",block:"start"});
       toast("Done \u2014 "+S.gen.length.toLocaleString("en-IN")+" messages ready \uD83C\uDF89");
     },30);
+  }
+
+  /* ---------- AI quality check ----------
+     Runs automatically after every generate() and again before export.
+     Purely advisory \u2014 never blocks Export, only warns, exactly like this
+     tool's existing warning banners (load-warn/map-warn) already do. */
+  function runQualityCheck(){
+    var warnings=[];
+    if(!S.gen.length)return warnings;
+    var seenPhone={},dupPhones=0;
+    S.gen.forEach(function(g){if(g.local){if(seenPhone[g.local])dupPhones++;seenPhone[g.local]=true;}});
+    if(dupPhones)warnings.push(dupPhones+" duplicate customer number(s) \u2014 they'll receive the campaign more than once.");
+    var invalid=S.gen.filter(function(g){return !g.valid;}).length;
+    if(invalid)warnings.push(invalid+" invalid mobile number(s) \u2014 double-check before sending.");
+    var none=S.gen.filter(function(g){return g.none;}).length;
+    if(none)warnings.push(none+" customer(s) got no products \u2014 stock may be exhausted for their category.");
+    if(!S.map.soh.category)warnings.push("No Category column mapped in Stock \u2014 Set/Kurta classification may be inaccurate.");
+    var styleQty={};S.idx.sets.concat(S.idx.kurtas).forEach(function(o){styleQty[o.style]=o.totalQty;});
+    var lowStock=new Set();
+    S.gen.forEach(function(g){allPicks(g).forEach(function(p){if(styleQty[p.code]!==undefined&&styleQty[p.code]<=1)lowStock.add(p.code);});});
+    if(lowStock.size)warnings.push(lowStock.size+" recommended style(s) have only 1 unit left in stock.");
+    var useCount={},totalPicks=0;
+    S.gen.forEach(function(g){allPicks(g).forEach(function(p){useCount[p.code]=(useCount[p.code]||0)+1;totalPicks++;});});
+    var styleCount=Object.keys(useCount).length;
+    var overused=Object.keys(useCount).filter(function(c){return totalPicks&&(useCount[c]/totalPicks)>0.4;});
+    if(overused.length&&styleCount>3)warnings.push("One or more styles are being recommended to a disproportionate share of customers \u2014 check the Sets/Kurtas list for missing categories.");
+    var prices=[];S.gen.forEach(function(g){allPicks(g).forEach(function(p){if(isFinite(p.price)&&p.price>0)prices.push(p.price);});});
+    if(prices.length>4){
+      var med=median(prices);
+      var high=prices.filter(function(p){return p>med*3;}).length;
+      var low=prices.filter(function(p){return p<med*0.3;}).length;
+      if(high)warnings.push(high+" recommendation(s) priced far above the typical range (\u20B9"+inr(med)+" median) \u2014 check for a data error.");
+      if(low)warnings.push(low+" recommendation(s) priced far below the typical range \u2014 check for a data error.");
+    }
+    var w=$("quality-warn");
+    if(warnings.length){w.innerHTML="\u26A0 <b>AI quality check</b> \u2014 "+warnings.map(escapeHtml).join(" ");w.classList.add("show");}
+    else w.classList.remove("show");
+    return warnings;
   }
 
   /* ---------- table ---------- */
@@ -697,33 +863,78 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     $("pg-info").textContent=total?("Showing "+(start+1).toLocaleString("en-IN")+"\u2013"+end.toLocaleString("en-IN")+" of "+total.toLocaleString("en-IN")):"0 results";$("pg-prev").disabled=S.view.page<=1;$("pg-next").disabled=S.view.page>=pages;
   }
   function byIdx(i){for(var k=0;k<S.gen.length;k++)if(S.gen[k].i===i)return S.gen[k];return null;}
-  function updateStats(){var none=0,sent=0;S.gen.forEach(function(g){if(g.none)none++;if(g.sent)sent++;});$("s-total").textContent=S.gen.length.toLocaleString("en-IN");$("s-sets").textContent=(S.idx?S.idx.sets.length:0).toLocaleString("en-IN");$("s-kurtas").textContent=(S.idx?S.idx.kurtas.length:0).toLocaleString("en-IN");$("s-none").textContent=none.toLocaleString("en-IN");$("s-sent").textContent=sent.toLocaleString("en-IN");}
+  function updateStats(){
+    var none=0,sent=0;S.gen.forEach(function(g){if(g.none)none++;if(g.sent)sent++;});
+    $("s-total").textContent=S.gen.length.toLocaleString("en-IN");$("s-sets").textContent=(S.idx?S.idx.sets.length:0).toLocaleString("en-IN");$("s-kurtas").textContent=(S.idx?S.idx.kurtas.length:0).toLocaleString("en-IN");$("s-none").textContent=none.toLocaleString("en-IN");$("s-sent").textContent=sent.toLocaleString("en-IN");
+    var stats=buildCampaignStats();
+    var catTxt=Object.keys(stats.byCategory).map(function(k){return k+" "+stats.byCategory[k];}).join(" · ")||"—";
+    $("campaign-extra-stats").textContent="Coverage "+stats.coveragePct+"% · Avg recommendation price ₹"+inr(stats.avgPrice)+" · Personalised "+stats.personalized+"/"+stats.total+" · Quality score "+stats.qualityScore+"/100 · Mix: "+catTxt;
+  }
 
   /* ---------- export: formatted report (ExcelJS) ---------- */
   var HEAD=["#","Customer","Mobile","Sir/Ma'am","Set 1 (link)","Set 2","Kurta 1","Kurta 2","WhatsApp Message (with 4 links)","Send on WhatsApp","DONE BY"];
   var WIDTHS=[5,18,15,10,30,30,26,26,60,17,11];
+  function buildCampaignStats(){
+    var none=0,sent=0,valid=0,personalized=0,priceSum=0,priceN=0,byCategory={},byBrand={};
+    S.gen.forEach(function(g){
+      if(g.none)none++;if(g.sent)sent++;if(g.valid)valid++;if(g.personalized)personalized++;
+      allPicks(g).forEach(function(p){if(isFinite(p.price)){priceSum+=p.price;priceN++;}var cat=p.bucket||"OTHER";byCategory[cat]=(byCategory[cat]||0)+1;});
+    });
+    (S.idx?S.idx.sets.concat(S.idx.kurtas):[]).forEach(function(o){if(o.brand)byBrand[o.brand]=(byBrand[o.brand]||0)+1;});
+    var total=S.gen.length,coveragePct=total?Math.round(((total-none)/total)*100):0,avgPrice=priceN?Math.round(priceSum/priceN):0;
+    var warnCount=runQualityCheck().length;
+    var qualityScore=Math.max(0,Math.min(100,Math.round(coveragePct*0.6+(valid/(total||1))*100*0.3-warnCount*4)));
+    return {total:total,none:none,sent:sent,valid:valid,personalized:personalized,coveragePct:coveragePct,avgPrice:avgPrice,byCategory:byCategory,byBrand:byBrand,qualityScore:qualityScore};
+  }
   function exportReport(){
     if(!S.gen.length){toast("Generate first");return;}
     if(typeof ExcelJS==="undefined"){toast("Report engine missing \u2014 using CSV");exportCsv();return;}
     toast("Building report…");
+    var warnings=runQualityCheck();
     var wb=new ExcelJS.Workbook();
+    var stats=buildCampaignStats();
+    var sw=wb.addWorksheet("Campaign Summary",{views:[{showGridLines:false}]});
+    sw.columns=[{width:34},{width:20}];
+    var title=sw.addRow(["AI Customer Campaign Builder — Campaign Summary",""]);
+    sw.mergeCells("A1:B1");title.getCell(1).font={bold:true,size:14,color:{argb:"FFE9D692"}};title.getCell(1).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF122145"}};title.height=26;title.getCell(1).alignment={vertical:"middle"};
+    sw.addRow(["Generated",new Date().toLocaleString()]);
+    sw.addRow([]);
+    [["Customers",stats.total],["Valid numbers",stats.valid],["Invalid numbers",stats.total-stats.valid],
+     ["Products matched (have 1+ piece)",stats.total-stats.none],["No products",stats.none],
+     ["Coverage",stats.coveragePct+"%"],["Average recommendation price","Rs "+inr(stats.avgPrice)],
+     ["Personalised from purchase history",stats.personalized],["Estimated campaign reach",stats.valid],
+     ["Campaign quality score",stats.qualityScore+" / 100"]
+    ].forEach(function(r){var rr=sw.addRow(r);rr.getCell(1).font={bold:true,color:{argb:"FF122145"}};});
+    sw.addRow([]);
+    var ch=sw.addRow(["Category distribution",""]);ch.getCell(1).font={bold:true,italic:true};
+    Object.keys(stats.byCategory).forEach(function(k){sw.addRow([k,stats.byCategory[k]]);});
+    sw.addRow([]);
+    var bh=sw.addRow(["Brand distribution",""]);bh.getCell(1).font={bold:true,italic:true};
+    Object.keys(stats.byBrand).forEach(function(k){sw.addRow([k,stats.byBrand[k]]);});
+    if(warnings.length){
+      sw.addRow([]);var wh=sw.addRow(["AI quality warnings",""]);wh.getCell(1).font={bold:true,color:{argb:"FFB3261E"}};
+      warnings.forEach(function(w){var wr=sw.addRow([w,""]);wr.getCell(1).font={color:{argb:"FFB3261E"}};sw.mergeCells("A"+wr.number+":B"+wr.number);});
+    }
     var ws=wb.addWorksheet("Outreach Campaign",{views:[{state:"frozen",ySplit:1}]});
+    ws.autoFilter={from:{row:1,column:1},to:{row:1,column:HEAD.length}};
     ws.columns=HEAD.map(function(h,i){return {header:h,width:WIDTHS[i]};});
     var hr=ws.getRow(1);hr.height=40;
     hr.eachCell(function(c){c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF122145"}};c.font={color:{argb:"FFE9D692"},bold:true,size:11};c.alignment={vertical:"middle",horizontal:"center",wrapText:true};c.border=allBorder("FF2A3A5E");});
     var linkFont={color:{argb:"FF1155CC"},underline:true,size:10};
     var waFont={color:{argb:"FF127A3D"},bold:true,underline:true};
+    var styleQty={};(S.idx?S.idx.sets.concat(S.idx.kurtas):[]).forEach(function(o){styleQty[o.style]=o.totalQty;});
     S.gen.forEach(function(g,idx){
       var row=ws.addRow([g.i,g.name,g.local,g.sal,cellText(g.sets[0]),cellText(g.sets[1]),cellText(g.kurtas[0]),cellText(g.kurtas[1]),g.msg,"Send on WhatsApp","store"]);
       row.alignment={vertical:"top",wrapText:true};
       setLink(row.getCell(5),g.sets[0],linkFont);setLink(row.getCell(6),g.sets[1],linkFont);
       setLink(row.getCell(7),g.kurtas[0],linkFont);setLink(row.getCell(8),g.kurtas[1],linkFont);
+      [[5,g.sets[0]],[6,g.sets[1]],[7,g.kurtas[0]],[8,g.kurtas[1]]].forEach(function(pair){var p=pair[1];if(p&&styleQty[p.code]!==undefined&&styleQty[p.code]<=1){row.getCell(pair[0]).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFFCE9C9"}};}});
       var sc=row.getCell(10);sc.value={text:"Send on WhatsApp",hyperlink:g.url};sc.font=waFont;sc.alignment={vertical:"top",horizontal:"center"};
       row.getCell(3).numFmt="@";row.getCell(3).alignment={vertical:"top"};
       row.getCell(1).alignment={vertical:"top",horizontal:"center"};
       row.getCell(9).font={size:10};
-      if(!g.valid){row.getCell(3).font={color:{argb:"FFB3261E"},bold:true};}
-      var fill=(idx%2===1)?"FFF7F8FB":null;
+      if(!g.valid){row.getCell(3).font={color:{argb:"FFB3261E"},bold:true};row.getCell(3).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFFBEAE9"}};}
+      var fill=g.none?"FFFBEAE9":((idx%2===1)?"FFF7F8FB":null);
       row.eachCell({includeEmpty:true},function(c){c.border=allBorder("FFE3E6EE");if(fill&&!c.fill)c.fill={type:"pattern",pattern:"solid",fgColor:{argb:fill}};});
     });
     wb.xlsx.writeBuffer().then(function(buf){download("Outreach_Report.xlsx",new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));toast("Report downloaded \u2713");}).catch(function(){toast("Could not build report \u2014 try CSV");});
@@ -745,16 +956,19 @@ https://github.com/nodeca/pako/blob/main/LICENSE
      tiles — same shared /api/chat reasoning and report shape every other
      tool on the pipeline uses. Purely additive; nothing existing is touched. ---------- */
   function buildAggregateContext(){
-    var none=0,sent=0,valid=0;
-    S.gen.forEach(function(g){if(g.none)none++;if(g.sent)sent++;if(g.valid)valid++;});
+    var stats=buildCampaignStats();
     return {
-      totalCustomers:S.gen.length,
-      validPhoneNumbers:valid,
-      invalidPhoneNumbers:S.gen.length-valid,
-      customersWithNoPieces:none,
-      alreadyMarkedSent:sent,
+      totalCustomers:stats.total,
+      validPhoneNumbers:stats.valid,
+      invalidPhoneNumbers:stats.total-stats.valid,
+      customersWithNoPieces:stats.none,
+      alreadyMarkedSent:stats.sent,
       setStylesInStock:(S.idx?S.idx.sets.length:0),
-      kurtaStylesInStock:(S.idx?S.idx.kurtas.length:0)
+      kurtaStylesInStock:(S.idx?S.idx.kurtas.length:0),
+      coveragePct:stats.coveragePct,
+      averageRecommendationPrice:stats.avgPrice,
+      personalizedFromHistory:stats.personalized,
+      campaignQualityScore:stats.qualityScore
     };
   }
   var AI_BUSY=false;
@@ -806,6 +1020,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   $("opt-endpoint").addEventListener("change",function(){S.dirty=true;renderPreview();});
   function wireTokens(wrap,target){document.getElementById(wrap).querySelectorAll(".tok").forEach(function(t){t.addEventListener("click",function(){var el=$(target),tok=t.getAttribute("data-tok"),s=el.selectionStart||el.value.length,e=el.selectionEnd||el.value.length;el.value=el.value.slice(0,s)+tok+el.value.slice(e);el.focus();el.selectionStart=el.selectionEnd=s+tok.length;renderPreview();});});}
   wireTokens("tokens-main","tmpl-main");wireTokens("tokens-pick","tmpl-pick");
+  $("btn-ai-write").addEventListener("click",function(){aiWriteMessage("again");});
+  document.querySelectorAll("#ai-tone-row .tok").forEach(function(t){t.addEventListener("click",function(){aiWriteMessage(t.getAttribute("data-tone"));});});
   $("btn-generate").addEventListener("click",generate);
   $("search").addEventListener("input",function(){S.view.search=this.value;S.view.page=1;renderTable();});
   $("f-type").addEventListener("change",function(){S.view.type=this.value;S.view.page=1;renderTable();});
