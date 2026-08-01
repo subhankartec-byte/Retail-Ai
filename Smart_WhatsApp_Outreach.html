@@ -1004,7 +1004,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     root.innerHTML=html;
     $("mc-open-wa").addEventListener("click",function(){
       S.mobile.awaitingConfirm=true;S.mobile.awaitingSince=Date.now();
-      window.open(g.url,"_blank","noopener");
+      window.open(CampaignUI.deviceWaUrl(g.e164,g.msg),"_blank","noopener");
       $("mc-confirm").hidden=false;
     });
     root.querySelectorAll("#mc-confirm button").forEach(function(b){b.addEventListener("click",function(){mcConfirm(list,idx,b.getAttribute("data-c"));});});

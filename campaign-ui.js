@@ -66,6 +66,30 @@
     return "https://web.whatsapp.com/send?phone=" + e164 + "&text=" + t;
   }
 
+  /* True on Android/iPhone/iPad/iPod, false on desktop (Windows/Mac/
+     Linux). Feature-detection-free by design — WhatsApp's own deep
+     links are the only cross-platform-reliable signal, and UA
+     sniffing here only chooses WHICH deep link family to use, never
+     gates a feature outright. */
+  function isMobileDevice() {
+    var ua = (navigator.userAgent || navigator.vendor || "") + "";
+    return /android/i.test(ua) || /iphone|ipad|ipod/i.test(ua);
+  }
+
+  /* Device-aware "Open WhatsApp" target, decided at click time (not
+     baked into the stored template/export like buildWaUrl()):
+     desktop -> WhatsApp Web (needs a logged-in browser session);
+     Android/iPhone -> wa.me, which itself hands off to the installed
+     app when present and falls back to WhatsApp Web/install prompt
+     when it isn't — the graceful fallback Meta documents for wa.me,
+     so no extra whatsapp:// scheme + timeout-detection hack is
+     needed (those are unreliable in mobile Safari). */
+  function deviceWaUrl(e164, message) {
+    var t = encodeURIComponent(message);
+    if (isMobileDevice()) return "https://wa.me/" + e164 + "?text=" + t;
+    return "https://web.whatsapp.com/send?phone=" + e164 + "&text=" + t;
+  }
+
   /* list items use `mobileStatus`: "pending"|"completed"|"skipped"|"failed" */
   function mcStats(list, completedTimes) {
     var completed = 0, skipped = 0, failed = 0;
@@ -98,6 +122,8 @@
     linkify: linkify,
     buildMessage: buildMessage,
     buildWaUrl: buildWaUrl,
+    isMobileDevice: isMobileDevice,
+    deviceWaUrl: deviceWaUrl,
     mcStats: mcStats,
     mcFmtEta: mcFmtEta
   };

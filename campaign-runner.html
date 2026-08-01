@@ -141,7 +141,7 @@
 
     document.getElementById("mc-open-wa").addEventListener("click", function () {
       state.awaitingConfirm = true; state.awaitingSince = Date.now();
-      window.open(g.url, "_blank", "noopener");
+      window.open(window.CampaignUI.deviceWaUrl(g.e164, g.msg), "_blank", "noopener");
       document.getElementById("mc-confirm").hidden = false;
     });
     root.querySelectorAll("#mc-confirm button").forEach(function (b) {
