@@ -1,0 +1,86 @@
+/* =========================================================
+   campaign-ui.css — Retail AI · shared Campaign Runner UI
+   ---------------------------------------------------------
+   The mobile "one customer at a time" card, split dashboard,
+   and done-screen styling used by BOTH the manager tool
+   (Smart_WhatsApp_Outreach.html, Mobile Campaign Mode) and the
+   standalone staff campaign-runner page. Extracted so the two
+   pages never carry two copies of the same rules.
+
+   Scoped under .mc-scope (not :root) so dropping this file into
+   a page never overrides that page's own theme variables —
+   apply class="mc-scope" to the container these cards render
+   into (e.g. #mobile-view) and everything below cascades to its
+   dynamically-injected innerHTML content normally.
+   ========================================================= */
+.mc-scope{
+  --navy:#122145;--navy-2:#0c1730;--navy-3:#1c2f5c;
+  --gold:#c9a227;--gold-soft:#e9d692;--gold-tint:#faf3dc;
+  --green:#1f7a4d;--green-tint:#e6f4ec;
+  --red:#b3261e;--red-tint:#fbeae9;
+  --muted:#5d6577;--line:#e3e6ee;
+  --shadow:0 1px 2px rgba(18,33,69,.06),0 6px 18px rgba(18,33,69,.06);
+}
+
+.mc-scope .btn{appearance:none;border:1px solid transparent;border-radius:9px;padding:9px 15px;font-size:13.5px;font-weight:650;cursor:pointer;transition:.13s;line-height:1;display:inline-flex;align-items:center;gap:7px;font-family:inherit}
+.mc-scope .btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.mc-scope .btn-primary{background:var(--gold);color:var(--navy-2);border-color:var(--gold)}
+.mc-scope .btn-primary:hover{background:#d8b331}
+.mc-scope .btn-navy{background:var(--navy);color:#fff}
+.mc-scope .btn-navy:hover{background:var(--navy-3)}
+.mc-scope .btn-ghost{background:#fff;color:var(--navy);border-color:#cdd3e2}
+.mc-scope .btn-ghost:hover{background:#f4f6fb;border-color:var(--navy-3)}
+.mc-scope .btn:disabled{opacity:.5;cursor:default}
+
+.mc-scope .empty{padding:40px 20px;text-align:center;color:var(--muted)}
+
+.mc-wrap{max-width:480px;margin:0 auto}
+.mc-progress{background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#fff;border-radius:14px;padding:16px 18px;margin-bottom:14px}
+.mc-progress .mc-big{font-size:26px;font-weight:800;letter-spacing:-.3px}
+.mc-progress .mc-lbl{font-size:11.5px;letter-spacing:.3px;text-transform:uppercase;color:var(--gold-soft);font-weight:700;margin-bottom:4px}
+.mc-bar{background:rgba(255,255,255,.15);border-radius:999px;height:9px;margin-top:10px;overflow:hidden}
+.mc-bar-fill{background:var(--gold);height:100%;border-radius:999px;transition:width .3s ease}
+.mc-stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.mc-stat-row div{background:rgba(255,255,255,.08);border-radius:8px;padding:7px 4px;text-align:center}
+.mc-stat-row .mc-sn{display:block;font-size:16px;font-weight:800}
+.mc-stat-row .mc-sl{font-size:9.5px;letter-spacing:.2px;text-transform:uppercase;color:#c6cede}
+.mc-eta{font-size:11.5px;color:#c6cede;margin-top:8px}
+.mc-card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px;text-align:center}
+.mc-card h2{margin:0;font-size:22px;color:var(--navy-2)}
+.mc-card .mc-phone{font-family:ui-monospace,monospace;font-size:15px;color:var(--muted);margin-top:4px}
+.mc-card .mc-badge{display:inline-block;margin-top:8px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px}
+.mc-card .mc-badge.ok{background:var(--green-tint);color:var(--green)}
+.mc-card .mc-badge.bad{background:var(--red-tint);color:var(--red)}
+.mc-picks{text-align:left;margin:16px 0;display:flex;flex-direction:column;gap:8px}
+.mc-pick{border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13px;background:#fbfbfd}
+.mc-pick b{color:var(--navy-2)}
+.mc-pick a{color:var(--navy-3);text-decoration:none;font-weight:600}
+.mc-preview{background:#ece5dd;border-radius:12px;padding:12px;text-align:left;margin:14px 0}
+.mc-preview .bubble{font-size:13px}
+.mc-open-wa{display:flex;align-items:center;justify-content:center;gap:9px;background:#25D366;color:#08331b;border:none;border-radius:12px;padding:16px;font-size:16.5px;font-weight:800;width:100%;cursor:pointer;box-shadow:0 6px 18px -6px rgba(37,211,102,.6)}
+.mc-open-wa:hover{background:#20c25c}
+.mc-confirm{margin-top:16px;padding-top:16px;border-top:1px dashed var(--line)}
+.mc-confirm p{font-weight:700;color:var(--navy-2);margin:0 0 10px}
+.mc-confirm-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mc-confirm-row button{border:none;border-radius:10px;padding:13px 6px;font-weight:800;font-size:13.5px;cursor:pointer}
+.mc-yes{background:var(--green-tint);color:var(--green)}
+.mc-no{background:var(--red-tint);color:var(--red)}
+.mc-skip{background:#eef1f8;color:var(--navy-3)}
+.mc-nav{display:flex;justify-content:space-between;margin-top:14px}
+.mc-done{text-align:center;padding:40px 20px}
+.mc-done .mc-score{font-size:44px;font-weight:800;color:var(--navy-2)}
+.mc-split-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:14px}
+.mc-split-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#fff}
+.mc-split-card h4{margin:0 0 6px;font-size:14px;color:var(--navy-2)}
+.mc-split-bar{background:var(--line);border-radius:999px;height:7px;margin:8px 0;overflow:hidden}
+.mc-split-bar-fill{background:var(--green);height:100%}
+.mc-split-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.mc-split-actions button{font-size:11.5px;padding:6px 9px}
+.mc-overall{background:var(--gold-tint);border:1px solid var(--gold-soft);border-radius:12px;padding:14px 16px;margin-top:16px}
+
+/* Link-status row (share/copy/revoke/regenerate), new for the
+   Firestore-backed share flow — same visual family as mc-split-*. */
+.mc-link-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:11.5px;color:var(--muted)}
+.mc-link-row .mc-link-badge{font-weight:700;padding:2px 8px;border-radius:999px}
+.mc-link-row .mc-link-badge.active{background:var(--green-tint);color:var(--green)}
+.mc-link-row .mc-link-badge.revoked,.mc-link-row .mc-link-badge.expired{background:var(--red-tint);color:var(--red)}

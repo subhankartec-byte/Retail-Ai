@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Your Campaign — Retail AI</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="campaign-ui.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,sans-serif;background:#f4f6fb;min-height:100vh;padding:16px}
+  .page{max-width:480px;margin:0 auto;padding-top:8px}
+  .loading,.error{text-align:center;padding:60px 20px;color:#5d6577}
+  .error h2{color:#b3261e;margin:0 0 8px}
+  .spin{width:28px;height:28px;border:3px solid #e9d692;border-top-color:#c9a227;border-radius:50%;animation:sp .7s linear infinite;margin:0 auto 16px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .empty{padding:40px 20px;text-align:center;color:#5d6577}
+</style>
+</head>
+<body>
+<div class="page mc-scope" id="root">
+  <div class="loading"><div class="spin"></div>Loading your campaign…</div>
+</div>
+
+<script src="campaign-ui.js"></script>
+<script type="module" src="campaign-store.js"></script>
+<script type="module">
+/* =========================================================
+   campaign-runner.html — Retail AI · staff campaign runner
+   ---------------------------------------------------------
+   The ONLY page a staff member ever opens. No login, no upload,
+   no settings — just the campaign+token in the URL
+   (?c=<campaignId>&t=<token>). Everything a customer needs is
+   read live from Firestore via campaign-store.js; the message
+   text and WhatsApp link are built with the exact same
+   campaign-ui.js used by the manager tool, so nothing here is a
+   second implementation of that logic.
+
+   Security is enforced by firestore.rules, not by this file:
+   an inactive or expired token simply can't be read, so this
+   page shows one honest "link no longer active" state for
+   revoked/expired/mistyped alike — it never knows which.
+   ========================================================= */
+(function () {
+  "use strict";
+  var params = new URLSearchParams(location.search);
+  var campaignId = params.get("c"), token = params.get("t");
+  var root = document.getElementById("root");
+  var state = { cursor: 0, awaitingConfirm: false, awaitingSince: null, completedTimes: [], list: null, tmpl: {}, label: "", unsubMeta: null, unsubCustomers: null, ended: false };
+
+  function showEnd(title, body) {
+    state.ended = true;
+    if (state.unsubCustomers) { state.unsubCustomers(); state.unsubCustomers = null; }
+    if (state.unsubMeta) { state.unsubMeta(); state.unsubMeta = null; }
+    root.innerHTML = '<div class="error"><h2>' + CampaignUI.escapeHtml(title) + '</h2><p>' + CampaignUI.escapeHtml(body) + '</p></div>';
+  }
+
+  if (!campaignId || !token) {
+    showEnd("Link incomplete", "This campaign link is missing information. Ask your manager to resend it.");
+  } else {
+    start();
+  }
+
+  function start() {
+    state.unsubMeta = window.CampaignStore.watchAssignmentMeta(campaignId, token, function (meta) {
+      if (state.ended) return;
+      if (!meta || meta.active === false) {
+        showEnd("Link no longer active", "This campaign link has expired or been revoked. Ask your manager for a new one.");
+        return;
+      }
+      state.tmpl = meta.messageTemplate || {};
+      state.label = meta.label || "";
+      if (!state.unsubCustomers) subscribeCustomers();
+    });
+  }
+
+  function subscribeCustomers() {
+    state.unsubCustomers = window.CampaignStore.watchCustomers(campaignId, token, function (list) {
+      if (state.ended) return;
+      if (!list) { showEnd("Link no longer active", "This campaign link has expired or been revoked. Ask your manager for a new one."); return; }
+      state.list = list.map(function (c) {
+        var picks = (c.sets || []).concat(c.kurtas || []);
+        var msg = window.CampaignUI.buildMessage(state.tmpl, c.name, c.sal, picks);
+        return Object.assign({}, c, { msg: msg, url: window.CampaignUI.buildWaUrl(c.e164, msg, state.tmpl.endpoint) });
+      });
+      render();
+    });
+  }
+
+  function mcStats() { return window.CampaignUI.mcStats(state.list, state.completedTimes); }
+
+  function render() {
+    if (!state.list || !state.list.length) { root.innerHTML = '<div class="empty">No customers in this campaign yet.</div>'; return; }
+    var idx = Math.min(state.cursor, state.list.length);
+    if (idx >= state.list.length) { renderDone(); return; }
+    renderCard(idx);
+  }
+
+  function renderCard(idx) {
+    var g = state.list[idx], st = mcStats();
+    var picksHtml = g.sets.concat(g.kurtas).map(function (p) {
+      return '<div class="mc-pick"><b>' + CampaignUI.escapeHtml(p.name) + '</b> <code>' + CampaignUI.escapeHtml(p.code) + '</code>' +
+        (p.link ? ' · <a href="' + CampaignUI.escapeAttr(p.link) + '" target="_blank" rel="noopener">view</a>' : '') + '</div>';
+    }).join("") || '<div class="mc-pick">No pieces available for this customer.</div>';
+
+    root.innerHTML = '<div class="mc-wrap">' +
+      '<div class="mc-progress">' +
+        '<div class="mc-lbl">' + CampaignUI.escapeHtml(state.label || "Your Campaign") + '</div>' +
+        '<div class="mc-big">' + st.completed + ' / ' + st.total + ' Customers Completed</div>' +
+        '<div class="mc-bar"><div class="mc-bar-fill" style="width:' + st.pct + '%"></div></div>' +
+        '<div class="mc-stat-row">' +
+          '<div><span class="mc-sn">' + st.completed + '</span><span class="mc-sl">Done</span></div>' +
+          '<div><span class="mc-sn">' + st.remaining + '</span><span class="mc-sl">Remaining</span></div>' +
+          '<div><span class="mc-sn">' + st.skipped + '</span><span class="mc-sl">Skipped</span></div>' +
+          '<div><span class="mc-sn">' + st.failed + '</span><span class="mc-sl">Failed</span></div>' +
+        '</div>' +
+        '<div class="mc-eta">Est. time remaining: ' + CampaignUI.mcFmtEta(st.etaMs) + ' · Campaign score ' + st.score + '/100</div>' +
+      '</div>' +
+      '<div class="mc-card">' +
+        '<h2>' + CampaignUI.escapeHtml(g.name) + '</h2>' +
+        '<div class="mc-phone">+' + CampaignUI.escapeHtml(g.e164) + '</div>' +
+        (g.valid ? '<span class="mc-badge ok">valid number</span>' : '<span class="mc-badge bad">check number</span>') +
+        '<div class="mc-picks">' + picksHtml + '</div>' +
+        '<div class="mc-preview"><div class="bubble">' + CampaignUI.linkify(g.msg) + '</div></div>' +
+        '<button class="mc-open-wa" id="mc-open-wa" type="button">💬 Open WhatsApp</button>' +
+        '<div class="mc-confirm" id="mc-confirm" hidden>' +
+          '<p>✓ Message sent?</p>' +
+          '<div class="mc-confirm-row">' +
+            '<button class="mc-yes" data-c="completed" type="button">YES</button>' +
+            '<button class="mc-no" data-c="failed" type="button">NO</button>' +
+            '<button class="mc-skip" data-c="skipped" type="button">SKIP</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="mc-nav">' +
+          '<button class="btn btn-ghost" id="mc-prev" type="button"' + (idx === 0 ? " disabled" : "") + '>← Prev</button>' +
+          '<button class="btn btn-ghost" id="mc-back" type="button">Skip for now</button>' +
+          '<button class="btn btn-ghost" id="mc-next" type="button"' + (idx >= state.list.length - 1 ? " disabled" : "") + '>Next →</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+    document.getElementById("mc-open-wa").addEventListener("click", function () {
+      state.awaitingConfirm = true; state.awaitingSince = Date.now();
+      window.open(g.url, "_blank", "noopener");
+      document.getElementById("mc-confirm").hidden = false;
+    });
+    root.querySelectorAll("#mc-confirm button").forEach(function (b) {
+      b.addEventListener("click", function () { confirmStatus(idx, b.getAttribute("data-c")); });
+    });
+    var prevBtn = document.getElementById("mc-prev");
+    prevBtn.addEventListener("click", function () { state.cursor = Math.max(0, idx - 1); state.awaitingConfirm = false; render(); });
+    var nextBtn = document.getElementById("mc-next");
+    nextBtn.addEventListener("click", function () { state.cursor = Math.min(state.list.length - 1, idx + 1); state.awaitingConfirm = false; render(); });
+    document.getElementById("mc-back").addEventListener("click", function () { confirmStatus(idx, "skipped"); });
+  }
+
+  function confirmStatus(idx, status) {
+    var g = state.list[idx];
+    g.mobileStatus = status; // optimistic — the next live snapshot confirms it
+    if (status === "completed" && state.awaitingSince) state.completedTimes.push(Date.now() - state.awaitingSince);
+    state.awaitingConfirm = false; state.awaitingSince = null;
+    window.CampaignStore.updateCustomerStatus(campaignId, token, idx, status).catch(function () {
+      var warn = document.createElement("div");
+      warn.textContent = "Could not sync — check your connection and try again";
+      warn.style.cssText = "background:#fbeae9;color:#b3261e;padding:8px 12px;border-radius:8px;margin-bottom:10px;font-size:12.5px;text-align:center";
+      root.insertBefore(warn, root.firstChild);
+    });
+    var next = idx + 1; while (next < state.list.length && state.list[next].mobileStatus !== "pending") next++;
+    state.cursor = next < state.list.length ? next : state.list.length;
+    render();
+  }
+
+  function renderDone() {
+    var st = mcStats();
+    root.innerHTML = '<div class="mc-wrap"><div class="mc-card mc-done">' +
+      '<div>🎉 Campaign complete</div>' +
+      '<div class="mc-score">' + st.score + '</div>' +
+      '<div style="color:var(--muted)">Campaign score out of 100</div>' +
+      '<div style="margin-top:14px">' + st.completed + ' completed · ' + st.skipped + ' skipped · ' + st.failed + ' failed</div>' +
+    '</div></div>';
+  }
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible" && state.awaitingConfirm) {
+      var el = document.getElementById("mc-confirm"); if (el) el.hidden = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>

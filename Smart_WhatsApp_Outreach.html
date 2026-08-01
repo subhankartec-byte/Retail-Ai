@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Customer Campaign Builder</title>
+<link rel="stylesheet" href="campaign-ui.css">
 <style>
   :root{
     --navy:#122145;--navy-2:#0c1730;--navy-3:#1c2f5c;
@@ -191,52 +192,13 @@
   .printbtn{background:var(--navy,#122145);color:#fff;border:1px solid var(--navy,#122145);border-radius:5px;padding:6px 11px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap;font-family:inherit}
   .printbtn:hover{filter:brightness(1.15)}
   .printbtn:disabled{opacity:.55;cursor:default}
-  /* ---------- Mobile Campaign Mode ---------- */
+  /* ---------- Mobile Campaign Mode ----------
+     Card/dashboard rules live in the shared campaign-ui.css
+     (loaded in <head>) so this tool and the staff campaign-runner
+     page never carry two copies of the same CSS. Only this tool's
+     own mode-toggle buttons stay here. */
   #mode-toggle .btn.active{background:var(--navy);color:#fff}
   #mode-toggle .btn:not(.active){background:#fff;color:var(--navy);border-color:#cdd3e2}
-  .mc-wrap{max-width:480px;margin:0 auto}
-  .mc-progress{background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#fff;border-radius:14px;padding:16px 18px;margin-bottom:14px}
-  .mc-progress .mc-big{font-size:26px;font-weight:800;letter-spacing:-.3px}
-  .mc-progress .mc-lbl{font-size:11.5px;letter-spacing:.3px;text-transform:uppercase;color:var(--gold-soft);font-weight:700;margin-bottom:4px}
-  .mc-bar{background:rgba(255,255,255,.15);border-radius:999px;height:9px;margin-top:10px;overflow:hidden}
-  .mc-bar-fill{background:var(--gold);height:100%;border-radius:999px;transition:width .3s ease}
-  .mc-stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
-  .mc-stat-row div{background:rgba(255,255,255,.08);border-radius:8px;padding:7px 4px;text-align:center}
-  .mc-stat-row .mc-sn{display:block;font-size:16px;font-weight:800}
-  .mc-stat-row .mc-sl{font-size:9.5px;letter-spacing:.2px;text-transform:uppercase;color:#c6cede}
-  .mc-eta{font-size:11.5px;color:#c6cede;margin-top:8px}
-  .mc-card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px;text-align:center}
-  .mc-card h2{margin:0;font-size:22px;color:var(--navy-2)}
-  .mc-card .mc-phone{font-family:ui-monospace,monospace;font-size:15px;color:var(--muted);margin-top:4px}
-  .mc-card .mc-badge{display:inline-block;margin-top:8px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px}
-  .mc-card .mc-badge.ok{background:var(--green-tint);color:var(--green)}
-  .mc-card .mc-badge.bad{background:var(--red-tint);color:var(--red)}
-  .mc-picks{text-align:left;margin:16px 0;display:flex;flex-direction:column;gap:8px}
-  .mc-pick{border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13px;background:#fbfbfd}
-  .mc-pick b{color:var(--navy-2)}
-  .mc-pick a{color:var(--navy-3);text-decoration:none;font-weight:600}
-  .mc-preview{background:#ece5dd;border-radius:12px;padding:12px;text-align:left;margin:14px 0}
-  .mc-preview .bubble{font-size:13px}
-  .mc-open-wa{display:flex;align-items:center;justify-content:center;gap:9px;background:#25D366;color:#08331b;border:none;border-radius:12px;padding:16px;font-size:16.5px;font-weight:800;width:100%;cursor:pointer;box-shadow:0 6px 18px -6px rgba(37,211,102,.6)}
-  .mc-open-wa:hover{background:#20c25c}
-  .mc-confirm{margin-top:16px;padding-top:16px;border-top:1px dashed var(--line)}
-  .mc-confirm p{font-weight:700;color:var(--navy-2);margin:0 0 10px}
-  .mc-confirm-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-  .mc-confirm-row button{border:none;border-radius:10px;padding:13px 6px;font-weight:800;font-size:13.5px;cursor:pointer}
-  .mc-yes{background:var(--green-tint);color:var(--green)}
-  .mc-no{background:var(--red-tint);color:var(--red)}
-  .mc-skip{background:#eef1f8;color:var(--navy-3)}
-  .mc-nav{display:flex;justify-content:space-between;margin-top:14px}
-  .mc-done{text-align:center;padding:40px 20px}
-  .mc-done .mc-score{font-size:44px;font-weight:800;color:var(--navy-2)}
-  .mc-split-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:14px}
-  .mc-split-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#fff}
-  .mc-split-card h4{margin:0 0 6px;font-size:14px;color:var(--navy-2)}
-  .mc-split-bar{background:var(--line);border-radius:999px;height:7px;margin:8px 0;overflow:hidden}
-  .mc-split-bar-fill{background:var(--green);height:100%}
-  .mc-split-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-  .mc-split-actions button{font-size:11.5px;padding:6px 9px}
-  .mc-overall{background:var(--gold-tint);border:1px solid var(--gold-soft);border-radius:12px;padding:14px 16px;margin-top:16px}
   @media print{
     .masthead,.flow,#card-load,#card-map,#card-set,#card-compose,.toolbar,.pager,.export-band,#aiToolbarSlot,#mode-toggle,#mobile-view{display:none!important}
     body{background:#fff}
@@ -449,7 +411,7 @@
         </div>
       </div>
       </div>
-      <div id="mobile-view" hidden></div>
+      <div id="mobile-view" class="mc-scope" hidden></div>
     </div>
   </section>
 
@@ -535,9 +497,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 <script src="ai-report-ui.js"></script>
 <script src="ai-toolbar-ui.js"></script>
 <script src="ai-chat-ui.js"></script>
+<script src="campaign-ui.js"></script>
 <script type="module" src="retail-knowledge.js"></script>
 <script type="module" src="retail-chat.js"></script>
 <script type="module" src="ai-pipeline.js"></script>
+<script type="module" src="campaign-store.js"></script>
 <script>
 /* ============================================================
    AI Customer Campaign Builder — 2-file distribution logic
@@ -561,8 +525,14 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     mode:"desktop",
     splits:null,
     mobile:{splitIdx:null,cursor:0,awaitingConfirm:false,startedAt:null,completedTimes:[]},
-    staffPayload:null
+    /* Firestore-backed campaign publishing state (Save & Share).
+       campaign.meta[splitIdx] = {token, active, unsub, liveList}.
+       Nothing here is touched unless the manager clicks Share/Copy
+       Link on a split — desktop-only and local-only mobile use are
+       unaffected if this stays empty for the whole session. */
+    campaign:{id:null,meta:{}}
   };
+  var CAMPAIGN_RUNNER_URL=location.origin+location.pathname.replace(/[^/]+$/,"")+"campaign-runner.html";
 
   var toastT;
   function toast(m){var t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove("show");},2300);}
@@ -578,8 +548,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   function median(a){if(!a.length)return NaN;var b=a.slice().sort(function(x,y){return x-y;});var m=Math.floor(b.length/2);return b.length%2?b[m]:(b[m-1]+b[m])/2;}
   function inr(n){return isFinite(n)?Number(n).toLocaleString("en-IN"):"";}
   function cleanPhone(raw){var d=str(raw).replace(/\D/g,"");if(d.length>10){if(d.length===12&&d.slice(0,2)==="91")d=d.slice(2);else if(d.length===13&&d.slice(0,3)==="091")d=d.slice(3);else if(d.length===11&&d[0]==="0")d=d.slice(1);else d=d.slice(-10);}return{local:d,e164:"91"+d,valid:d.length===10&&/^[6-9]/.test(d)};}
-  function escapeHtml(s){return str(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
-  function escapeAttr(s){return escapeHtml(s).replace(/"/g,"&quot;");}
+  function escapeHtml(s){return CampaignUI.escapeHtml(s);}
+  function escapeAttr(s){return CampaignUI.escapeAttr(s);}
   function prettify(h){return str(h).replace(/[_\-]+/g," ").replace(/\s+/g," ").trim();}
   var SZORD={XS:1,S:2,M:3,L:4,XL:5,XXL:6,XXXL:7,"3XL":7,"4XL":8};
   function sizeRank(s){s=normSize(s);if(SZORD[s])return SZORD[s];var n=parseFloat(s);return isFinite(n)?100+n:200;}
@@ -801,16 +771,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   function pickTwo(pool,cursor,pref){var out=[];for(var a=0;a<2;a++){if(!pool.length)break;out.push(mkPick(nextFromPool(pool,cursor,pref)));}return out;}
 
   /* ---------- message + link ---------- */
-  function fillPick(p,n){return $("tmpl-pick").value.replace(/\{n\}/g,n).replace(/\{name\}/g,p.name).replace(/\{code\}/g,p.code).replace(/\{link\}/g,p.link);}
   function allPicks(g){return g.sets.concat(g.kurtas);}
-  function buildMessage(name,sal,picks){
-    var block=picks.map(function(p,i){return fillPick(p,i+1);}).join("\n");
-    var offer=str($("opt-offer").value);
-    var msg=$("tmpl-main").value.replace(/\{name\}/g,name||"there").replace(/\{salutation\}/g,sal||"").replace(/\{store\}/g,str($("opt-store").value)||"our store").replace(/\{picks\}/g,block);
-    if(offer)msg=msg.replace(/\{offer\}/g,offer);else msg=msg.replace(/[^\S\n]*\{offer\}[^\S\n]*/g,"");
-    return msg.replace(/[ \t]+\n/g,"\n").replace(/\n{3,}/g,"\n\n").trim();
-  }
-  function buildWaUrl(e164,message){var ep=$("opt-endpoint").value,t=encodeURIComponent(message);if(ep==="wa")return "https://wa.me/"+e164+"?text="+t;if(ep==="api")return "https://api.whatsapp.com/send?phone="+e164+"&text="+t;return "https://web.whatsapp.com/send?phone="+e164+"&text="+t;}
+  /* Message/WhatsApp-URL construction now lives once, in
+     campaign-ui.js, shared with the staff campaign-runner page.
+     Same call signature as before — every caller here is untouched. */
+  function currentMessageTemplate(){return {main:$("tmpl-main").value,pick:$("tmpl-pick").value,offer:$("opt-offer").value,store:$("opt-store").value};}
+  function buildMessage(name,sal,picks){return CampaignUI.buildMessage(currentMessageTemplate(),name,sal,picks);}
+  function buildWaUrl(e164,message){return CampaignUI.buildWaUrl(e164,message,$("opt-endpoint").value);}
   function salOf(row){return str(row[S.map.cust.sal])||str($("opt-sal").value)||"Ma'am";}
 
   /* ---------- AI message writer (Universal AI Pipeline) ----------
@@ -842,7 +809,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   }
 
   /* ---------- preview ---------- */
-  function linkify(s){return escapeHtml(s).replace(/(https?:\/\/[^\s]+)/g,function(m){return '<a href="'+escapeAttr(m)+'" target="_blank" rel="noopener">'+m+'</a>';});}
+  function linkify(s){return CampaignUI.linkify(s);}
   function renderPreview(){if(!ready())return;ensureIndexes();var row=S.files.cust.rows[0];var name=str(row[S.map.cust.name]);var sal=salOf(row);var ph=cleanPhone(row[S.map.cust.phone]);var pref=S.histLookup&&S.histLookup.get(ph.local);var sets=pickTwo(S.idx.sets,{i:0},pref);var kurtas=pickTwo(S.idx.kurtas,{i:0},pref);var picks=sets.concat(kurtas);var msg=buildMessage(name,sal,picks);$("pv-text").innerHTML=linkify(msg);var url=buildWaUrl(ph.e164,msg);$("pv-link").href=url;$("pv-link").textContent=(name||"Customer")+" \u00b7 +"+ph.e164+" \u00b7 open in WhatsApp";$("pv-who").textContent="Preview for "+(name||"first customer")+" \u2014 first "+sets.length+" set(s) + "+kurtas.length+" kurta(s) from stock"+(pref?" (personalised from purchase history)":"")+". The next customer gets the next pieces.";}
 
   /* ---------- generate: round-robin distribution ---------- */
@@ -892,27 +859,30 @@ https://github.com/nodeca/pako/blob/main/LICENSE
      the staff member always presses Send themselves inside WhatsApp.
      ============================================================ */
 
+  /* A published split's live Firestore list (once Share/Copy Link has
+     been clicked at least once) always wins over the manager's own
+     local copy, so the manager sees real cross-device staff progress
+     the moment they open that split — not just what happened in this
+     browser tab. */
   function mcCurrentList(){
-    if(S.staffPayload)return S.staffPayload.gen;
-    if(S.splits&&S.mobile.splitIdx!=null)return S.splits[S.mobile.splitIdx].list;
+    if(S.splits&&S.mobile.splitIdx!=null){
+      if(S.mobile.splitIdx===-1)return S.gen;
+      var m=S.campaign.meta[S.mobile.splitIdx];
+      if(m&&m.liveList)return m.liveList;
+      return S.splits[S.mobile.splitIdx].list;
+    }
     return S.gen;
   }
-  function mcStats(list){
-    var completed=0,skipped=0,failed=0;
-    list.forEach(function(g){if(g.mobileStatus==="completed")completed++;else if(g.mobileStatus==="skipped")skipped++;else if(g.mobileStatus==="failed")failed++;});
-    var total=list.length,remaining=total-completed-skipped-failed,pct=total?Math.round((completed/total)*100):0;
-    var avgMs=S.mobile.completedTimes.length?(S.mobile.completedTimes.reduce(function(a,b){return a+b;},0)/S.mobile.completedTimes.length):null;
-    var etaMs=avgMs!=null?avgMs*remaining:null;
-    var resolvedRate=(completed+failed+skipped)?Math.round((completed/(completed+failed+skipped))*100):100;
-    var score=Math.max(0,Math.min(100,Math.round(pct*0.7+resolvedRate*0.3)));
-    return {total:total,completed:completed,skipped:skipped,failed:failed,remaining:remaining,pct:pct,etaMs:etaMs,score:score};
+  function splitStatsFor(i,sp){
+    var m=S.campaign.meta[i];
+    return (m&&m.liveList)?mcStats(m.liveList):mcStats(sp.list);
   }
-  function mcFmtEta(ms){
-    if(ms==null)return "—";
-    var mins=Math.round(ms/60000);
-    if(mins<1)return "<1 min";if(mins<60)return mins+" min";
-    return Math.floor(mins/60)+"h "+(mins%60)+"m";
+  function activeCampaignMetaForCurrentSplit(){
+    if(S.splits&&S.mobile.splitIdx!=null&&S.mobile.splitIdx>=0)return S.campaign.meta[S.mobile.splitIdx];
+    return null;
   }
+  function mcStats(list){return CampaignUI.mcStats(list,S.mobile.completedTimes);}
+  function mcFmtEta(ms){return CampaignUI.mcFmtEta(ms);}
 
   function setMode(mode){
     S.mode=mode;
@@ -925,7 +895,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
   function renderMobileView(){
     var root=$("mobile-view");
-    if(S.splits&&S.mobile.splitIdx==null&&!S.staffPayload){renderSplitDashboard(root);return;}
+    if(S.splits&&S.mobile.splitIdx==null){renderSplitDashboard(root);return;}
     var list=mcCurrentList();
     if(!list||!list.length){root.innerHTML='<div class="empty">No customers in this campaign.</div>';return;}
     if(S.mobile.startedAt==null)S.mobile.startedAt=Date.now();
@@ -936,10 +906,24 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
   function renderSplitDashboard(root){
     var html='<div class="mc-wrap">';
-    if(!S.staffPayload)html+='<div class="btn-row" style="margin-bottom:10px"><button class="btn btn-ghost" id="mc-view-all" type="button">View full campaign (all customers)</button></div>';
+    html+='<div class="btn-row" style="margin-bottom:10px;gap:8px;flex-wrap:wrap">'+
+      '<button class="btn btn-ghost" id="mc-view-all" type="button">View full campaign (all customers)</button>'+
+      '<button class="btn btn-ghost" id="mc-end-campaign" type="button">End campaign (revoke all links)</button>'+
+      '</div>';
     html+='<div class="mc-split-grid">';
     S.splits.forEach(function(sp,i){
-      var st=mcStats(sp.list);
+      var st=splitStatsFor(i,sp);
+      var m=S.campaign.meta[i];
+      var linkHtml='';
+      if(m&&m.token){
+        var badgeCls=m.active===false?"revoked":"active";
+        var badgeLbl=m.active===false?"Link revoked":"Link active — live sync on";
+        linkHtml='<div class="mc-link-row"><span class="mc-link-badge '+badgeCls+'">'+badgeLbl+'</span></div>'+
+          '<div class="mc-split-actions">'+
+            '<button class="btn btn-ghost" data-regen="'+i+'" type="button">Regenerate</button>'+
+            (m.active!==false?'<button class="btn btn-ghost" data-revoke="'+i+'" type="button">Revoke</button>':'')+
+          '</div>';
+      }
       html+='<div class="mc-split-card"><h4>Campaign '+sp.label+'</h4>'+
         '<div>'+st.completed+' / '+st.total+' complete</div>'+
         '<div class="mc-split-bar"><div class="mc-split-bar-fill" style="width:'+st.pct+'%"></div></div>'+
@@ -947,17 +931,30 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           '<button class="btn btn-primary" data-open="'+i+'" type="button">Open</button>'+
           '<button class="btn btn-ghost" data-share="'+i+'" type="button">Share</button>'+
           '<button class="btn btn-ghost" data-copy="'+i+'" type="button">Copy Link</button>'+
-        '</div></div>';
+        '</div>'+linkHtml+'</div>';
     });
     html+='</div>';
     var overall=mcStats(S.gen);
     html+='<div class="mc-overall"><b>Overall progress</b> — '+overall.completed+' / '+overall.total+' complete ('+overall.pct+'%)</div>';
+    if(S.splits.length>1){
+      html+='<div class="mc-overall"><b>Reassign unfinished work</b>'+
+        '<div class="btn-row" style="margin-top:8px;gap:8px;flex-wrap:wrap;align-items:center">'+
+          '<select id="mc-reassign-from">'+S.splits.map(function(sp,i){return '<option value="'+i+'">'+escapeHtml(sp.label)+'</option>';}).join("")+'</select>'+
+          '<span>&rarr;</span>'+
+          '<select id="mc-reassign-to">'+S.splits.map(function(sp,i){return '<option value="'+i+'"'+(i===1?" selected":"")+'>'+escapeHtml(sp.label)+'</option>';}).join("")+'</select>'+
+          '<button class="btn btn-primary" id="mc-reassign-go" type="button">Move pending</button>'+
+        '</div></div>';
+    }
     html+='</div>';
     root.innerHTML=html;
     var viewAll=root.querySelector("#mc-view-all");if(viewAll)viewAll.addEventListener("click",function(){S.mobile.splitIdx=-1;S.mobile.cursor=0;renderMobileView();});
+    var endBtn=root.querySelector("#mc-end-campaign");if(endBtn)endBtn.addEventListener("click",mcEndCampaign);
+    var reassignBtn=root.querySelector("#mc-reassign-go");if(reassignBtn)reassignBtn.addEventListener("click",mcReassign);
     root.querySelectorAll("[data-open]").forEach(function(b){b.addEventListener("click",function(){S.mobile.splitIdx=+b.getAttribute("data-open");S.mobile.cursor=0;renderMobileView();});});
-    root.querySelectorAll("[data-share]").forEach(function(b){b.addEventListener("click",function(){mcShareSplit(+b.getAttribute("data-share"),"share");});});
-    root.querySelectorAll("[data-copy]").forEach(function(b){b.addEventListener("click",function(){mcShareSplit(+b.getAttribute("data-copy"),"copy");});});
+    root.querySelectorAll("[data-share]").forEach(function(b){b.addEventListener("click",function(){mcSharePublish(+b.getAttribute("data-share"),"share");});});
+    root.querySelectorAll("[data-copy]").forEach(function(b){b.addEventListener("click",function(){mcSharePublish(+b.getAttribute("data-copy"),"copy");});});
+    root.querySelectorAll("[data-revoke]").forEach(function(b){b.addEventListener("click",function(){mcRevoke(+b.getAttribute("data-revoke"));});});
+    root.querySelectorAll("[data-regen]").forEach(function(b){b.addEventListener("click",function(){mcRegenerate(+b.getAttribute("data-regen"));});});
   }
   /* splitIdx -1 is used as "all customers, no specific split" sentinel distinct from null (dashboard) */
   function mcActiveList(){
@@ -999,7 +996,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         '</div>'+
         '<div class="mc-nav">'+
           '<button class="btn btn-ghost" id="mc-prev" type="button"'+(idx===0?" disabled":"")+'>← Prev</button>'+
-          '<button class="btn btn-ghost" id="mc-back" type="button">'+(S.splits&&!S.staffPayload?"All campaigns":"Skip for now")+'</button>'+
+          '<button class="btn btn-ghost" id="mc-back" type="button">'+(S.splits?"All campaigns":"Skip for now")+'</button>'+
           '<button class="btn btn-ghost" id="mc-next" type="button"'+(idx>=list.length-1?" disabled":"")+'>Next →</button>'+
         '</div>'+
       '</div>'+
@@ -1013,13 +1010,21 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     root.querySelectorAll("#mc-confirm button").forEach(function(b){b.addEventListener("click",function(){mcConfirm(list,idx,b.getAttribute("data-c"));});});
     var prevBtn=$("mc-prev");if(prevBtn)prevBtn.addEventListener("click",function(){S.mobile.cursor=Math.max(0,idx-1);S.mobile.awaitingConfirm=false;renderMobileView();});
     var nextBtn=$("mc-next");if(nextBtn)nextBtn.addEventListener("click",function(){S.mobile.cursor=Math.min(list.length-1,idx+1);S.mobile.awaitingConfirm=false;renderMobileView();});
-    var backBtn=$("mc-back");if(backBtn)backBtn.addEventListener("click",function(){if(S.splits&&!S.staffPayload){S.mobile.splitIdx=null;S.mobile.cursor=0;renderMobileView();}else{mcConfirm(list,idx,"skipped");}});
+    var backBtn=$("mc-back");if(backBtn)backBtn.addEventListener("click",function(){if(S.splits){S.mobile.splitIdx=null;S.mobile.cursor=0;renderMobileView();}else{mcConfirm(list,idx,"skipped");}});
   }
   function mcConfirm(list,idx,status){
     var g=list[idx];
     g.mobileStatus=status;
     if(status==="completed"){g.sent=true;if(S.mobile.awaitingSince)S.mobile.completedTimes.push(Date.now()-S.mobile.awaitingSince);}
     S.mobile.awaitingConfirm=false;S.mobile.awaitingSince=null;
+    /* If this split has been published, write straight to Firestore
+       so every other device (the manager's dashboard, this staff
+       member's own phone if they reopen it) sees it immediately —
+       the local mutation above is just an optimistic UI update. */
+    var m=activeCampaignMetaForCurrentSplit();
+    if(m&&m.token&&typeof CampaignStore!=="undefined"){
+      CampaignStore.updateCustomerStatus(S.campaign.id,m.token,idx,status).catch(function(){toast("Saved locally — could not sync to the cloud (check connection)");});
+    }
     updateStats();
     var next=idx+1;while(next<list.length&&list[next].mobileStatus!=="pending")next++;
     S.mobile.cursor=next<list.length?next:list.length;
@@ -1032,7 +1037,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       '<div class="mc-score">'+st.score+'</div>'+
       '<div style="color:var(--muted)">Campaign score out of 100</div>'+
       '<div style="margin-top:14px">'+st.completed+' completed · '+st.skipped+' skipped · '+st.failed+' failed</div>'+
-      (S.splits&&!S.staffPayload?'<div class="btn-row" style="justify-content:center;margin-top:16px"><button class="btn btn-navy" id="mc-back-done" type="button">Back to all campaigns</button></div>':"")+
+      (S.splits?'<div class="btn-row" style="justify-content:center;margin-top:16px"><button class="btn btn-navy" id="mc-back-done" type="button">Back to all campaigns</button></div>':"")+
     '</div></div>';
     var b=root.querySelector("#mc-back-done");if(b)b.addEventListener("click",function(){S.mobile.splitIdx=null;renderMobileView();});
   }
@@ -1043,60 +1048,98 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     }
   });
 
-  /* ---------- Staff sharing: encode a split entirely into the link itself ----------
-     No server, ever — the compressed payload travels only inside the URL
-     fragment (after #), which browsers never send to any server. Whoever
-     opens the link decodes it locally in their own browser, same as this
-     page always has. */
-  function b64EncodeUtf8(str){return btoa(unescape(encodeURIComponent(str)));}
-  function b64DecodeUtf8(str){return decodeURIComponent(escape(atob(str)));}
-  /* Payload stores the shared template ONCE plus minimal per-customer
-     fields, never the fully-expanded message or WhatsApp URL (which would
-     duplicate the same text twice per customer). The staff device
-     reconstructs msg/url locally via the exact same buildMessage()/
-     buildWaUrl() this page already uses — reused, not duplicated. */
-  function mcBuildPayload(splitIdx){
+  /* ---------- Cloud campaign publishing (Save & Share) ----------
+     Nothing here runs until the manager clicks Share/Copy Link on a
+     split. Each split becomes one Firestore "assignment" document
+     whose ID is itself a random, unguessable bearer token — the
+     entire staff access model (see firestore.rules). The staff
+     campaign-runner page (campaign-runner.html) is the only other
+     reader/writer of this data; this tool never emits a link staff
+     open on this same page anymore. */
+  function currentCampaignExpiry(){
+    var v=$("opt-camp-expiry")&&$("opt-camp-expiry").value;
+    return v?(24*Number(v)*60*60*1000):(24*60*60*1000);
+  }
+  async function ensureCampaignId(){
+    if(S.campaign.id)return S.campaign.id;
+    if(typeof CampaignStore==="undefined"){toast("Cloud sharing failed to load — refresh and try again");throw new Error("no-campaign-store");}
+    if(!CampaignStore.isSignedIn()){toast("Sign in to share campaigns");throw new Error("not-signed-in");}
+    S.campaign.id=await CampaignStore.createCampaign({retailer:(S.idx&&S.idx.family)||"",store:$("opt-store").value,messageTemplate:currentMessageTemplate()});
+    return S.campaign.id;
+  }
+  function splitCustomerPayload(list){
+    return list.map(function(g){return {name:g.name,sal:g.sal,local:g.local,e164:g.e164,valid:g.valid,sets:g.sets,kurtas:g.kurtas,mobileStatus:g.mobileStatus};});
+  }
+  function watchSplitLive(splitIdx){
+    var m=S.campaign.meta[splitIdx];
+    if(!m||!m.token||m.unsub)return;
+    m.unsub=CampaignStore.watchCustomers(S.campaign.id,m.token,function(list){
+      if(!list){m.active=false;} else {m.liveList=list;}
+      if(S.mode==="mobile")renderMobileView();
+    });
+  }
+  async function ensurePublished(splitIdx){
+    var m=S.campaign.meta[splitIdx];
+    if(m&&m.token&&m.active!==false)return m;
+    var campaignId=await ensureCampaignId();
     var list=S.splits[splitIdx].list;
-    return {v:2,label:S.splits[splitIdx].label,
-      tmpl:{main:$("tmpl-main").value,pick:$("tmpl-pick").value,offer:$("opt-offer").value,store:$("opt-store").value,endpoint:$("opt-endpoint").value},
-      cust:list.map(function(g){
-        return {name:g.name,sal:g.sal,local:g.local,e164:g.e164,valid:g.valid,
-          sets:g.sets.map(function(p){return {name:p.name,code:p.code,link:p.link};}),
-          kurtas:g.kurtas.map(function(p){return {name:p.name,code:p.code,link:p.link};})};
-      })};
+    var res=await CampaignStore.createAssignment(campaignId,{label:S.splits[splitIdx].label,customers:splitCustomerPayload(list),messageTemplate:currentMessageTemplate(),ttlMs:currentCampaignExpiry()});
+    S.campaign.meta[splitIdx]={token:res.token,active:true};
+    watchSplitLive(splitIdx);
+    return S.campaign.meta[splitIdx];
   }
-  function mcShareUrl(splitIdx){
-    var payload=mcBuildPayload(splitIdx);
-    var encoded=b64EncodeUtf8(JSON.stringify(payload));
-    return location.origin+location.pathname+"#staff="+encoded;
-  }
-  function mcShareSplit(splitIdx,mode){
-    var url=mcShareUrl(splitIdx);
-    if(url.length>6000)toast("⚠ This link is long ("+url.length+" chars) — works, but may be awkward to share for very large splits.");
-    if(mode==="share"&&navigator.share){navigator.share({title:"Campaign "+S.splits[splitIdx].label,url:url}).catch(function(){});}
-    else{copyText(url,"Campaign "+S.splits[splitIdx].label+" link copied");}
-  }
-  function mcRehydratePick(p){return {code:p.code,name:p.name,link:p.link,size:"",price:NaN,colText:p.code+" "+p.name,bucket:null};}
-  function tryLoadStaffPayload(){
-    var m=/#staff=(.+)$/.exec(location.hash);
-    if(!m)return false;
+  function campaignRunnerLink(token){return CAMPAIGN_RUNNER_URL+"?c="+encodeURIComponent(S.campaign.id)+"&t="+encodeURIComponent(token);}
+  async function mcSharePublish(splitIdx,mode){
     try{
-      var payload=JSON.parse(b64DecodeUtf8(decodeURIComponent(m[1])));
-      if(!payload||!payload.cust)return false;
-      $("tmpl-main").value=payload.tmpl.main||S.tmpl.main;
-      $("tmpl-pick").value=payload.tmpl.pick||S.tmpl.pick;
-      $("opt-offer").value=payload.tmpl.offer||"";
-      $("opt-store").value=payload.tmpl.store||"our store";
-      if(payload.tmpl.endpoint)$("opt-endpoint").value=payload.tmpl.endpoint;
-      var gen=payload.cust.map(function(c,i){
-        var sets=(c.sets||[]).map(mcRehydratePick),kurtas=(c.kurtas||[]).map(mcRehydratePick);
-        var picks=sets.concat(kurtas);
-        var msg=buildMessage(c.name,c.sal,picks);
-        return {i:i+1,name:c.name,sal:c.sal,local:c.local,e164:c.e164,valid:c.valid,sets:sets,kurtas:kurtas,none:picks.length===0,msg:msg,url:buildWaUrl(c.e164,msg),sent:false,mobileStatus:"pending"};
-      });
-      S.staffPayload={label:payload.label,gen:gen};
-      return true;
-    }catch(e){return false;}
+      toast("Preparing secure link…");
+      var m=await ensurePublished(splitIdx);
+      var url=campaignRunnerLink(m.token);
+      if(mode==="share"&&navigator.share){navigator.share({title:"Campaign "+S.splits[splitIdx].label,url:url}).catch(function(){});}
+      else{copyText(url,"Campaign "+S.splits[splitIdx].label+" secure link copied");}
+      renderMobileView();
+    }catch(e){
+      if(e&&e.message==="not-signed-in"){/* toast already shown */}
+      else if(e&&e.message==="no-campaign-store"){/* toast already shown */}
+      else toast("Could not create secure link — try again");
+    }
+  }
+  async function mcRevoke(splitIdx){
+    var m=S.campaign.meta[splitIdx];if(!m||!m.token)return;
+    try{await CampaignStore.revokeAssignment(S.campaign.id,m.token);m.active=false;toast("Link revoked — it stops working immediately");renderMobileView();}
+    catch(e){toast("Could not revoke — try again");}
+  }
+  async function mcRegenerate(splitIdx){
+    var m=S.campaign.meta[splitIdx];if(!m||!m.token)return;
+    try{
+      toast("Regenerating link…");
+      if(m.unsub){m.unsub();}
+      var res=await CampaignStore.regenerateAssignment(S.campaign.id,m.token);
+      S.campaign.meta[splitIdx]={token:res.token,active:true};
+      watchSplitLive(splitIdx);
+      copyText(campaignRunnerLink(res.token),"New secure link copied — old link is now dead");
+      renderMobileView();
+    }catch(e){toast("Could not regenerate — try again");}
+  }
+  async function mcReassign(){
+    var fromI=+$("mc-reassign-from").value,toI=+$("mc-reassign-to").value;
+    if(fromI===toI){toast("Pick two different splits");return;}
+    try{
+      toast("Moving pending customers…");
+      var fromM=await ensurePublished(fromI),toM=await ensurePublished(toI);
+      var n=await CampaignStore.reassignPending(S.campaign.id,fromM.token,toM.token);
+      toast(n?(n+" customer(s) moved to "+S.splits[toI].label):"No pending customers to move");
+      renderMobileView();
+    }catch(e){toast("Could not reassign — try again");}
+  }
+  async function mcEndCampaign(){
+    if(!S.campaign.id){toast("Nothing published yet — nothing to end");return;}
+    if(!confirm("End this campaign? Every staff link will stop working immediately."))return;
+    try{
+      await CampaignStore.endCampaign(S.campaign.id,"completed");
+      Object.keys(S.campaign.meta).forEach(function(k){S.campaign.meta[k].active=false;});
+      toast("Campaign ended — all links revoked");
+      renderMobileView();
+    }catch(e){toast("Could not end campaign — try again");}
   }
 
   /* ---------- AI quality check ----------
@@ -1327,18 +1370,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   $("mode-mobile").addEventListener("click",function(){setMode("mobile");});
   $("opt-split-enable").addEventListener("change",function(){$("split-parts-row").style.display=this.checked?"":"none";});
 
-  /* ---------- Staff link entry point ----------
-     If this page was opened via a shared "#staff=..." link, skip the
-     entire upload/mapping/compose flow (the staff member never touches
-     any of that) and drop straight into their assigned customer list. */
-  if(tryLoadStaffPayload()){
-    ["card-load","card-map","card-set","card-compose"].forEach(function(id){$(id).hidden=true;});
-    $("card-results").classList.remove("locked");
-    $("res-status").textContent="Campaign "+(S.staffPayload.label||"")+" — assigned to you";
-    setMode("mobile");
-  }else{
-    setMode("desktop");
-  }
+  /* Staff never open this page anymore — they get a secure link to
+     the dedicated campaign-runner.html instead (see "Cloud campaign
+     publishing" above), so this always starts in Desktop Mode. */
+  setMode("desktop");
 })();
 </script>
 <script type="module" src="auth-guard.js"></script>

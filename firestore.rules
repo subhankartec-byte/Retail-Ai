@@ -1,0 +1,117 @@
+rules_version = '2';
+
+/* =========================================================
+   firestore.rules — Retail AI
+   ---------------------------------------------------------
+   IMPORTANT — READ BEFORE DEPLOYING:
+   This repo has never source-controlled Firestore rules before
+   now (auth-guard.js's users/{uid} reads/writes have always been
+   governed by whatever rules exist today in the Firebase console
+   for project retail-ai-2c674 — this file did not previously
+   exist here). The `users/{userId}` block below is a best-effort
+   reconstruction of what auth-guard.js needs (read/write own
+   profile doc only) based on reading that file's code, NOT a
+   pull of your actual deployed rules. Before deploying this file,
+   diff it against (or merge it into) whatever is currently live
+   in the Firebase console, so you don't accidentally narrow or
+   remove an existing allowance. The `campaigns/**` block is the
+   new, additive part for this feature.
+   ========================================================= */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ---------- existing: user profile / quota (auth-guard.js) ----------
+       Reconstructed contract: a signed-in user may read and merge-write
+       only their own profile document. Verify against your real console
+       rules before deploying — see note above. */
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    /* ============================================================
+       NEW: Campaign management (AI Customer Campaign Builder)
+       ============================================================
+
+       campaigns/{campaignId}
+         Owned by the manager who created it (ownerId == their uid).
+         Holds only the message template + metadata — never the
+         customer list itself.
+
+       campaigns/{campaignId}/assignments/{token}
+         One doc per staff split. The document ID *is* the bearer
+         token — a client-generated, cryptographically random
+         string (see mkShareToken() in the app). Knowing this exact
+         ID is the only way in; it is never listable, and a `get`
+         only succeeds while `active == true` and `expiresAt` is in
+         the future. Revoke = flip `active` to false. Regenerate =
+         create a new token doc, copy customers, deactivate the old
+         one. Holds no stats field — progress is always computed
+         live from the customers subcollection, never trusted from
+         an unauthenticated write.
+
+       campaigns/{campaignId}/assignments/{token}/customers/{idx}
+         One doc per customer in that split. Staff (unauthenticated,
+         holding only the token) may update ONLY `status` and
+         `updatedAt` on a doc they can already read — never the
+         customer's name/phone/message content, never another
+         split's customers, never list customers outside an active,
+         unexpired assignment.
+       ============================================================ */
+    match /campaigns/{campaignId} {
+
+      function isCampaignOwner() {
+        return request.auth != null
+               && request.auth.uid == resource.data.ownerId;
+      }
+
+      allow create: if request.auth != null
+                    && request.resource.data.ownerId == request.auth.uid;
+      allow read, update, delete: if isCampaignOwner();
+
+      match /assignments/{token} {
+
+        function campaignOwnerUid() {
+          return get(/databases/$(database)/documents/campaigns/$(campaignId)).data.ownerId;
+        }
+        function isCampaignOwnerForAssignment() {
+          return request.auth != null && request.auth.uid == campaignOwnerUid();
+        }
+        function isActiveLink() {
+          return resource.data.active == true
+                 && resource.data.expiresAt > request.time;
+        }
+
+        /* Anyone holding the exact token may `get` it while active
+           and unexpired — this is the entire staff access model.
+           `list` is owner-only, so the assignments collection can
+           never be enumerated. */
+        allow get: if isCampaignOwnerForAssignment() || isActiveLink();
+        allow list, create, update, delete: if isCampaignOwnerForAssignment();
+
+        match /customers/{idx} {
+
+          function parentAssignment() {
+            return get(/databases/$(database)/documents/campaigns/$(campaignId)/assignments/$(token));
+          }
+          function isActiveLinkForCustomers() {
+            return parentAssignment().data.active == true
+                   && parentAssignment().data.expiresAt > request.time;
+          }
+          function isCampaignOwnerForCustomers() {
+            return request.auth != null && request.auth.uid == campaignOwnerUid();
+          }
+
+          allow read, list: if isCampaignOwnerForCustomers() || isActiveLinkForCustomers();
+          allow create, delete: if isCampaignOwnerForCustomers();
+          allow update: if isCampaignOwnerForCustomers()
+                        || (
+                             isActiveLinkForCustomers()
+                             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+                           );
+        }
+      }
+    }
+  }
+}
