@@ -27,7 +27,38 @@ service cloud.firestore {
        rules before deploying — see note above. */
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if request.auth != null && request.auth.uid == userId;
+
+      /* Shared guard for every write (create or update): admin-controlled
+         fields may only ever be their fixed, safe default — never a value
+         the client chooses. This one property is what closes the
+         self-approval / self-upgrade hole, and it's enforced the same way
+         regardless of whether the client is creating the doc or replacing/
+         merging it later — e.g. signup.html's full-document setDoc can race
+         with auth-guard.js's own profile bootstrap on first sign-in (both
+         fire off the same sign-in event); both are legitimate writes of the
+         same safe defaults and must keep succeeding either way. */
+      function adminFieldsSafe() {
+        return (!('plan' in request.resource.data)     || request.resource.data.plan     == 'free')
+            && (!('approved' in request.resource.data) || request.resource.data.approved == true)
+            && (!('role' in request.resource.data)     || request.resource.data.role     == 'employee')
+            && (!('status' in request.resource.data)   || request.resource.data.status   == 'active');
+      }
+
+      allow create: if request.auth != null && request.auth.uid == userId && adminFieldsSafe();
+
+      /* Update: admin fields stay value-pinned (adminFieldsSafe) and
+         createdAt is write-once (settable only while absent, never
+         changeable afterward — prevents backdating). Everything else the
+         app actually writes post-creation is on the allowlist below; any
+         other field, or any admin field set to a non-default value, is
+         rejected. */
+      allow update: if request.auth != null && request.auth.uid == userId
+                    && adminFieldsSafe()
+                    && (!('createdAt' in request.resource.data) || !('createdAt' in resource.data))
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['fullName', 'mobile', 'email', 'lastLogin', 'usage', 'role', 'status', 'createdAt', 'plan', 'approved']);
+
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
     /* ============================================================
