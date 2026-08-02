@@ -423,6 +423,7 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
   padding:.26rem .6rem;border-radius:999px;
 }
 .tag-live{color:var(--green);background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.32)}
+.tag-beta{color:var(--blue);background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.32)}
 .tag-soon{color:var(--text-low);background:rgba(255,255,255,.04);border:1px solid var(--border)}
 
 /* Card buttons */
@@ -1580,6 +1581,33 @@ body::after{content:"";position:fixed;inset:0;z-index:120;pointer-events:none;op
 /* ── 01. HELPERS ────────────────────────────────────────────── */
 const $  = (sel, ctx = document) => ctx.querySelector(sel);
 const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
+
+/* ── 01b. TOOLS GRID — AUTOMATIC STATUS ORDERING ─────────────── */
+// Why: keeps the Tools grid free of manual reordering as tools launch,
+// move to beta, or get retired — the grid always sorts itself.
+// Supported order: Live -> Beta -> Coming Soon -> untagged placeholder
+// ("More AI Tools") last.
+// To change how a tool sorts: change its card-tag class
+// (tag-live / tag-beta / tag-soon) in the HTML below. Do NOT reorder the
+// <article class="tool-card"> elements by hand — this script re-sorts
+// them on every load regardless of source order.
+const STATUS_RANK = { 'tag-live': 0, 'tag-beta': 1, 'tag-soon': 2 };
+function toolCardRank(card){
+  const tag = card.querySelector('.card-tag');
+  if (!tag) return 3;
+  for (const cls in STATUS_RANK) if (tag.classList.contains(cls)) return STATUS_RANK[cls];
+  return 3;
+}
+const toolsGrid = $('.tools-grid');
+if (toolsGrid){
+  $$('.tool-card', toolsGrid)
+    .map((card, i) => ({ card, rank: toolCardRank(card), i }))
+    .sort((a, b) => a.rank - b.rank || a.i - b.i)
+    .forEach(({ card }, idx) => {
+      toolsGrid.appendChild(card);
+      card.style.setProperty('--d', (idx * 0.06).toFixed(2) + 's');
+    });
+}
 
 /* ── 02. STICKY HEADER ──────────────────────────────────────── */
 const header = $('#siteHeader');

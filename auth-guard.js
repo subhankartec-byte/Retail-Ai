@@ -323,11 +323,13 @@ function applySignedOutUI() {
 }
 
 /* =========================================================
-   6. Profile card (bottom-left)
+   6. Profile avatar + dropdown (bottom-left)
    ========================================================= */
 function removeProfileCard() {
   const el = document.getElementById("ra-profile-card");
   if (el) el.remove();
+  document.removeEventListener("click", onOutsideProfileClick, true);
+  document.removeEventListener("keydown", onProfileKeydown, true);
 }
 
 function planLabel() {
@@ -346,57 +348,89 @@ function updateProfileCardUsage() {
   if (el) el.textContent = usageLabel();
 }
 
+function setProfileMenuOpen(open) {
+  const card  = document.getElementById("ra-profile-card");
+  const panel = document.getElementById("ra-profile-panel");
+  const btn   = document.getElementById("ra-profile-btn");
+  if (!card || !panel || !btn) return;
+  panel.style.display = open ? "block" : "none";
+  btn.setAttribute("aria-expanded", open ? "true" : "false");
+}
+
+function onOutsideProfileClick(ev) {
+  const card = document.getElementById("ra-profile-card");
+  if (card && !card.contains(ev.target)) setProfileMenuOpen(false);
+}
+
+function onProfileKeydown(ev) {
+  if (ev.key === "Escape") setProfileMenuOpen(false);
+}
+
 function renderProfileCard(user, profile) {
   removeProfileCard();
 
   const name = displayName(user, profile);
+  const initial = (name[0] || "U").toUpperCase();
+
   const card = document.createElement("div");
   card.id = "ra-profile-card";
   card.style.cssText =
     "position:fixed;left:16px;bottom:16px;z-index:2147483000;" +
-    "display:flex;align-items:center;gap:11px;" +
-    "background:rgba(10,22,51,.96);border:1px solid rgba(212,175,55,.42);" +
-    "border-radius:14px;padding:10px 14px;max-width:290px;" +
-    "box-shadow:0 8px 26px rgba(0,0,0,.45);" +
-    "font-family:Inter,system-ui,-apple-system,sans-serif;" +
-    "backdrop-filter:blur(8px)";
+    "font-family:Inter,system-ui,-apple-system,sans-serif";
 
-  const avatar = document.createElement("div");
-  avatar.textContent = (name[0] || "U").toUpperCase();
-  avatar.style.cssText =
-    "flex:0 0 auto;width:36px;height:36px;border-radius:50%;" +
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.id = "ra-profile-btn";
+  btn.title = name;
+  btn.setAttribute("aria-haspopup", "true");
+  btn.setAttribute("aria-expanded", "false");
+  btn.textContent = initial;
+  btn.style.cssText =
+    "width:40px;height:40px;border-radius:50%;padding:0;cursor:pointer;" +
     "display:flex;align-items:center;justify-content:center;" +
     "background:linear-gradient(135deg,#F2DE9A 0%,#D4AF37 44%,#B8912F 100%);" +
-    "color:#0A1633;font-weight:700;font-size:15px;letter-spacing:.02em";
+    "border:1px solid rgba(212,175,55,.5);color:#0A1633;font-weight:700;" +
+    "font-size:16px;letter-spacing:.02em;box-shadow:0 8px 22px rgba(0,0,0,.4)";
 
-  const text = document.createElement("div");
-  text.style.cssText = "min-width:0;line-height:1.32";
-  text.innerHTML =
-    '<div style="color:#F4F6FB;font-weight:600;font-size:13px;' +
-      'white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>' +
-    '<div style="color:#9BA7C4;font-size:11px;' +
-      'white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>' +
-    '<div style="color:#D4AF37;font-size:11px;font-weight:600;margin-top:2px"></div>' +
-    '<div id="ra-profile-usage" style="color:#7C89A8;font-size:10px"></div>';
-  text.children[0].textContent = name;
-  text.children[1].textContent = user.email || "";
-  text.children[2].textContent = planLabel();
-  text.children[3].textContent = usageLabel();
+  const panel = document.createElement("div");
+  panel.id = "ra-profile-panel";
+  panel.style.cssText =
+    "display:none;position:absolute;left:0;bottom:48px;min-width:230px;max-width:290px;" +
+    "background:rgba(10,22,51,.98);border:1px solid rgba(212,175,55,.42);" +
+    "border-radius:14px;padding:12px 14px;box-shadow:0 12px 34px rgba(0,0,0,.5);" +
+    "backdrop-filter:blur(8px)";
+  panel.innerHTML =
+    '<div style="display:flex;align-items:center;gap:10px;padding-bottom:10px;margin-bottom:8px;border-bottom:1px solid rgba(155,167,196,.2)">' +
+      '<div style="flex:0 0 auto;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;' +
+        'background:linear-gradient(135deg,#F2DE9A 0%,#D4AF37 44%,#B8912F 100%);color:#0A1633;font-weight:700;font-size:14px">' + initial + '</div>' +
+      '<div style="min-width:0;line-height:1.32">' +
+        '<div id="ra-profile-name" style="color:#F4F6FB;font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>' +
+        '<div id="ra-profile-email" style="color:#9BA7C4;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>' +
+      '</div>' +
+    '</div>' +
+    '<div id="ra-profile-plan" style="color:#D4AF37;font-size:11px;font-weight:600"></div>' +
+    '<div id="ra-profile-usage" style="color:#7C89A8;font-size:10px;margin-top:2px"></div>' +
+    '<button type="button" data-logout title="Log out" ' +
+      'style="margin-top:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;' +
+      'background:transparent;color:#C9D2E6;border:1px solid rgba(155,167,196,.34);border-radius:8px;' +
+      'padding:8px;cursor:pointer;font-size:12px;font-weight:600">⏻ Log out</button>';
 
-  const out = document.createElement("button");
-  out.type = "button";
-  out.setAttribute("data-logout", "");
-  out.title = "Log out";
-  out.textContent = "⏻";
-  out.style.cssText =
-    "flex:0 0 auto;margin-left:2px;background:transparent;color:#9BA7C4;" +
-    "border:1px solid rgba(155,167,196,.34);border-radius:8px;" +
-    "width:28px;height:28px;cursor:pointer;font-size:13px;line-height:1";
+  panel.querySelector("#ra-profile-name").textContent = name;
+  panel.querySelector("#ra-profile-email").textContent = user.email || "";
+  panel.querySelector("#ra-profile-plan").textContent = planLabel();
+  panel.querySelector("#ra-profile-usage").textContent = usageLabel();
 
-  card.appendChild(avatar);
-  card.appendChild(text);
-  card.appendChild(out);
+  btn.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+    setProfileMenuOpen(panel.style.display === "none");
+  });
+
+  card.appendChild(panel);
+  card.appendChild(btn);
   document.body.appendChild(card);
+
+  document.addEventListener("click", onOutsideProfileClick, true);
+  document.addEventListener("keydown", onProfileKeydown, true);
 }
 
 /* =========================================================
