@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bulk Order Upload Generator — W417</title>
+<title>Bulk Order Upload Generator</title>
 <style>
 :root{--navy:#0b1f3a;--navy2:#132a4d;--gold:#c9a227;--gl:#e6c65c;--bg:#f4f6fa;--ok:#1f8a4c;--bad:#c0392b;--warn:#b9770e;--mut:#66738a}
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:#1c2530;padding-bottom:60px}
@@ -33,7 +33,7 @@ tr.rbad td{background:#fdecea}tr.rwarn td{background:#fdf3e3}
 #link{font-size:12.5px;margin-top:8px}#link a{color:var(--navy);font-weight:700}
 @media(max-width:520px){#settings,.mgrid{grid-template-columns:1fr}}
 </style></head><body>
-<header><h1>Bulk Order Upload Generator</h1><p>W417 &middot; Outward IST &rarr; Courier bulk-order file (XLSX / CSV)</p></header><div class="bar"></div>
+<header><h1>Bulk Order Upload Generator</h1><p>Outward IST &rarr; Courier bulk-order file (XLSX / CSV)</p></header><div class="bar"></div>
 <div class="wrap">
 <div class="card"><h2>1. Upload your 3 files (any order)</h2>
 <div id="drop"><p>Select all three together: <b>MB51</b> report + <b>YGRN_REP</b> report (both from SAP) + <b>Master data</b> file from backend.<br>The tool recognises each file by itself.</p>
@@ -48,7 +48,7 @@ tr.rbad td{background:#fdecea}tr.rwarn td{background:#fdf3e3}
 <label>Height (CM)<input id="height" value="10"></label><label>Seller Registered Name<input id="sellerName" value="ADITYA BIRLA FASHION AND RETAIL LIMITED"></label>
 <label>Seller GSTIN<input id="sellerGSTIN" value="06AAECP2371C1ZT"></label><label>Seller Address Line 1<input id="sellerAddr1" value="Shop No:803,27th Main,12Cross,Sector-1,"></label>
 <label>Seller Address Line 2<input id="sellerAddr2" value="HSR Layout-560102"></label><label>Seller Pincode<input id="sellerPincode" value="560102"></label>
-<label>Invoice amount taken from<select id="priceBasis"><option value="cost">Transfer value (Amt.in Loc.Cur.)</option><option value="mrp">MRP (Sales Value inc. VAT)</option></select></label>
+<label>Invoice amount taken from<select id="priceBasis"><option value="mrp">MRP (Sales Value inc. VAT)</option><option value="cost">Transfer value (Amt.in Loc.Cur.)</option></select></label>
 <label>Seller City<input id="sellerCity" value="Bengaluru"></label><label>Seller State<input id="sellerState" value="Karnataka"></label>
 </div></div>
 <button class="btn" id="go" disabled>Generate report</button><div id="msgs"></div>
@@ -253,7 +253,7 @@ function parsePan(d){
 /* ---- Build one output row ---- */
 function buildRow(item, buyer, S){
   var qty = item.qty || 1, unit = item.unitPrice || 0;
-  var taxable = round2(unit * qty), tax = round2(taxable * 0.18);
+  var taxable = round2(unit * qty), tax = round2(taxable * 0.18), mrpTotal = round2((item.mrp || unit) * qty);
   var same = buyer.state !== '' && normUp(buyer.state) === normUp(S.sellerState);
   var cgst = 0, sgst = 0, igst = 0, cp = 0, sp = 0, ip = 0;
   if (same){ cgst = round2(tax/2); sgst = round2(tax - cgst); cp = 9; sp = 9; } else { igst = tax; ip = 18; }
@@ -267,7 +267,7 @@ function buildRow(item, buyer, S){
   o['Buyer City']=buyer.city; o['Buyer State']=buyer.state; o['Buyer Address Type']='OFFICE'; o['Buyer GSTIN']='';
   o['Weight (KG)']=S.weight; o['Length (CM)']=S.length; o['Breadth (CM)']=S.breadth; o['Height (CM)']=S.height;
   o['Fragile']='NO'; o['Dangerous Goods']='NO'; o['Essential']='YES'; o['Service Type']=''; o['Payment Mode']='PREPAID'; o['COD Collectable']=0;
-  o['Shipment Value']=total; o['Invoice ID']=numOrStr(item.invoiceId); o['Invoice Date']=ds; o['Shipment Gross Value']=total;
+  o['Shipment Value']=mrpTotal; o['Invoice ID']=numOrStr(item.invoiceId); o['Invoice Date']=ds; o['Shipment Gross Value']=mrpTotal;
   o['Shipment Taxable Value']=taxable; o['Shipment Total Tax Amount']=tax; o['Shipment CGST Amount']=cgst;
   o['Shipment SGST Amount']=sgst; o['Shipment IGST Amount']=igst; o['Shipment Discount Value']=0; o['SKU Count']=1;
   o['Product Name']='clothing '; o['Item Category']='clothing'; o['HSN']=numOrStr(S.hsn); o['Item SKU ID']='clothing ';
@@ -285,7 +285,7 @@ function generate(P, S, manual){
   var msgs = [];
   if (!P.outward) throw new Error('Outward export file not found among the uploads.');
   if (!P.master && !P.pan) throw new Error('Store master file not found among the uploads.');
-  var basis = S.priceBasis === 'mrp' ? 'mrp' : 'cost';
+  var basis = S.priceBasis === 'cost' ? 'cost' : 'mrp';
   var out = parseOutward(P.outward, S.homeCode);
   var mb = P.mb51 ? parseMB51(P.mb51) : null;
   var master = P.master ? parseMaster(P.master) : {};
@@ -318,7 +318,7 @@ function generate(P, S, manual){
     if (!buyer){ flags.push('no-store'); missingStores[code] = true; buyer = {name:'',email:'',phone:'',altPhone:'',addr1:'',addr2:'',city:'',state:'',pincode:'',complete:false}; }
     else if (!buyer.complete) flags.push('partial-store');
 
-    var row = buildRow({orderId:orderId, invoiceId:it.invoiceId, dateRaw:it.dateRaw, unitPrice:price, qty:it.qty}, buyer, S);
+    var row = buildRow({orderId:orderId, invoiceId:it.invoiceId, dateRaw:it.dateRaw, unitPrice:price, mrp:mrp, qty:it.qty}, buyer, S);
     results.push({ row:row, flags:flags, destCode:code, material:it.material, mrp:mrp });
   });
   return { results: results, missing: Object.keys(missingStores), msgs: msgs, stats: out };
